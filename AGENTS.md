@@ -1,7 +1,13 @@
 # AGENTS.md
 
-Altinn Management manages Kartverket's resources in Altinn's Resource Registry. See [README.md](README.md)
-for how to run it.
+Kotlin library and Ktor REST service that manage Kartverket's resources in Altinn's Resource Registry. See
+[README.md](README.md) for how to run it.
+
+## Modules
+
+- `altinn-management-client`: the library. It talks to Altinn. It uses Kotlin's explicit API mode, so make `public`
+  only what other services need.
+- `altinn-management-rest-server`: a Ktor server that offers a JSON API on top of the client.
 
 ## Commands
 

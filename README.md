@@ -1,6 +1,6 @@
 # 🗂️ Fleks · Altinn Management
 
-REST service for managing resources in Altinn's Resource Registry.
+Kotlin library and REST service for managing resources in Altinn's Resource Registry.
 
 ## Getting started
 

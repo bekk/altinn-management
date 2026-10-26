@@ -25,6 +25,8 @@ application {
 }
 
 dependencies {
+    implementation(project(":altinn-management-client"))
+
     implementation(ktorLibs.server.core)
     implementation(ktorLibs.server.config.yaml)
     implementation(ktorLibs.server.netty)
