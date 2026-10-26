@@ -5,7 +5,8 @@ Kotlin library and REST service for managing resources in Altinn's Resource Regi
 ## Getting started
 
 ```bash
-./gradlew build                                  # compile, ktlint and tests
-./gradlew :altinn-management-rest-server:run     # run the server on http://localhost:8080
+./gradlew build        # compile, ktlint and tests
+cp .env.example .env
+scripts/dev.sh         # run the server on http://localhost:8080
 curl -i localhost:8080/health/live
 ```
