@@ -28,6 +28,10 @@ scripts/dev.sh           # run the server on :8080 with the variables in .env
   `application.yaml` key and end with `(see .env.example)`, like the helpers in `Config.kt`.
 - The OpenAPI spec is generated from the routes and `OpenApi.kt`. A test fails if the checked-in `openapi.json` is
   out of date.
+- Errors follow Problem Details (RFC 9457), as `application/problem+json`. Build them with `ErrorResponse.of(...)`:
+  `type` is a `tag:kartverket.no,2026:` name for each kind of error, from `ProblemType`, and `title` comes from the
+  type. Leave out `detail` when the title says it all.
+- The `type` names and the response fields are a contract with callers. Change them only on purpose.
 - Server tests start the app with `testServer(...)`. Name a test with a sentence in backticks.
 - Comment only a reason the code cannot show.
 - Never log request bodies or tokens.
