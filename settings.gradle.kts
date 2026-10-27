@@ -22,3 +22,4 @@ rootProject.name = "altinn-management"
 
 include(":altinn-management-rest-server")
 include(":altinn-management-client")
+include(":mock-api")
