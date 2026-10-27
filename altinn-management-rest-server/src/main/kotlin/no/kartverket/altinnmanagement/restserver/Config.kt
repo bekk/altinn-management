@@ -2,14 +2,13 @@ package no.kartverket.altinnmanagement.restserver
 
 import io.ktor.server.config.ApplicationConfig
 import io.ktor.server.config.yaml.YamlConfig
-import no.kartverket.altinnmanagement.client.AltinnEnvironment
 import java.io.File
 
 internal class AppConfig(
     val port: Int,
     val accessLog: Boolean,
     val logbackConfigFile: String?,
-    val altinnEnvironment: AltinnEnvironment,
+    val altinnEnvironment: AltinnEnvironmentSetting,
 ) {
     companion object {
         fun load(config: ApplicationConfig = loadApplicationConfig()): AppConfig = AppConfig(

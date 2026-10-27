@@ -5,11 +5,15 @@ Kotlin library and REST service for managing resources in Altinn's Resource Regi
 ## Getting started
 
 ```bash
-./gradlew build        # compile, ktlint and tests
+./gradlew build              # compile, ktlint and tests
+./gradlew :mock-api:run      # in another terminal: the mock of Altinn on http://localhost:8090
 cp .env.example .env
-scripts/dev.sh         # run the server on http://localhost:8080
+scripts/dev.sh               # run the server on http://localhost:8080
 curl -i localhost:8080/health/live
 ```
+
+`.env.example` sets `ALTINN_ENVIRONMENT` to `LOCAL`, so the server talks to the mock instead of Altinn. See the mock's
+[README](mock-api/README.md).
 
 ## API
 

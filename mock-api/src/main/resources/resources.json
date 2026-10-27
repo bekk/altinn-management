@@ -1,0 +1,303 @@
+[
+  {
+    "identifier": "kv-matrikkel-brukernavn",
+    "version": "v1.0",
+    "createdAt": "2026-10-14T07:26:00.171396+00:00",
+    "updatedAt": "2026-10-14T07:26:00.171396+00:00",
+    "title": {
+      "en": "Cadastre API",
+      "nb": "Matrikkel API",
+      "nn": "Matrikkel API"
+    },
+    "description": {
+      "en": "The Cadastre (Matrikkelen) is Norway's official register of real property, including cadastral units, buildings, dwellings and addresses. The Matrikkel API provides machine-to-machine access to the Cadastre and offers services for retrieving and updating register data. The API is SOAP-based.",
+      "nb": "Matrikkelen er Norges offisielle register over fast eiendom, herunder matrikkelenheter, bygninger, boliger og adresser. Matrikkel API gir maskinell tilgang til Matrikkelen og tilbyr tjenester for uthenting og oppdatering av registerdata. API-et er SOAP-basert.",
+      "nn": "Matrikkelen er Noregs offisielle register over fast eigedom, mellom anna matrikkeleiningar, bygningar, bustader og adresser. Matrikkel API gir maskinell tilgang til Matrikkelen og tilbyr tenester for uthenting og oppdatering av registerdata. API-et er SOAP-basert."
+    },
+    "rightDescription": {
+      "en": "Allows a system provider to authenticate to the Matrikkel API on behalf of your organisation. The data and operations available to the system provider are managed separately through the user and permissions configured in the Cadastre.",
+      "nb": "Gir en systemleverandør rett til å autentisere seg mot Matrikkel API på vegne av virksomheten din. Hvilke data og operasjoner systemleverandøren får tilgang til, styres separat av brukeren og rettighetene som er opprettet i Matrikkelen.",
+      "nn": "Gir ein systemleverandør rett til å autentisere seg mot Matrikkel API på vegner av verksemda di. Kva data og operasjonar systemleverandøren får tilgang til, blir styrt separat av brukaren og rettane som er oppretta i Matrikkelen."
+    },
+    "homepage": "https://kartverket.github.io/api-dokumentasjon/docs/matrikkelen",
+    "status": "Completed",
+    "contactPoints": [
+      {
+        "category": "Kartverket Kundesenter",
+        "email": "kundesenter@kartverket.no",
+        "telephone": "",
+        "contactPage": ""
+      }
+    ],
+    "resourceReferences": [
+      {
+        "referenceSource": "Default",
+        "reference": "kartverk:matrikkel:brukernavn",
+        "referenceType": "MaskinportenScope"
+      }
+    ],
+    "delegable": true,
+    "visible": true,
+    "hasCompetentAuthority": {
+      "name": {
+        "en": "Norwegian Mapping Authority",
+        "nb": "Kartverket",
+        "nn": "Kartverket"
+      },
+      "organization": "971040238",
+      "orgcode": "kv"
+    },
+    "keywords": [
+      {
+        "word": "matrikkel",
+        "language": "nb"
+      },
+      {
+        "word": "matrikkelen",
+        "language": "nb"
+      },
+      {
+        "word": "eigedom",
+        "language": "nb"
+      },
+      {
+        "word": "fast eigedom",
+        "language": "nb"
+      },
+      {
+        "word": "adresse",
+        "language": "nb"
+      },
+      {
+        "word": "bygning",
+        "language": "nb"
+      },
+      {
+        "word": "bustad",
+        "language": "nb"
+      },
+      {
+        "word": "cadastre",
+        "language": "nb"
+      },
+      {
+        "word": "cadastral register",
+        "language": "nb"
+      },
+      {
+        "word": "property",
+        "language": "nb"
+      },
+      {
+        "word": "real property",
+        "language": "nb"
+      },
+      {
+        "word": "address",
+        "language": "nb"
+      },
+      {
+        "word": "building",
+        "language": "nb"
+      },
+      {
+        "word": "dwelling",
+        "language": "nb"
+      },
+      {
+        "word": "API",
+        "language": "nb"
+      }
+    ],
+    "accessListMode": "Disabled",
+    "selfIdentifiedUserEnabled": false,
+    "enterpriseUserEnabled": false,
+    "resourceType": "MaskinportenSchema",
+    "authorizationReference": [
+      {
+        "id": "urn:altinn:resource",
+        "value": "kv-matrikkel-brukernavn"
+      }
+    ],
+    "isOneTimeConsent": false,
+    "versionId": 3774
+  },
+  {
+    "identifier": "nrl-reporting",
+    "createdAt": "2024-05-10T06:04:32.656254+00:00",
+    "updatedAt": "2024-05-10T06:04:32.656254+00:00",
+    "title": {
+      "en": "NRL reporting",
+      "nb": "NRL rapportering",
+      "nn": "NRL rapportering"
+    },
+    "description": {
+      "en": "Retrieving and reporting of owned aviation obstacles.",
+      "nb": "Uthenting og rapportering av egne luftfartshindre.",
+      "nn": "Uthenting og rapportering av eigne luftfartshinder."
+    },
+    "rightDescription": {
+      "en": "Retrieving and reporting of owned aviation obstacles.",
+      "nb": "Uthenting og rapportering av egne luftfartshindre.",
+      "nn": "Uthenting og rapportering av eigne luftfartshinder."
+    },
+    "homepage": "https://www.kartverket.no/",
+    "status": "Active",
+    "contactPoints": [
+      {
+        "contactPage": "https://www.kartverket.no/"
+      }
+    ],
+    "isPartOf": "",
+    "resourceReferences": [
+      {
+        "referenceSource": "Altinn3",
+        "reference": "kartverk:nrl.rapportering",
+        "referenceType": "MaskinportenScope"
+      }
+    ],
+    "delegable": true,
+    "visible": true,
+    "hasCompetentAuthority": {
+      "name": {
+        "en": "The Norwegian Mapping Authority",
+        "nb": "Kartverket",
+        "nn": "Kartverket"
+      },
+      "organization": "971040238",
+      "orgcode": "KV"
+    },
+    "keywords": [],
+    "accessListMode": "Disabled",
+    "selfIdentifiedUserEnabled": false,
+    "enterpriseUserEnabled": false,
+    "resourceType": "MaskinportenSchema",
+    "authorizationReference": [
+      {
+        "id": "urn:altinn:resource",
+        "value": "nrl-reporting"
+      }
+    ],
+    "isOneTimeConsent": false,
+    "versionId": 115
+  },
+  {
+    "identifier": "nrl-retrieval",
+    "createdAt": "2024-05-10T06:13:44.814488+00:00",
+    "updatedAt": "2024-05-10T06:13:44.814488+00:00",
+    "title": {
+      "en": "NRL retrieval",
+      "nb": "NRL uthenting",
+      "nn": "NRL uthenting"
+    },
+    "description": {
+      "en": "To retrive all NRL aviation obstacles.",
+      "nb": "For å hente ut alle NRL luftfartshindre.",
+      "nn": "For å hente ut alle NRL luftfartshindre."
+    },
+    "rightDescription": {
+      "en": "To retrive all NRL aviation obstacles.",
+      "nb": "For å hente ut alle NRL luftfartshindre.",
+      "nn": "For å hente ut alle NRL luftfartshindre."
+    },
+    "homepage": "https://www.kartverket.no/",
+    "status": "Active",
+    "contactPoints": [
+      {
+        "contactPage": "https://www.kartverket.no/"
+      }
+    ],
+    "isPartOf": "",
+    "resourceReferences": [
+      {
+        "referenceSource": "Altinn3",
+        "reference": "kartverk:nrl.rapportering",
+        "referenceType": "MaskinportenScope"
+      }
+    ],
+    "delegable": true,
+    "visible": true,
+    "hasCompetentAuthority": {
+      "name": {
+        "en": "The Norwegian Mapping Authority",
+        "nb": "Kartverket",
+        "nn": "Kartverket"
+      },
+      "organization": "971040238",
+      "orgcode": "KV"
+    },
+    "keywords": [],
+    "accessListMode": "Disabled",
+    "selfIdentifiedUserEnabled": false,
+    "enterpriseUserEnabled": false,
+    "resourceType": "MaskinportenSchema",
+    "authorizationReference": [
+      {
+        "id": "urn:altinn:resource",
+        "value": "nrl-retrieval"
+      }
+    ],
+    "isOneTimeConsent": false,
+    "versionId": 116
+  },
+  {
+    "identifier": "slf-skogtiltakws",
+    "version": "1.0",
+    "createdAt": "2026-06-12T06:40:30.233545+00:00",
+    "updatedAt": "2026-06-12T06:40:30.233545+00:00",
+    "title": {
+      "en": "Skog tiltakws",
+      "nb": "Skog tiltakws",
+      "nn": "Skog tiltakws"
+    },
+    "description": {
+      "en": "Beskrivelse",
+      "nb": "Beskrivelse",
+      "nn": "Beskrivelse"
+    },
+    "rightDescription": {
+      "en": "Delegering",
+      "nb": "Delegering",
+      "nn": "Delegering"
+    },
+    "status": "Completed",
+    "contactPoints": [
+      {
+        "category": "Brukerstøtte",
+        "email": "support@landbruksdirektoratet.no",
+        "telephone": "",
+        "contactPage": ""
+      }
+    ],
+    "resourceReferences": [
+      {
+        "referenceSource": "Altinn3",
+        "reference": "ldir:skogtiltakws",
+        "referenceType": "MaskinportenScope"
+      }
+    ],
+    "delegable": true,
+    "visible": true,
+    "hasCompetentAuthority": {
+      "name": {
+        "en": "Norwegian Agriculture Agency",
+        "nb": "Landbruksdirektoratet",
+        "nn": "Landbruksdirektoratet"
+      },
+      "organization": "981544315",
+      "orgcode": "slf"
+    },
+    "accessListMode": "Disabled",
+    "selfIdentifiedUserEnabled": false,
+    "enterpriseUserEnabled": false,
+    "resourceType": "MaskinportenSchema",
+    "authorizationReference": [
+      {
+        "id": "urn:altinn:resource",
+        "value": "slf-skogtiltakws"
+      }
+    ],
+    "isOneTimeConsent": false,
+    "versionId": 2236
+  }
+]

@@ -2,6 +2,7 @@ package no.kartverket.altinnmanagement.restserver
 
 import io.ktor.server.config.MapApplicationConfig
 import no.kartverket.altinnmanagement.client.AltinnEnvironment
+import java.net.URI
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -14,17 +15,17 @@ class ConfigTest {
         val config = AppConfig.load(MapApplicationConfig("server.port" to "9090", "altinn.environment" to "TT02"))
 
         assertEquals(9090, config.port)
-        assertEquals(AltinnEnvironment.TT02, config.altinnEnvironment)
+        assertEquals(AltinnEnvironmentSetting.TT02, config.altinnEnvironment)
     }
 
     @Test
     fun `a misspelled environment names the valid values`() {
         val e = assertFailsWith<IllegalStateException> {
-            MapApplicationConfig("altinn.environment" to "tt02").enum<AltinnEnvironment>("altinn.environment")
+            MapApplicationConfig("altinn.environment" to "tt02").enum<AltinnEnvironmentSetting>("altinn.environment")
         }
 
         assertContains(e.message!!, "altinn.environment")
-        assertContains(e.message!!, "TT02, PROD")
+        assertContains(e.message!!, "TT02, PROD, LOCAL")
     }
 
     @Test
@@ -56,5 +57,12 @@ class ConfigTest {
         }
 
         assertContains(e.message!!, "/no/such/logback.xml")
+    }
+
+    @Test
+    fun `LOCAL is the mock API, and the other environments are the client's`() {
+        assertEquals(URI("http://localhost:8090"), AltinnEnvironmentSetting.LOCAL.platformBaseUrl)
+        assertEquals(AltinnEnvironment.TT02.platformBaseUrl, AltinnEnvironmentSetting.TT02.platformBaseUrl)
+        assertEquals(AltinnEnvironment.PROD.maskinportenTokenUrl, AltinnEnvironmentSetting.PROD.maskinportenTokenUrl)
     }
 }
