@@ -9,3 +9,7 @@ accessLog:
 
 logback:
   configFile: "$?LOGBACK_CONFIG_FILE"
+
+maskinporten:
+  clientId: "$?MASKINPORTEN_CLIENT_ID"
+  clientJwk: "$?MASKINPORTEN_CLIENT_JWK"
