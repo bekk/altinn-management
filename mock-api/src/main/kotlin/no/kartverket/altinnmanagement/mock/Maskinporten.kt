@@ -62,6 +62,9 @@ class Maskinporten(private val tokens: Tokens, issuer: String = "http://localhos
                     put("authority", "iso6523-actorid-upis")
                     put("ID", "0192:$KARTVERKET")
                 }
+                // The prefixes of the scopes Kartverket owns. Altinn requires every scope of a new or changed resource to
+                // start with one of them
+                put("consumer_prefix", KARTVERKET_SCOPE_PREFIX)
                 put("client_id", clientId)
                 put("iat", now.epochSecond)
                 put("exp", tokenExpiresAt.epochSecond)
@@ -79,6 +82,7 @@ class Maskinporten(private val tokens: Tokens, issuer: String = "http://localhos
 
     companion object {
         const val TOKEN_LIFETIME_SECONDS = 120L
+        const val KARTVERKET_SCOPE_PREFIX = "kartverk"
         private const val GRANT_TYPE = "urn:ietf:params:oauth:grant-type:jwt-bearer"
 
         // Maskinporten's limits, from https://docs.digdir.no/docs/Maskinporten/maskinporten_protocol_jwtgrant

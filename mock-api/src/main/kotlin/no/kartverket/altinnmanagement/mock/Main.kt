@@ -15,7 +15,7 @@ fun main() {
 fun Application.module(registry: ResourceRegistry = ResourceRegistry.seeded(), tokens: Tokens = Tokens()) {
     routing {
         get("/health/live") { call.respond(HttpStatusCode.OK) }
-        resourceRegistry(registry)
+        resourceRegistry(registry, tokens)
         maskinporten(Maskinporten(tokens))
         altinnAuthentication(tokens)
     }
