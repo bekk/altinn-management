@@ -25,6 +25,9 @@ after changing the API:
 ./gradlew :altinn-management-rest-server:generateOpenApiSpec
 ```
 
+Errors follow Problem Details ([RFC 9457](https://www.rfc-editor.org/info/rfc9457/)). They are sent as
+`application/problem+json`, with a `type` your code can rely on, like `tag:kartverket.no,2026:not-found`.
+
 ## Logging
 
 The server logs JSON to stdout through logback, set up by the bundled
