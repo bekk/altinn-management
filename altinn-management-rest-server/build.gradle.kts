@@ -24,6 +24,20 @@ application {
     mainClass = "no.kartverket.altinnmanagement.restserver.MainKt"
 }
 
+tasks.test {
+    inputs.file("openapi.json")
+}
+
+tasks.register<Test>("generateOpenApiSpec") {
+    group = "build"
+    description = "Writes openapi.json from the spec the running server serves."
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    filter { includeTestsMatching("*.OpenApiSpecFileTest") }
+    systemProperty("openApiSpec.write", "true")
+    outputs.upToDateWhen { false }
+}
+
 dependencies {
     implementation(project(":altinn-management-client"))
 
@@ -34,6 +48,8 @@ dependencies {
     implementation(platform(libs.netty.bom))
     implementation(ktorLibs.server.callLogging)
     implementation(ktorLibs.server.callId)
+    implementation(ktorLibs.server.routingOpenapi)
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.logback.classic)
     implementation(libs.logstash.logback.encoder)
     // logstash-logback-encoder pulls in an older Jackson 3 with known vulnerabilities.

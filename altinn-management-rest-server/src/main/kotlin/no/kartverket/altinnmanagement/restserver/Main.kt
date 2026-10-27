@@ -1,5 +1,6 @@
 package no.kartverket.altinnmanagement.restserver
 
+import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
@@ -10,8 +11,11 @@ import io.ktor.server.plugins.callid.CallId
 import io.ktor.server.plugins.callid.callIdMdc
 import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.response.respond
+import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
+import io.ktor.server.routing.openapi.hide
 import io.ktor.server.routing.routing
+import io.ktor.utils.io.ExperimentalKtorApi
 import org.slf4j.LoggerFactory
 import java.util.UUID
 
@@ -24,6 +28,7 @@ fun main() {
     }.start(wait = true)
 }
 
+@OptIn(ExperimentalKtorApi::class)
 fun Application.module(accessLog: Boolean = true) {
     install(CallId) {
         header(HttpHeaders.XRequestId)
@@ -39,9 +44,10 @@ fun Application.module(accessLog: Boolean = true) {
         filter { accessLog }
     }
 
+    val spec by lazy { openApiSpec() }
+
     routing {
-        get("/health/live") {
-            call.respond(HttpStatusCode.OK)
-        }
+        get("/health/live") { call.respond(HttpStatusCode.OK) }.hide()
+        get("/openapi") { call.respondText(spec, ContentType.Application.Json) }.hide()
     }
 }

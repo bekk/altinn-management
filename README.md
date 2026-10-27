@@ -11,6 +11,16 @@ scripts/dev.sh         # run the server on http://localhost:8080
 curl -i localhost:8080/health/live
 ```
 
+## API
+
+The server serves its OpenAPI spec at `GET /openapi`, and the same spec is checked in as
+[`openapi.json`](altinn-management-rest-server/openapi.json). The build fails if that file is stale. Regenerate it
+after changing the API:
+
+```bash
+./gradlew :altinn-management-rest-server:generateOpenApiSpec
+```
+
 ## Logging
 
 The server logs JSON to stdout through logback, set up by the bundled
