@@ -53,7 +53,7 @@ class LoggingTest {
         appender.list.map { it.formattedMessage }
     }
 
-    // Logs before and after moving to another thread, as the real routes can
+    // Logs before and after moving to another thread, and fails, as the real routes can
     private fun eventsFor(accessLog: Boolean, certificate: String?, requestId: String? = null) = run {
         val headers: HttpRequestBuilder.() -> Unit = {
             certificate?.let { header(CLIENT_CERTIFICATE_HEADER, it) }
@@ -68,9 +68,11 @@ class LoggingTest {
                         withContext(Dispatchers.IO) { call.application.log.info("on another thread") }
                         call.respond(HttpStatusCode.OK)
                     }
+                    get("/fails") { error("boom") }
                 }
             }
             client.get("/logs", headers)
+            client.get("/fails", headers)
         }
         appender.list
     }
@@ -78,7 +80,7 @@ class LoggingTest {
     private val ILoggingEvent.requestId get() = mdcPropertyMap["request_id"]
 
     private fun List<ILoggingEvent>.fromCalls() = filter {
-        it.loggerName == "access" || it.formattedMessage in setOf("before", "on another thread")
+        it.loggerName == "access" || it.formattedMessage in setOf("before", "on another thread", "Unhandled exception")
     }
 
     private val certificate = "By=spiffe://cluster.local/ns/a/sa/b;Hash=abc;Subject=\"\";URI=spiffe://cluster.local/ns/team/sa/app"
@@ -149,7 +151,7 @@ class LoggingTest {
     fun `every line logged during a call has the workload`() {
         val events = eventsFor(true, certificate).fromCalls()
 
-        assertEquals(3, events.size, "expected two lines and an access line, got: $events")
+        assertEquals(5, events.size, "expected two lines, an error and two access lines, got: $events")
         events.forEach { assertEquals(workload, it.mdcPropertyMap["workload"], "for: $it") }
     }
 
@@ -157,7 +159,7 @@ class LoggingTest {
     fun `every line logged during a call has the workload, also with the access log off`() {
         val events = eventsFor(false, certificate).fromCalls()
 
-        assertEquals(2, events.size, "expected two lines, got: $events")
+        assertEquals(3, events.size, "expected two lines and an error, got: $events")
         events.forEach { assertEquals(workload, it.mdcPropertyMap["workload"], "for: $it") }
     }
 
@@ -165,7 +167,7 @@ class LoggingTest {
     fun `a call without a caller has no workload`() {
         val events = eventsFor(true, null).fromCalls()
 
-        assertEquals(3, events.size, "expected two lines and an access line, got: $events")
+        assertEquals(5, events.size, "expected two lines, an error and two access lines, got: $events")
         events.forEach { assertFalse("workload" in it.mdcPropertyMap, "for: $it") }
     }
 
@@ -173,26 +175,25 @@ class LoggingTest {
     fun `every line logged during a call has the request id the caller sent`() {
         val events = eventsFor(true, certificate, requestId = "3f2a1c9e-7b4d-4e8f-9a6b-2c1d0e9f8a7b").fromCalls()
 
-        assertEquals(3, events.size, "expected two lines and an access line, got: $events")
+        assertEquals(5, events.size, "expected two lines, an error and two access lines, got: $events")
         events.forEach { assertEquals("3f2a1c9e-7b4d-4e8f-9a6b-2c1d0e9f8a7b", it.requestId, "for: $it") }
     }
 
     @Test
     fun `a call without a request id gets a new one, the same on every line it logs`() {
-        val first = eventsFor(true, certificate).fromCalls().map { it.requestId }.distinct()
-        appender.list.clear()
-        val second = eventsFor(true, certificate).fromCalls().map { it.requestId }.distinct()
+        val events = eventsFor(true, certificate).fromCalls()
 
-        assertNotNull(first.single(), "for: $first")
-        assertNotNull(second.single(), "for: $second")
-        assertNotEquals(first, second)
+        val (logs, fails) = events.partition { it.formattedMessage in setOf("before", "on another thread") || "/logs" in it.formattedMessage }
+        val logsId = assertNotNull(logs.map { it.requestId }.distinct().single(), "for: $logs")
+        val failsId = assertNotNull(fails.map { it.requestId }.distinct().single(), "for: $fails")
+        assertNotEquals(logsId, failsId)
     }
 
     @Test
     fun `a request id that is not safe to log is replaced by a new one`() {
         val events = eventsFor(true, certificate, requestId = "id\" level=ERROR").fromCalls()
 
-        assertEquals(3, events.size, "expected two lines and an access line, got: $events")
+        assertEquals(5, events.size, "expected two lines, an error and two access lines, got: $events")
         events.forEach {
             assertNotNull(it.requestId, "for: $it")
             assertNotEquals("id\" level=ERROR", it.requestId, "for: $it")
