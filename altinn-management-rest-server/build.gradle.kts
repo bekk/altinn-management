@@ -32,6 +32,12 @@ dependencies {
     implementation(ktorLibs.server.netty)
     // ktor pulls in an older netty with known vulnerabilities
     implementation(platform(libs.netty.bom))
+    implementation(ktorLibs.server.callLogging)
+    implementation(ktorLibs.server.callId)
+    implementation(libs.logback.classic)
+    implementation(libs.logstash.logback.encoder)
+    // logstash-logback-encoder pulls in an older Jackson 3 with known vulnerabilities.
+    implementation(platform(libs.jackson.bom))
 
     testImplementation(ktorLibs.server.testHost)
 }

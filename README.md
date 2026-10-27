@@ -10,3 +10,9 @@ cp .env.example .env
 scripts/dev.sh         # run the server on http://localhost:8080
 curl -i localhost:8080/health/live
 ```
+
+## Logging
+
+The server logs JSON to stdout through logback, set up by the bundled
+`altinn-management-rest-server/src/main/resources/logback.xml`. To replace it, point `LOGBACK_CONFIG_FILE` at your
+own file. Every line logged during a call has the call's `request_id` and the calling `workload`.

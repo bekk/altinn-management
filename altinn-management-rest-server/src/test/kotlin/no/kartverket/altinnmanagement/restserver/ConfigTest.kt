@@ -33,4 +33,28 @@ class ConfigTest {
 
         assertContains(e.message!!, "server.port")
     }
+
+    @Test
+    fun `the access log is on unless switched off`() {
+        val required = arrayOf("server.port" to "8080", "altinn.environment" to "TT02")
+
+        assertEquals(true, AppConfig.load(MapApplicationConfig(*required)).accessLog)
+        assertEquals(false, AppConfig.load(MapApplicationConfig(*required, "accessLog.enabled" to "false")).accessLog)
+    }
+
+    @Test
+    fun `a flag must be true or false`() {
+        val e = assertFailsWith<IllegalStateException> { MapApplicationConfig("flag" to "yes").boolean("flag", default = true) }
+
+        assertContains(e.message!!, "must be true or false")
+    }
+
+    @Test
+    fun `refuses a logback config path that is not a file`() {
+        val e = assertFailsWith<IllegalStateException> {
+            MapApplicationConfig("logback.configFile" to "/no/such/logback.xml").file("logback.configFile")
+        }
+
+        assertContains(e.message!!, "/no/such/logback.xml")
+    }
 }

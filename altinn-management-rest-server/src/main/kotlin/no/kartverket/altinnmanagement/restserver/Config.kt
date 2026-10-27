@@ -3,14 +3,19 @@ package no.kartverket.altinnmanagement.restserver
 import io.ktor.server.config.ApplicationConfig
 import io.ktor.server.config.yaml.YamlConfig
 import no.kartverket.altinnmanagement.client.AltinnEnvironment
+import java.io.File
 
 internal class AppConfig(
     val port: Int,
+    val accessLog: Boolean,
+    val logbackConfigFile: String?,
     val altinnEnvironment: AltinnEnvironment,
 ) {
     companion object {
         fun load(config: ApplicationConfig = loadApplicationConfig()): AppConfig = AppConfig(
             port = config.port("server.port"),
+            accessLog = config.boolean("accessLog.enabled", default = true),
+            logbackConfigFile = config.file("logback.configFile"),
             altinnEnvironment = config.enum("altinn.environment"),
         )
     }
@@ -25,6 +30,12 @@ internal fun ApplicationConfig.optional(path: String): String? =
 internal fun ApplicationConfig.required(path: String): String =
     optional(path) ?: error("Missing required configuration $path (see .env.example)")
 
+internal fun ApplicationConfig.boolean(path: String, default: Boolean): Boolean {
+    val raw = optional(path) ?: return default
+    return raw.toBooleanStrictOrNull()
+        ?: error("$path must be true or false, but was \"$raw\" (see .env.example)")
+}
+
 internal inline fun <reified T : Enum<T>> ApplicationConfig.enum(path: String): T {
     val raw = required(path)
     return enumValues<T>().find { it.name == raw }
@@ -35,4 +46,10 @@ internal fun ApplicationConfig.port(path: String): Int {
     val raw = required(path)
     return raw.toIntOrNull()?.takeIf { it in 1..65535 }
         ?: error("$path must be a port number, but was \"$raw\" (see .env.example)")
+}
+
+internal fun ApplicationConfig.file(path: String): String? {
+    val raw = optional(path) ?: return null
+    check(File(raw).isFile) { "$path must point to a file, but was \"$raw\" (see .env.example)" }
+    return raw
 }
