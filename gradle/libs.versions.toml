@@ -2,12 +2,20 @@
 kotlin = "2.4.21"
 ktlint-cli = "1.8.0"
 ktlint-gradle = "14.2.0"
+logback = "1.6.5"
+logstash-logback-encoder = "9.0"
+jackson = "3.2.4"
 netty = "4.2.19.Final"
 jib = "3.5.4"
+kotlinx-serialization = "1.12.0"
 zstd-jni = "1.5.7-23"
 
 [libraries]
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+jackson-bom = { module = "tools.jackson:jackson-bom", version.ref = "jackson" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 netty-bom = { module = "io.netty:netty-bom", version.ref = "netty" }
+logstash-logback-encoder = { module = "net.logstash.logback:logstash-logback-encoder", version.ref = "logstash-logback-encoder" }
 zstd-jni = { module = "com.github.luben:zstd-jni", version.ref = "zstd-jni" }
 
 [plugins]
