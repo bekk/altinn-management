@@ -56,6 +56,7 @@ dependencies {
     implementation(platform(libs.jackson.bom))
 
     testImplementation(ktorLibs.server.testHost)
+    testImplementation(testFixtures(project(":altinn-management-client")))
 }
 
 jib {

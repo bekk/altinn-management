@@ -2,6 +2,8 @@ package no.kartverket.altinnmanagement.restserver
 
 import io.ktor.server.config.ApplicationConfig
 import io.ktor.server.config.yaml.YamlConfig
+import no.kartverket.altinnmanagement.client.auth.MaskinportenKey
+import no.kartverket.altinnmanagement.client.exception.MaskinportenException
 import java.io.File
 
 internal class AppConfig(
@@ -9,6 +11,8 @@ internal class AppConfig(
     val accessLog: Boolean,
     val logbackConfigFile: String?,
     val altinnEnvironment: AltinnEnvironmentSetting,
+    val maskinportenClientId: String,
+    val maskinportenKey: MaskinportenKey,
 ) {
     companion object {
         fun load(config: ApplicationConfig = loadApplicationConfig()): AppConfig = AppConfig(
@@ -16,6 +20,8 @@ internal class AppConfig(
             accessLog = config.boolean("accessLog.enabled", default = true),
             logbackConfigFile = config.file("logback.configFile"),
             altinnEnvironment = config.enum("altinn.environment"),
+            maskinportenClientId = config.required("maskinporten.clientId"),
+            maskinportenKey = config.maskinportenKey("maskinporten.clientJwk"),
         )
     }
 }
@@ -51,4 +57,11 @@ internal fun ApplicationConfig.file(path: String): String? {
     val raw = optional(path) ?: return null
     check(File(raw).isFile) { "$path must point to a file, but was \"$raw\" (see .env.example)" }
     return raw
+}
+
+// The message leaves out the parser's, which can quote the key
+internal fun ApplicationConfig.maskinportenKey(path: String): MaskinportenKey = try {
+    MaskinportenKey.parse(required(path))
+} catch (e: MaskinportenException) {
+    error("$path must be an RSA private key as a JWK (see .env.example)")
 }
