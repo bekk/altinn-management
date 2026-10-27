@@ -76,7 +76,7 @@ class SearchFilter(
     fun matches(resource: JsonObject): Boolean {
         val authority = resource["hasCompetentAuthority"]?.jsonObject
         return contains(resource.stringOrNull("identifier"), id) &&
-            (resourceType == null || isResourceType(resource.stringOrNull("resourceType"), resourceType)) &&
+            equals(resource.stringOrNull("resourceType"), resourceType) &&
             equals(authority?.stringOrNull("orgcode"), orgCode) &&
             equals(authority?.stringOrNull("organization"), organizationId) &&
             anyContains(resource["description"]?.jsonObject?.values?.map { it.jsonPrimitive.contentOrNull }, description) &&
@@ -90,11 +90,13 @@ class SearchFilter(
 
     private fun anyContains(values: List<String?>?, filter: String?) =
         filter == null || values.orEmpty().any { it?.contains(filter, ignoreCase = true) == true }
-
-    // Altinn takes the enum's name or its number. MaskinportenSchema is the only type the mock knows the number of
-    private fun isResourceType(value: String?, filter: String) =
-        value.equals(filter, ignoreCase = true) || (filter == "2" && value == "MaskinportenSchema")
 }
+
+/** Altinn's resource types, each with its number. */
+internal val RESOURCE_TYPES = listOf(
+    "Default", "Systemresource", "MaskinportenSchema", "Altinn2Service", "AltinnApp", "GenericAccessResource",
+    "BrokerService", "CorrespondenceService", "Consent", "MigratedApp",
+).mapIndexed { index, name -> name to if (index == 0) 0 else 1 shl (index - 1) }
 
 private fun authorizationReference(id: String) = buildJsonArray {
     add(buildJsonObject { put("id", "urn:altinn:resource"); put("value", id) })

@@ -33,9 +33,17 @@ fun Route.resourceRegistry(registry: ResourceRegistry) {
 }
 
 private suspend fun ApplicationCall.search(registry: ResourceRegistry) {
+    // Like Altinn, a type's name in any case or its number. ASP.NET words its refusals of the two kinds differently
+    val resourceType = query("resourceType")?.let { raw ->
+        RESOURCE_TYPES.find { (name, number) -> name.equals(raw, ignoreCase = true) || "$number" == raw }?.first
+            ?: return validationProblem(
+                "ResourceType",
+                if (raw.toIntOrNull() == null) "The value '$raw' is not valid for ResourceType." else "The value '$raw' is invalid.",
+            )
+    }
     val filter = SearchFilter(
         id = query("id"),
-        resourceType = query("resourceType"),
+        resourceType = resourceType,
         orgCode = query("orgCode"),
         organizationId = query("organizationId"),
         description = query("description"),

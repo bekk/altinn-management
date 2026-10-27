@@ -104,6 +104,22 @@ class ResourceRegistryTest {
     @Test
     fun `the resource type can also be given as its number`() = mockApi {
         assertEquals(4, client.get("$path/search?resourceType=2").json().jsonArray.size)
+        assertEquals(0, client.get("$path/search?resourceType=8").json().jsonArray.size)
+    }
+
+    @Test
+    fun `a resource type Altinn does not know is a validation problem, worded like Altinn's`() = mockApi {
+        val refused = mapOf(
+            "not-a-type" to "The value 'not-a-type' is not valid for ResourceType.",
+            "3" to "The value '3' is invalid.",
+        )
+        for ((value, message) in refused) {
+            val response = client.get("$path/search?resourceType=$value")
+            val errors = response.json().jsonObject.getValue("errors").jsonObject
+
+            assertEquals(HttpStatusCode.BadRequest, response.status, value)
+            assertEquals(message, errors.getValue("ResourceType").jsonArray.single().jsonPrimitive.content, value)
+        }
     }
 
     @Test
