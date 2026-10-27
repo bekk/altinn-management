@@ -72,12 +72,12 @@ private suspend fun ApplicationCall.validationProblem(field: String, message: St
     },
 )
 
-private suspend fun ApplicationCall.respondJson(status: HttpStatusCode, body: JsonElement) =
+internal suspend fun ApplicationCall.respondJson(status: HttpStatusCode, body: JsonElement) =
     respondText(body.toString(), ContentType.Application.Json.withCharset(Charsets.UTF_8), status)
 
 private val random = SecureRandom()
 
-private fun traceId(): String {
+internal fun traceId(): String {
     fun hex(bytes: Int) = HexFormat.of().formatHex(ByteArray(bytes).also(random::nextBytes))
     return "00-${hex(16)}-${hex(8)}-00"
 }
