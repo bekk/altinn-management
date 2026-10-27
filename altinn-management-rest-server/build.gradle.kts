@@ -28,6 +28,8 @@ dependencies {
     implementation(ktorLibs.server.core)
     implementation(ktorLibs.server.config.yaml)
     implementation(ktorLibs.server.netty)
+    // ktor pulls in an older netty with known vulnerabilities
+    implementation(platform(libs.netty.bom))
 
     testImplementation(ktorLibs.server.testHost)
 }
