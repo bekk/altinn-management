@@ -5,5 +5,442 @@
         "version": "v0",
         "description": "Manages Kartverket's resources in Altinn's Resource Registry."
     },
-    "components": {}
+    "paths": {
+        "/api/maskinportenschemas/{id}": {
+            "get": {
+                "summary": "Get a MaskinportenSchema",
+                "description": "Gets the resource with this id from Altinn. Only Kartverket's resources of type `MaskinportenSchema` are found: any other resource gives `404`, as if it did not exist.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "The resource's id: 4 or more of `a-z`, `0-9`, `_` and `-`, for example `kv-matrikkel-brukernavn`.",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[a-z0-9_-]{4,}$"
+                        }
+                    },
+                    {
+                        "name": "X-Request-ID",
+                        "in": "header",
+                        "description": "An id to find this call by in this API's logs. Up to 128 ASCII letters, digits, `-`, `_`, `.` and `:`. Without it, or with any other value, this API makes a new one. Every response has the id in its `X-Request-Id` header.",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "3f2b8c1e-7d4a-4f0e-9b6a-2c5d8e1f4a7b"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The MaskinportenSchema.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MaskinportenSchema"
+                                },
+                                "examples": {
+                                    "MaskinportenSchema": {
+                                        "value": {
+                                            "resourceId": "kv-matrikkel-brukernavn",
+                                            "scopes": [
+                                                "kartverk:matrikkel:brukernavn"
+                                            ],
+                                            "title": {
+                                                "en": "Cadastre API",
+                                                "nb": "Matrikkel API",
+                                                "nn": "Matrikkel API"
+                                            },
+                                            "description": {
+                                                "en": "Machine-to-machine access to the Cadastre.",
+                                                "nb": "Maskinell tilgang til Matrikkelen.",
+                                                "nn": "Maskinell tilgang til Matrikkelen."
+                                            },
+                                            "delegationDescription": {
+                                                "en": "Allows a system provider to use the Matrikkel API on behalf of your organisation.",
+                                                "nb": "Gir en systemleverandør rett til å bruke Matrikkel API på vegne av virksomheten din.",
+                                                "nn": "Gir ein systemleverandør rett til å bruke Matrikkel API på vegner av verksemda di."
+                                            },
+                                            "homepage": "https://kartverket.github.io/api-dokumentasjon/docs/matrikkelen",
+                                            "contactPoints": [
+                                                {
+                                                    "category": "Kartverket Kundesenter",
+                                                    "email": "kundesenter@kartverket.no"
+                                                }
+                                            ],
+                                            "keywords": [
+                                                {
+                                                    "word": "matrikkel",
+                                                    "language": "nb"
+                                                },
+                                                {
+                                                    "word": "cadastre",
+                                                    "language": "en"
+                                                }
+                                            ],
+                                            "status": "COMPLETED",
+                                            "delegable": true,
+                                            "visible": true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "The id is not valid.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "InvalidId": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:validation-error",
+                                            "title": "Validation failed",
+                                            "status": 400,
+                                            "errors": [
+                                                {
+                                                    "field": "id",
+                                                    "code": "INVALID_FORMAT",
+                                                    "message": "id must be 4 or more of a-z, 0-9, _ and -"
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Kartverket has no MaskinportenSchema with this id in Altinn.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "NotFound": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:not-found",
+                                            "title": "Not found",
+                                            "status": 404,
+                                            "detail": "There is no MaskinportenSchema with this id"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "This API could not get an answer from Altinn. Your request did not cause it.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "UpstreamError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:upstream-error",
+                                            "title": "A service this API depends on failed",
+                                            "status": 502,
+                                            "detail": "The call to Altinn failed"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "An unexpected error in this API.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "InternalError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:internal-error",
+                                            "title": "Internal error",
+                                            "status": 500
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "MultilingualText": {
+                "type": "object",
+                "title": "MultilingualText",
+                "description": "A text in English, Norwegian Bokmål and Norwegian Nynorsk.",
+                "required": [
+                    "en",
+                    "nb",
+                    "nn"
+                ],
+                "properties": {
+                    "en": {
+                        "type": "string",
+                        "description": "In English. Not blank."
+                    },
+                    "nb": {
+                        "type": "string",
+                        "description": "In Norwegian Bokmål. Not blank."
+                    },
+                    "nn": {
+                        "type": "string",
+                        "description": "In Norwegian Nynorsk. Not blank."
+                    }
+                }
+            },
+            "ContactPoint": {
+                "type": "object",
+                "title": "ContactPoint",
+                "properties": {
+                    "category": {
+                        "type": "string",
+                        "description": "What the contact point is, such as `Kundesenter`. Left out if it has none."
+                    },
+                    "email": {
+                        "type": "string",
+                        "description": "An email address. Left out if it has none."
+                    },
+                    "telephone": {
+                        "type": "string",
+                        "description": "A phone number. Left out if it has none."
+                    },
+                    "contactPage": {
+                        "type": "string",
+                        "description": "A web page with contact information, starting with `http://` or `https://`. Left out if it has none."
+                    }
+                }
+            },
+            "Keyword": {
+                "type": "object",
+                "title": "Keyword",
+                "required": [
+                    "word",
+                    "language"
+                ],
+                "properties": {
+                    "word": {
+                        "type": "string",
+                        "description": "The word."
+                    },
+                    "language": {
+                        "type": "string",
+                        "description": "The word's language: `en`, `nb` or `nn`.",
+                        "enum": [
+                            "en",
+                            "nb",
+                            "nn"
+                        ]
+                    }
+                }
+            },
+            "MaskinportenSchema": {
+                "type": "object",
+                "title": "MaskinportenSchema",
+                "description": "One of Kartverket's resources of type `MaskinportenSchema` in Altinn. `title` is its name, `description` says what it gives access to, and `delegationDescription` explains the rights an organisation gets when the resource is delegated to it.",
+                "required": [
+                    "resourceId",
+                    "scopes",
+                    "title",
+                    "description",
+                    "delegationDescription",
+                    "contactPoints",
+                    "keywords",
+                    "delegable",
+                    "visible"
+                ],
+                "properties": {
+                    "resourceId": {
+                        "type": "string",
+                        "description": "The resource's id in Altinn: 4 or more of `a-z`, `0-9`, `_` and `-`. It cannot be changed."
+                    },
+                    "scopes": {
+                        "type": "array",
+                        "description": "The Maskinporten scopes the resource is for, at least one. An organisation the resource is delegated to in Altinn can get tokens with these scopes on behalf of the organisation that delegated it.",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "title": {
+                        "$ref": "#/components/schemas/MultilingualText"
+                    },
+                    "description": {
+                        "$ref": "#/components/schemas/MultilingualText"
+                    },
+                    "delegationDescription": {
+                        "$ref": "#/components/schemas/MultilingualText"
+                    },
+                    "homepage": {
+                        "type": "string",
+                        "description": "A web page about the resource, starting with `http://` or `https://`. Left out if it has none."
+                    },
+                    "contactPoints": {
+                        "type": "array",
+                        "description": "Where to get help with the resource. Can be empty.",
+                        "items": {
+                            "$ref": "#/components/schemas/ContactPoint"
+                        }
+                    },
+                    "keywords": {
+                        "type": "array",
+                        "description": "Words to find the resource by in Altinn. Can be empty.",
+                        "items": {
+                            "$ref": "#/components/schemas/Keyword"
+                        }
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "Altinn's status for the resource. Left out if it has none.\n\n- `COMPLETED`, `ACTIVE`: in use.\n- `UNDER_DEVELOPMENT`: not finished.\n- `DEPRECATED`: on its way out.\n- `WITHDRAWN`: withdrawn. It cannot be delegated any more, and Altinn does not show it.\n- `UNKNOWN`: a status this API does not know yet.",
+                        "enum": [
+                            "COMPLETED",
+                            "ACTIVE",
+                            "UNDER_DEVELOPMENT",
+                            "DEPRECATED",
+                            "WITHDRAWN",
+                            "UNKNOWN"
+                        ]
+                    },
+                    "delegable": {
+                        "type": "boolean",
+                        "description": "If `true`, organisations can delegate the resource to others in Altinn."
+                    },
+                    "visible": {
+                        "type": "boolean",
+                        "description": "If `true`, Altinn shows the resource to its users."
+                    }
+                }
+            },
+            "FieldError": {
+                "type": "object",
+                "title": "FieldError",
+                "required": [
+                    "field",
+                    "code",
+                    "message"
+                ],
+                "properties": {
+                    "field": {
+                        "type": "string",
+                        "description": "The query parameter, path parameter, header or body field."
+                    },
+                    "code": {
+                        "type": "string",
+                        "description": "- `MISSING`: the field is absent or blank.\n- `INVALID_FORMAT`: the field is there, but not valid.",
+                        "enum": [
+                            "MISSING",
+                            "INVALID_FORMAT"
+                        ]
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "What is wrong, for people to read. The wording may change."
+                    }
+                }
+            },
+            "ErrorResponse": {
+                "type": "object",
+                "title": "ErrorResponse",
+                "required": [
+                    "type",
+                    "title",
+                    "status"
+                ],
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "description": "What went wrong, as a name that does not change, so your code can rely on it.\n\n- `tag:kartverket.no,2026:validation-error` (400): one or more fields are missing or invalid. `errors` lists all of\n  them.\n- `tag:kartverket.no,2026:malformed-request` (400): the request could not be read, for example a body that is not\n  valid JSON, a field with the wrong type, or a `Content-Type` that is not `application/json`.\n- `tag:kartverket.no,2026:upstream-rejected` (400): the values passed this API's checks, but Altinn rejected them.\n- `tag:kartverket.no,2026:not-found` (404): there is nothing at this path: no endpoint, or no MaskinportenSchema\n  with this id.\n- `tag:kartverket.no,2026:method-not-allowed` (405): the endpoint at this path does not accept this HTTP method.\n- `tag:kartverket.no,2026:upstream-error` (502): this API could not get an answer from Altinn. Your request did\n  not cause it.\n- `tag:kartverket.no,2026:internal-error` (500): an unexpected error in this API.",
+                        "enum": [
+                            "tag:kartverket.no,2026:validation-error",
+                            "tag:kartverket.no,2026:malformed-request",
+                            "tag:kartverket.no,2026:upstream-rejected",
+                            "tag:kartverket.no,2026:not-found",
+                            "tag:kartverket.no,2026:method-not-allowed",
+                            "tag:kartverket.no,2026:upstream-error",
+                            "tag:kartverket.no,2026:internal-error"
+                        ]
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "A short name for the `type`, the same every time."
+                    },
+                    "status": {
+                        "type": "integer",
+                        "description": "The HTTP status code, the same as the response's."
+                    },
+                    "detail": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "What went wrong this time, for people to read. Left out when `title` says it all. The wording may change, so check `type` in your code."
+                    },
+                    "errors": {
+                        "type": "array",
+                        "description": "Only with `tag:kartverket.no,2026:validation-error`: every field that failed, so you can fix them all at once.",
+                        "items": {
+                            "$ref": "#/components/schemas/FieldError"
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
