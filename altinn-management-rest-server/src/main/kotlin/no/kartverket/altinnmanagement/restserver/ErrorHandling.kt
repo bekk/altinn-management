@@ -23,6 +23,10 @@ internal fun StatusPagesConfig.errorResponses() {
         call.application.log.error("Call to Maskinporten or Altinn failed: statusCode=${cause.statusCode}", cause)
         call.respondProblem(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed")
     }
+    exception<ExternalFilteringException> { call, cause ->
+        call.application.log.error("Call to the filtering service failed", cause)
+        call.respondProblem(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to the filtering service failed")
+    }
     exception<Throwable> { call, cause ->
         call.application.log.error("Unhandled exception", cause)
         call.respondProblem(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError)

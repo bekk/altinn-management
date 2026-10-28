@@ -32,13 +32,18 @@ fun main() {
     config.logbackConfigFile?.let { System.setProperty("logback.configurationFile", it) }
 
     embeddedServer(Netty, port = config.port) {
-        module(client = resourceRegistryClient(config), accessLog = config.accessLog)
+        module(
+            client = resourceRegistryClient(config),
+            externalFiltering = externalFiltering(config),
+            accessLog = config.accessLog,
+        )
     }.start(wait = true)
 }
 
 @OptIn(ExperimentalKtorApi::class)
 fun Application.module(
     client: ResourceRegistryClient,
+    externalFiltering: ExternalFiltering,
     accessLog: Boolean = true,
 ) {
     install(CallId) {
@@ -64,7 +69,9 @@ fun Application.module(
         get("/openapi") { call.respondText(spec, ContentType.Application.Json) }.hide()
 
         get("/api/maskinportenschemas") {
-            call.respond(client.listMaskinportenSchemas().map(MaskinportenSchema::from))
+            val certificate = clientCertificate(call.request.headers[CLIENT_CERTIFICATE_HEADER], required = externalFiltering.isOn)
+            val filter = externalFiltering.filterFor(certificate)
+            call.respond(client.listMaskinportenSchemas().allowedBy(filter).map(MaskinportenSchema::from))
         }.describe(maskinportenSchemasListOperation)
 
         get("/api/maskinportenschemas/{id}") {
