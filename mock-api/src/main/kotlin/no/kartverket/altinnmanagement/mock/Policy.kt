@@ -26,7 +26,7 @@ internal fun policyProblem(policy: ByteArray, id: String): String? {
                 val designator = match.descendants("AttributeDesignator").firstOrNull() ?: return@mapNotNull null
                 val isResource = designator.getAttribute("Category") == RESOURCE_CATEGORY &&
                     designator.getAttribute("AttributeId") == RESOURCE_ATTRIBUTE
-                match.descendants("AttributeValue").firstOrNull()?.textContent?.trim()?.takeIf { isResource }
+                match.descendants("AttributeValue").firstOrNull()?.textContent?.takeIf { isResource }
             }
         if (resources.any { it != id }) return "Policy not accepted: Contains rules for a different registry resource"
         if (id !in resources) return "Policy not accepted: Contains rule without reference to registry resource id"
@@ -50,8 +50,19 @@ private fun rules(policy: ByteArray): List<Element> {
     }
     val rules = root.children("Rule")
     if (rules.isEmpty()) throw UnreadablePolicyException("The policy has no rules")
+    for (rule in rules) {
+        if (rule.getAttribute("RuleId").isEmpty() || rule.getAttribute("Effect").isEmpty()) {
+            throw UnreadablePolicyException("A rule has no RuleId or Effect")
+        }
+        if (!isEffect(rule.getAttribute("Effect"))) throw UnreadablePolicyException("A rule's Effect is not Permit or Deny")
+    }
+    if (root.descendants("AnyOf").any { it.children("AllOf").isEmpty() }) throw UnreadablePolicyException("An AnyOf has no AllOf")
+    if (root.descendants("AllOf").any { it.children("Match").isEmpty() }) throw UnreadablePolicyException("An AllOf has no Match")
     return rules
 }
+
+// Altinn parses the effect as an enum: Permit or Deny in any case, or the enum's number
+private fun isEffect(value: String) = value.trim().let { it.equals("Permit", ignoreCase = true) || it.equals("Deny", ignoreCase = true) || it.toIntOrNull() != null }
 
 private fun Element.children(name: String) = (0 until childNodes.length).map { childNodes.item(it) }
     .filterIsInstance<Element>().filter { it.namespaceURI == XACML && it.localName == name }

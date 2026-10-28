@@ -15,23 +15,20 @@ import kotlin.test.assertEquals
 
 class PolicyTest {
 
-    private fun rule(vararg resources: String) = """
-        <xacml:Rule RuleId="rule-${resources.joinToString("-")}" Effect="Permit">
-          <xacml:Target>
-            <xacml:AnyOf>
-              <xacml:AllOf>
-                ${resources.joinToString("\n") { resource ->
-        """
-                <xacml:Match MatchId="urn:oasis:names:tc:xacml:1.0:function:string-equal">
-                  <xacml:AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">$resource</xacml:AttributeValue>
-                  <xacml:AttributeDesignator AttributeId="urn:altinn:resource" Category="urn:oasis:names:tc:xacml:3.0:attribute-category:resource" DataType="http://www.w3.org/2001/XMLSchema#string" MustBePresent="false"/>
-                </xacml:Match>"""
-    }}
-              </xacml:AllOf>
-            </xacml:AnyOf>
-          </xacml:Target>
+    private fun match(resource: String) = """
+        <xacml:Match MatchId="urn:oasis:names:tc:xacml:1.0:function:string-equal">
+          <xacml:AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">$resource</xacml:AttributeValue>
+          <xacml:AttributeDesignator AttributeId="urn:altinn:resource" Category="urn:oasis:names:tc:xacml:3.0:attribute-category:resource" DataType="http://www.w3.org/2001/XMLSchema#string" MustBePresent="false"/>
+        </xacml:Match>"""
+
+    // A rule about none of the resources has an empty target, as Altinn's parser needs a Match in every AllOf
+    private fun rule(vararg resources: String, attributes: String = "RuleId=\"rule\" Effect=\"Permit\"") = """
+        <xacml:Rule $attributes>
+          ${if (resources.isEmpty()) "<xacml:Target/>" else target(resources.joinToString("\n", transform = ::match))}
         </xacml:Rule>
     """
+
+    private fun target(allOf: String) = "<xacml:Target><xacml:AnyOf><xacml:AllOf>$allOf</xacml:AllOf></xacml:AnyOf></xacml:Target>"
 
     private fun policy(vararg rules: String) = """
         <?xml version="1.0" encoding="utf-8"?>
@@ -92,9 +89,34 @@ class PolicyTest {
     }
 
     @Test
+    fun `the resource in a rule is compared exactly, like Altinn does, so spaces around it make it another resource`() = mockApi {
+        val response = upload("nrl-reporting", policy(rule(" nrl-reporting ")))
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertEquals("\"Policy not accepted: Contains rules for a different registry resource\"", response.bodyAsText())
+    }
+
+    @Test
+    fun `an effect may have any case`() = mockApi {
+        assertEquals(HttpStatusCode.Created, upload("nrl-reporting", policy(rule("nrl-reporting", attributes = "RuleId=\"rule\" Effect=\"permit\""))).status)
+    }
+
+    @Test
     fun `a policy Altinn cannot read makes it fail`() = mockApi {
-        assertEquals(HttpStatusCode.InternalServerError, upload("nrl-reporting", "not xml").status)
-        assertEquals(HttpStatusCode.InternalServerError, upload("nrl-reporting", policy()).status, "a policy without rules")
+        val unreadable = mapOf(
+            "not XML" to "not xml",
+            "a policy without rules" to policy(),
+            "a rule without RuleId" to policy(rule("nrl-reporting", attributes = "Effect=\"Permit\"")),
+            "a rule without Effect" to policy(rule("nrl-reporting", attributes = "RuleId=\"rule\"")),
+            "an effect that is not Permit or Deny" to policy(rule("nrl-reporting", attributes = "RuleId=\"rule\" Effect=\"Allow\"")),
+            "an AllOf without a Match" to policy("<xacml:Rule RuleId=\"rule\" Effect=\"Permit\">${target("")}</xacml:Rule>"),
+            "an AnyOf without an AllOf" to policy(
+                "<xacml:Rule RuleId=\"rule\" Effect=\"Permit\"><xacml:Target><xacml:AnyOf/></xacml:Target></xacml:Rule>",
+            ),
+        )
+        for ((why, policy) in unreadable) {
+            assertEquals(HttpStatusCode.InternalServerError, upload("nrl-reporting", policy).status, why)
+        }
     }
 
     @Test
