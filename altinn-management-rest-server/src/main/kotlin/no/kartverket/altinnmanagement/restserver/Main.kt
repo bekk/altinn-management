@@ -63,6 +63,10 @@ fun Application.module(
         get("/health/live") { call.respond(HttpStatusCode.OK) }.hide()
         get("/openapi") { call.respondText(spec, ContentType.Application.Json) }.hide()
 
+        get("/api/maskinportenschemas") {
+            call.respond(client.listMaskinportenSchemas().map(MaskinportenSchema::from))
+        }.describe(maskinportenSchemasListOperation)
+
         get("/api/maskinportenschemas/{id}") {
             val id = resourceId("id", call.pathParameters["id"]!!)
             val schema = client.getMaskinportenSchema(id) ?: throw MaskinportenSchemaNotFoundException()

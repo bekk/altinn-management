@@ -13,6 +13,7 @@ import io.ktor.openapi.OpenApiDoc
 import io.ktor.openapi.OpenApiInfo
 import io.ktor.openapi.Operation
 import io.ktor.openapi.Parameters
+import io.ktor.openapi.ReferenceOr
 import io.ktor.openapi.jsonSchema
 import io.ktor.server.application.Application
 import io.ktor.server.application.plugin
@@ -67,6 +68,44 @@ private val exampleMaskinportenSchema = MaskinportenSchema(
     delegable = true,
     visible = true,
 )
+
+internal val maskinportenSchemasListOperation: Operation.Builder.() -> Unit = {
+    summary = "List Kartverket's MaskinportenSchemas"
+    description = "Gets Kartverket's resources of type `MaskinportenSchema` from Altinn."
+
+    parameters {
+        requestId()
+    }
+
+    responses {
+        HttpStatusCode.OK {
+            description = "Kartverket's MaskinportenSchemas. The list is empty if there are none."
+            headers { requestId() }
+            ContentType.Application.Json {
+                schema = JsonSchema(type = JsonType.ARRAY, items = ReferenceOr.Value(jsonSchema<MaskinportenSchema>()))
+                example("MaskinportenSchemas", listOf(exampleMaskinportenSchema))
+            }
+        }
+
+        HttpStatusCode.BadGateway {
+            description = "This API could not get an answer from Altinn. Your request did not cause it."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
+            }
+        }
+
+        HttpStatusCode.InternalServerError {
+            description = "An unexpected error in this API."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example("InternalError", ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError))
+            }
+        }
+    }
+}
 
 internal val maskinportenSchemaGetOperation: Operation.Builder.() -> Unit = {
     summary = "Get a MaskinportenSchema"
