@@ -1,6 +1,7 @@
 package no.kartverket.altinnmanagement.restserver
 
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
@@ -11,24 +12,55 @@ import kotlinx.serialization.json.Json
 import no.kartverket.altinnmanagement.client.http.HttpMethod
 import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
 import no.kartverket.altinnmanagement.client.http.OutgoingRequest
+import no.kartverket.altinnmanagement.client.http.OutgoingResponse
 import no.kartverket.altinnmanagement.client.support.resourceJson
 import no.kartverket.altinnmanagement.client.support.response
 import no.kartverket.altinnmanagement.restserver.models.ErrorResponse
+import no.kartverket.altinnmanagement.restserver.models.FieldError
 import no.kartverket.altinnmanagement.restserver.models.MaskinportenSchema
 import no.kartverket.altinnmanagement.restserver.models.ProblemType
+import no.kartverket.altinnmanagement.restserver.models.ValidationCode
 import java.io.IOException
+import java.net.URI
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ListMaskinportenSchemasTest {
 
     private val sentToAltinn = mutableListOf<OutgoingRequest>()
+    private val sentToFiltering = mutableListOf<OutgoingRequest>()
+
+    private val certificate = "Hash=abc;Subject=\"\";URI=spiffe://cluster.local/ns/matrikkel/sa/matrikkel-api"
 
     private fun altinn(status: Int = 200, body: String = "[${resourceJson()}]") = OutgoingHttpClient { request ->
         sentToAltinn += request
         response(status, "application/json; charset=utf-8", body)
     }
+
+    private fun filtering(answer: () -> OutgoingResponse) = ExternalFiltering(
+        ExternalFilteringClient(
+            URI("https://filtering.test/altinn"),
+            OutgoingHttpClient { request ->
+                sentToFiltering += request
+                answer()
+            },
+        ),
+    )
+
+    private fun filteringAllowing(scopes: String, resources: String) = filtering {
+        response(200, "application/json", """{"result":{"scopes":$scopes,"resources":$resources}}""")
+    }
+
+    private fun resource(id: String, vararg scopes: String) = """
+        {
+          "identifier": "$id",
+          "resourceType": "MaskinportenSchema",
+          "resourceReferences": [${scopes.joinToString { """{"reference":"$it","referenceType":"MaskinportenScope"}""" }}]
+        }
+    """.trimIndent()
 
     private val upstreamError = ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed")
 
@@ -73,6 +105,63 @@ class ListMaskinportenSchemasTest {
         assertEquals(HttpStatusCode.OK, response.status)
         assertEquals("[]", response.bodyAsText())
     }
+
+    @Test
+    fun `lists only the resources the calling app has access to, along with every one of their scopes`() = testServer(
+        altinn = altinn(
+            body = listOf(
+                resource("res-exact", "kartverk:dokumentbestilling"),
+                resource("res-prefix-demo", "kartverk:tilgangsstyring:demo.read", "kartverk:dokumentbestilling"),
+                resource("res-prefix-other", "kartverk:tilgangsstyring:demo.read", "kartverk:matrikkel:brukernavn"),
+                resource("kv-matrikkel-brukernavn", "kartverk:dokumentbestilling"),
+            ).joinToString(prefix = "[", postfix = "]"),
+        ),
+        filtering = filteringAllowing(
+            scopes = """{"exact":["kartverk:dokumentbestilling"],"prefix":["kartverk:tilgangsstyring:"]}""",
+            resources = """{"exact":["res-exact"],"prefix":["res-prefix-"]}""",
+        ),
+    ) {
+        val response = client.get("/api/maskinportenschemas") { header(CLIENT_CERTIFICATE_HEADER, certificate) }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(listOf("res-exact", "res-prefix-demo"), response.maskinportenSchemas().map { it.resourceId })
+        assertContains(sentToFiltering.single().body!!.decodeToString(), "matrikkel-api")
+    }
+
+    @Test
+    fun `answers an empty list when the calling app has access to nothing`() = testServer(altinn(), filtering { response(200, "application/json", "{}") }) {
+        val response = client.get("/api/maskinportenschemas") { header(CLIENT_CERTIFICATE_HEADER, certificate) }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals("[]", response.bodyAsText())
+    }
+
+    @Test
+    fun `gives 400 when filtering is on and X-Forwarded-Client-Cert is missing, without asking anyone`() =
+        testServer(altinn(), filteringAllowing(scopes = """{"exact":[],"prefix":[]}""", resources = """{"exact":[],"prefix":[]}""")) {
+            for (value in listOf(null, " ")) {
+                client.get("/api/maskinportenschemas") { value?.let { header(CLIENT_CERTIFICATE_HEADER, it) } }.assertProblem(
+                    ErrorResponse.of(
+                        ProblemType.VALIDATION_ERROR,
+                        HttpStatusCode.BadRequest,
+                        errors = listOf(FieldError(CLIENT_CERTIFICATE_HEADER, ValidationCode.MISSING, "$CLIENT_CERTIFICATE_HEADER is required")),
+                    ),
+                )
+            }
+
+            assertTrue(sentToAltinn.isEmpty(), "Altinn was called: $sentToAltinn")
+            assertTrue(sentToFiltering.isEmpty(), "The filtering service was called: $sentToFiltering")
+        }
+
+    @Test
+    fun `gives 502 when the filtering service fails, without asking Altinn`() =
+        testServer(altinn(), filtering { response(503, "text/plain", "unavailable") }) {
+            client.get("/api/maskinportenschemas") { header(CLIENT_CERTIFICATE_HEADER, certificate) }.assertProblem(
+                ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to the filtering service failed"),
+            )
+
+            assertTrue(sentToAltinn.isEmpty(), "Altinn was called: $sentToAltinn")
+        }
 
     @Test
     fun `gives 502 when Altinn answers with an error`() = testServer(altinn(status = 500, body = "boom")) {

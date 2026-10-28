@@ -9,8 +9,16 @@
         "/api/maskinportenschemas": {
             "get": {
                 "summary": "List Kartverket's MaskinportenSchemas",
-                "description": "Gets Kartverket's resources of type `MaskinportenSchema` from Altinn.",
+                "description": "Gets Kartverket's resources of type `MaskinportenSchema` from Altinn. When filtering is on, this API only returns the ones the calling app has access to: the resource, and every one of its scopes, must be in the app's `exact` list or start with one of its prefixes. This API reads which app is calling from the `X-Forwarded-Client-Cert` header, which Istio usually sets.",
                 "parameters": [
+                    {
+                        "name": "X-Forwarded-Client-Cert",
+                        "in": "header",
+                        "description": "Says which app is calling. Istio usually sets it on every call, so the app does not. This API requires it when filtering is on.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     {
                         "name": "X-Request-ID",
                         "in": "header",
@@ -23,7 +31,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Kartverket's MaskinportenSchemas. The list is empty if there are none.",
+                        "description": "Kartverket's MaskinportenSchemas, or when filtering is on, the ones the calling app has access to. The list is empty if there are none.",
                         "headers": {
                             "X-Request-ID": {
                                 "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
@@ -91,8 +99,43 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Filtering is on and the `X-Forwarded-Client-Cert` header is missing, so this API cannot tell which app is calling.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "MissingClientCertificate": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:validation-error",
+                                            "title": "Validation failed",
+                                            "status": 400,
+                                            "errors": [
+                                                {
+                                                    "field": "X-Forwarded-Client-Cert",
+                                                    "code": "MISSING",
+                                                    "message": "X-Forwarded-Client-Cert is required"
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
                     "502": {
-                        "description": "This API could not get an answer from Altinn. Your request did not cause it.",
+                        "description": "This API could not get an answer from Altinn, or from the service that says which resources and scopes the calling app has access to. Your request did not cause it.",
                         "headers": {
                             "X-Request-ID": {
                                 "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
@@ -114,6 +157,14 @@
                                             "title": "A service this API depends on failed",
                                             "status": 502,
                                             "detail": "The call to Altinn failed"
+                                        }
+                                    },
+                                    "FilteringError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:upstream-error",
+                                            "title": "A service this API depends on failed",
+                                            "status": 502,
+                                            "detail": "The call to the filtering service failed"
                                         }
                                     }
                                 }
@@ -524,7 +575,7 @@
                 "properties": {
                     "type": {
                         "type": "string",
-                        "description": "What went wrong, as a name that does not change, so your code can rely on it.\n\n- `tag:kartverket.no,2026:validation-error` (400): one or more fields are missing or invalid. `errors` lists all of\n  them.\n- `tag:kartverket.no,2026:malformed-request` (400): the request could not be read, for example a body that is not\n  valid JSON, a field with the wrong type, or a `Content-Type` that is not `application/json`.\n- `tag:kartverket.no,2026:upstream-rejected` (400): the values passed this API's checks, but Altinn rejected them.\n- `tag:kartverket.no,2026:not-found` (404): there is nothing at this path: no endpoint, or no MaskinportenSchema\n  with this id.\n- `tag:kartverket.no,2026:method-not-allowed` (405): the endpoint at this path does not accept this HTTP method.\n- `tag:kartverket.no,2026:upstream-error` (502): this API could not get an answer from Altinn. Your request did\n  not cause it.\n- `tag:kartverket.no,2026:internal-error` (500): an unexpected error in this API.",
+                        "description": "What went wrong, as a name that does not change, so your code can rely on it.\n\n- `tag:kartverket.no,2026:validation-error` (400): one or more fields are missing or invalid. `errors` lists all of\n  them.\n- `tag:kartverket.no,2026:malformed-request` (400): the request could not be read, for example a body that is not\n  valid JSON, a field with the wrong type, or a `Content-Type` that is not `application/json`.\n- `tag:kartverket.no,2026:upstream-rejected` (400): the values passed this API's checks, but Altinn rejected them.\n- `tag:kartverket.no,2026:not-found` (404): there is nothing at this path: no endpoint, or no MaskinportenSchema\n  with this id.\n- `tag:kartverket.no,2026:method-not-allowed` (405): the endpoint at this path does not accept this HTTP method.\n- `tag:kartverket.no,2026:upstream-error` (502): this API could not get a usable answer from Altinn, or from the\n  service that says which resources and scopes the calling app has access to. Your request did not cause it.\n- `tag:kartverket.no,2026:internal-error` (500): an unexpected error in this API.",
                         "enum": [
                             "tag:kartverket.no,2026:validation-error",
                             "tag:kartverket.no,2026:malformed-request",
