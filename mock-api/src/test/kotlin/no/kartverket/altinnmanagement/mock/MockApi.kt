@@ -1,7 +1,12 @@
 package no.kartverket.altinnmanagement.mock
 
+import io.ktor.client.request.forms.submitForm
+import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.HttpHeaders
+import io.ktor.http.parameters
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import kotlinx.serialization.json.Json
@@ -10,6 +15,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 import java.time.Instant
@@ -42,6 +48,18 @@ internal fun grant(
         jti?.let { put("jti", it) }
     }
     return "${base64Url(buildJsonObject { put("alg", "RS256") })}.${base64Url(claims)}.c2lnbmF0dXJl"
+}
+
+/** An Altinn token from the mock, the way the server gets one: a Maskinporten token, exchanged. */
+internal suspend fun ApplicationTestBuilder.altinnToken(scope: String = "altinn:resourceregistry/resource.write"): String {
+    val maskinporten = client.submitForm(
+        "/token",
+        parameters {
+            append("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer")
+            append("assertion", grant(scope = scope))
+        },
+    ).json().jsonObject.getValue("access_token").jsonPrimitive.content
+    return client.get("/authentication/api/v1/exchange/maskinporten") { header(HttpHeaders.Authorization, "Bearer $maskinporten") }.bodyAsText()
 }
 
 /** The claims of a JWT. */

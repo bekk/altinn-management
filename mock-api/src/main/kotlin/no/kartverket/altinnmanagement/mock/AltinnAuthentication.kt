@@ -37,7 +37,7 @@ fun Route.altinnAuthentication(tokens: Tokens, platformBaseUrl: String = "http:/
         val now = Instant.now()
         val expiresAt = now.plusSeconds(ALTINN_TOKEN_LIFETIME_SECONDS)
         val organizationNumber = claims.getValue("consumer").jsonObject.getValue("ID").jsonPrimitive.content.substringAfter(':')
-        val altinnToken = unsignedJwt(
+        val altinnToken = tokens.issueAltinn(
             buildJsonObject {
                 claims.filterKeys { it !in DROPPED_CLAIMS }.forEach { (key, value) -> put(key, value) }
                 put("urn:altinn:orgNumber", organizationNumber)
@@ -49,6 +49,7 @@ fun Route.altinnAuthentication(tokens: Tokens, platformBaseUrl: String = "http:/
                 put("nbf", now.epochSecond)
                 put("exp", expiresAt.epochSecond)
             },
+            expiresAt,
         )
         call.respondToken(altinnToken)
     }
