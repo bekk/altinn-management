@@ -16,7 +16,7 @@ class JsonFieldException(val path: String, message: String) : RuntimeException(m
 /**
  * What Altinn keeps of a resource it is sent: it reads the JSON into its ServiceResource class and writes that back. So
  * field names may have any case, unknown fields and nulls are dropped, enums become their names, and an omitted field
- * gets its default.
+ * gets its default. A value of the wrong type, or null where Altinn's class has a value type, cannot be read.
  */
 internal object ServiceResource {
     // ServiceResource's fields, in Altinn's order. versionId, createdAt and updatedAt are Altinn's to set
@@ -27,6 +27,8 @@ internal object ServiceResource {
         "resourceType", "availableForType", "authorizationReference", "consentTemplate", "consentText", "consentMetadata",
         "isOneTimeConsent",
     )
+
+    // The value types, which are also the only fields that cannot be null
     private val DEFAULTS = mapOf(
         "delegable" to JsonPrimitive(true),
         "visible" to JsonPrimitive(true),
@@ -43,6 +45,8 @@ internal object ServiceResource {
     ).mapIndexed { index, name -> name to index }
     private val REFERENCE_SOURCES = listOf("Default", "Altinn1", "Altinn2", "Altinn3", "ExternalPlatform").mapIndexed { index, name -> name to index }
     private val ACCESS_LIST_MODES = listOf("Disabled" to 0, "Enabled" to 1)
+    private val PARTY_TYPES = listOf("PrivatePerson", "LegalEntityEnterprise", "Company", "BankruptcyEstate", "SelfRegisteredUser")
+        .mapIndexed { index, name -> name to index }
 
     /** The resource as Altinn would keep it. Throws [JsonFieldException] where Altinn could not read it. */
     fun read(body: JsonObject): JsonObject {
@@ -50,43 +54,88 @@ internal object ServiceResource {
         return buildJsonObject {
             for (field in FIELDS) {
                 val value = fields[field] ?: DEFAULTS[field] ?: continue
-                val read = when (field) {
-                    "resourceType" -> enum(value, RESOURCE_TYPES, "ResourceType", "$.resourceType")
-
-                    "accessListMode" -> enum(value, ACCESS_LIST_MODES, "ResourceAccessListMode", "$.accessListMode")
-
-                    "delegable", "visible", "selfIdentifiedUserEnabled", "enterpriseUserEnabled", "isOneTimeConsent" ->
-                        boolean(value, "$.$field")
-
-                    "hasCompetentAuthority" -> (value as? JsonObject)?.canonical(listOf("organization", "orgcode", "name"))
-                        ?.let(::JsonObject) ?: throw notReadable("CompetentAuthority", "$.$field")
-
-                    "resourceReferences" -> references(value)
-
-                    else -> value
-                }
-                put(field, read)
+                if (value == JsonNull && field !in DEFAULTS) continue
+                put(field, field(field, value, "$.$field"))
             }
         }
     }
 
-    private fun references(value: JsonElement): JsonArray {
-        val references = value as? JsonArray ?: throw notReadable("List`1", "$.resourceReferences")
-        return JsonArray(
-            references.mapIndexed { index, reference ->
-                val path = "$.resourceReferences[$index]"
-                val fields = (reference as? JsonObject)?.canonical(listOf("referenceSource", "reference", "referenceType"))
-                    ?: throw notReadable("ResourceReference", path)
-                JsonObject(
-                    buildMap {
-                        fields["referenceSource"]?.let { put("referenceSource", enum(it, REFERENCE_SOURCES, "ReferenceSource", "$path.referenceSource")) }
-                        fields["reference"]?.let { put("reference", it) }
-                        fields["referenceType"]?.let { put("referenceType", enum(it, REFERENCE_TYPES, "ReferenceType", "$path.referenceType")) }
-                    },
-                )
+    private fun field(field: String, value: JsonElement, path: String): JsonElement = when (field) {
+        "resourceType" -> enum(value, RESOURCE_TYPES, "ResourceType", path)
+
+        "accessListMode" -> enum(value, ACCESS_LIST_MODES, "ResourceAccessListMode", path)
+
+        "delegable", "visible", "selfIdentifiedUserEnabled", "enterpriseUserEnabled", "isOneTimeConsent" -> boolean(value, path)
+
+        "title", "description", "rightDescription", "consentText" -> texts(value, path)
+
+        "spatial", "produces", "thematicAreas" -> list(value, path, ::string)
+
+        "contactPoints" -> list(value, path) { item, itemPath ->
+            record(item, "ContactPoint", itemPath, listOf("category", "email", "telephone", "contactPage")) { _, text, textPath -> string(text, textPath) }
+        }
+
+        "keywords" -> list(value, path) { item, itemPath ->
+            record(item, "Keyword", itemPath, listOf("word", "language")) { _, text, textPath -> string(text, textPath) }
+        }
+
+        "authorizationReference" -> list(value, path) { item, itemPath ->
+            record(item, "AuthorizationReferenceAttribute", itemPath, listOf("id", "value")) { _, text, textPath -> string(text, textPath) }
+        }
+
+        "resourceReferences" -> list(value, path) { item, itemPath ->
+            record(item, "ResourceReference", itemPath, listOf("referenceSource", "reference", "referenceType")) { name, part, partPath ->
+                when (name) {
+                    "referenceSource" -> enum(part, REFERENCE_SOURCES, "ReferenceSource", partPath)
+                    "referenceType" -> enum(part, REFERENCE_TYPES, "ReferenceType", partPath)
+                    else -> string(part, partPath)
+                }
+            }
+        }
+
+        "availableForType" -> list(value, path) { item, itemPath -> enum(item, PARTY_TYPES, "ResourcePartyType", itemPath) }
+
+        "hasCompetentAuthority" -> record(value, "CompetentAuthority", path, listOf("organization", "orgcode", "name")) { name, part, partPath ->
+            if (name == "name") texts(part, partPath) else string(part, partPath)
+        }
+
+        "consentMetadata" -> JsonObject(
+            (value as? JsonObject ?: throw notReadable("Dictionary`2", path)).mapValues { (key, metadata) ->
+                val metadataPath = "$path.$key"
+                if (metadata == JsonNull) return@mapValues metadata
+                val optional = (metadata as? JsonObject ?: throw notReadable("ConsentMetadata", metadataPath)).canonical(listOf("optional"))["optional"]
+                JsonObject(mapOf("optional" to (optional?.let { boolean(it, "$metadataPath.optional") } ?: JsonPrimitive(false))))
             },
         )
+
+        else -> string(value, path)
     }
+
+    // A class in a list, or as a field. Its properties are all nullable, so nulls are dropped like unknown names
+    private fun record(
+        value: JsonElement,
+        type: String,
+        path: String,
+        names: List<String>,
+        read: (name: String, value: JsonElement, path: String) -> JsonElement,
+    ): JsonElement {
+        if (value == JsonNull) return value
+        val fields = (value as? JsonObject ?: throw notReadable(type, path)).canonical(names)
+        return JsonObject(fields.filterValues { it != JsonNull }.mapValues { (name, part) -> read(name, part, "$path.$name") })
+    }
+
+    private fun list(value: JsonElement, path: String, item: (JsonElement, String) -> JsonElement): JsonArray {
+        val items = value as? JsonArray ?: throw notReadable("List`1", path)
+        return JsonArray(items.mapIndexed { index, element -> item(element, "$path[$index]") })
+    }
+
+    private fun texts(value: JsonElement, path: String): JsonObject {
+        val texts = value as? JsonObject ?: throw notReadable("Dictionary`2", path)
+        return JsonObject(texts.mapValues { (key, text) -> string(text, "$path.$key") })
+    }
+
+    private fun string(value: JsonElement, path: String): JsonElement =
+        if (value == JsonNull || (value is JsonPrimitive && value.isString)) value else throw notReadable("String", path)
 
     // Altinn takes an enum as its name, in any case, or as its number
     private fun enum(value: JsonElement, values: List<Pair<String, Int>>, type: String, path: String): JsonPrimitive {
@@ -107,9 +156,8 @@ internal object ServiceResource {
     private fun notReadable(type: String, path: String) =
         JsonFieldException(path, "The JSON value could not be converted to $type. Path: $path")
 
-    // Names in any case become Altinn's, and nulls and unknown names are dropped
+    // Names in any case become Altinn's, and unknown names are dropped
     private fun JsonObject.canonical(names: List<String>): Map<String, JsonElement> = entries
-        .filter { it.value != JsonNull }
         .mapNotNull { (key, value) -> names.find { it.equals(key, ignoreCase = true) }?.let { it to value } }
         .toMap()
 

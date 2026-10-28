@@ -17,6 +17,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
@@ -131,6 +132,35 @@ class ResourceWritesTest {
 
         assertEquals(HttpStatusCode.BadRequest, response.status)
         assertEquals(listOf("$.resourceType"), response.errors().keys.toList())
+    }
+
+    @Test
+    fun `a value of the wrong type cannot be read, and a refused write leaves search working`() = mockApi {
+        val cases = mapOf(
+            "$.keywords[0]" to body { put("keywords", buildJsonArray { add(42) }) },
+            "$.title.en" to body { put("title", buildJsonObject { put("en", 1); put("nb", "x"); put("nn", "x") }) },
+            "$.homepage" to body { put("homepage", JsonPrimitive(5)) },
+            "$.contactPoints[0].email" to body { put("contactPoints", buildJsonArray { add(buildJsonObject { put("email", true) }) }) },
+            "$.availableForType[0]" to body { put("availableForType", buildJsonArray { add("Spaceship") }) },
+            "$.consentMetadata.x.optional" to body { put("consentMetadata", buildJsonObject { putJsonObject("x") { put("optional", "yes") } }) },
+        )
+        for ((field, body) in cases) {
+            val response = create(body)
+
+            assertEquals(HttpStatusCode.BadRequest, response.status, field)
+            assertEquals(listOf(field), response.errors().keys.toList())
+        }
+        assertEquals(HttpStatusCode.OK, client.get("$path/search").status)
+    }
+
+    @Test
+    fun `null cannot be read into a field Altinn has as a value type`() = mockApi {
+        for (field in listOf("visible", "resourceType")) {
+            val response = create(body { put(field, JsonNull) })
+
+            assertEquals(HttpStatusCode.BadRequest, response.status, field)
+            assertEquals(listOf("$.$field"), response.errors().keys.toList())
+        }
     }
 
     @Test

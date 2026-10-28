@@ -32,8 +32,9 @@ Errors look like Altinn's: ProblemDetails sent as `application/json`, or a JSON 
 401 and a token without access gives 403, both without a body.
 
 A resource is kept the way Altinn keeps it: field names may have any case, unknown fields and nulls are dropped, and an
-omitted field gets Altinn's default, like `delegable` and `visible`, which are `true`. The mock knows the org codes of
-its seed resources' owners: `kv` for 971040238 and `slf` for 981544315.
+omitted field gets Altinn's default, like `delegable` and `visible`, which are `true`. A value of the wrong type, or
+`null` in a field Altinn cannot leave empty, like `delegable`, is 400. The mock knows the org codes of its seed resources'
+owners: `kv` for 971040238 and `slf` for 981544315.
 
 Which check of scope prefixes Altinn runs in production depends on a setting we cannot see. The mock runs Altinn's
 default: every Maskinporten scope of the resource must start with the token's `consumer_prefix`, which is `kartverk`,

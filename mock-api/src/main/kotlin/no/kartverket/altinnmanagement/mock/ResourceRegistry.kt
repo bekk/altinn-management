@@ -139,4 +139,4 @@ private fun JsonObject.string(key: String) = getValue(key).jsonPrimitive.content
 
 private fun JsonObject.stringOrNull(key: String) = (this[key] as? JsonPrimitive)?.contentOrNull
 
-private fun JsonObject.objects(key: String) = (this[key] as? JsonArray)?.map { it.jsonObject }
+private fun JsonObject.objects(key: String) = (this[key] as? JsonArray)?.filterIsInstance<JsonObject>()
