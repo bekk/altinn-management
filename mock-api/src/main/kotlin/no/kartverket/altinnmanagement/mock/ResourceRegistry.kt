@@ -25,10 +25,11 @@ private class Version(val versionId: Long, val resource: JsonObject, val created
  * Altinn returns it, with its `versionId`, `createdAt` and `updatedAt`.
  */
 class ResourceRegistry(versions: List<JsonObject>) {
-    private val versions: MutableMap<String, MutableList<Version>> = versions
+    // A write replaces a resource's list instead of changing it, so a read without the lock still sees a whole list
+    private val versions: MutableMap<String, List<Version>> = versions
         .map { Version(it.long("versionId"), it - METADATA, it.string("createdAt"), it.string("updatedAt")) }
         .groupBy { it.resource.string("identifier") }
-        .mapValuesTo(ConcurrentHashMap()) { (_, versions) -> versions.sortedBy { it.versionId }.toMutableList() }
+        .mapValuesTo(ConcurrentHashMap()) { (_, versions) -> versions.sortedBy { it.versionId } }
 
     // Like Altinn's, a version id counts up across all resources
     private val lastVersionId = AtomicLong(versions.maxOfOrNull { it.long("versionId") } ?: 0)
@@ -45,7 +46,7 @@ class ResourceRegistry(versions: List<JsonObject>) {
         val id = resource.string("identifier")
         if (id in versions) return false
         val now = now()
-        versions[id] = mutableListOf(Version(lastVersionId.incrementAndGet(), resource, now, now))
+        versions[id] = listOf(Version(lastVersionId.incrementAndGet(), resource, now, now))
         true
     }
 
@@ -53,7 +54,7 @@ class ResourceRegistry(versions: List<JsonObject>) {
     fun update(resource: JsonObject) = synchronized(this) {
         val id = resource.string("identifier")
         val now = now()
-        versions.getValue(id).add(Version(lastVersionId.incrementAndGet(), resource, now, now))
+        versions[id] = versions.getValue(id) + Version(lastVersionId.incrementAndGet(), resource, now, now)
     }
 
     /**
