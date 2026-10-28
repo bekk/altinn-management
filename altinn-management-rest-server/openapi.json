@@ -3,7 +3,417 @@
     "info": {
         "title": "Altinn Management REST API",
         "version": "v0",
-        "description": "Manages Kartverket's resources in Altinn's Resource Registry."
+        "description": "Manages Kartverket's resources in Altinn's Resource Registry.\n\nA call only reaches this API after the platform has checked that the calling app may make it. When a list\nholds resources, it only shows the ones the calling app has access to."
     },
-    "components": {}
+    "paths": {
+        "/api/maskinportenschemas": {
+            "get": {
+                "summary": "List the MaskinportenSchema resources for a scope",
+                "description": "Returns Kartverket's MaskinportenSchema resources in Altinn that point to `scope`, as Altinn has them now,\nwithdrawn ones included: check `status`, `delegable` and `visible`. A resource must point to exactly `scope`,\ncase included: `kartverk:a` does not find a resource for `kartverk:a.read`.\n\nThe list only holds the resources the calling app has access to: those in its `exact` list, and those whose id\nstarts with one of its prefixes. This API reads which app is calling from the `X-Forwarded-Client-Cert` header,\nwhich Istio usually sets.",
+                "parameters": [
+                    {
+                        "name": "scope",
+                        "in": "query",
+                        "description": "The Maskinporten scope, for example `kartverk:matrikkel:brukernavn`. It must be the only query parameter, sent once.",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-Forwarded-Client-Cert",
+                        "in": "header",
+                        "description": "Says which app is calling. Istio usually sets it on every call, so the app does not.",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-Request-ID",
+                        "in": "header",
+                        "description": "An id to find this call by in this API's logs. Up to 128 ASCII letters, digits, `-`, `_`, `.` and `:`. Without it, or with any other value, this API makes a new one. Every response has the id in its `X-Request-Id` header.",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "3f2b8c1e-7d4a-4f0e-9b6a-2c5d8e1f4a7b"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The resources. The list is empty if there are none.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/MaskinportenSchema"
+                                    }
+                                },
+                                "examples": {
+                                    "Resources": {
+                                        "value": [
+                                            {
+                                                "resourceId": "kv-matrikkel-brukernavn",
+                                                "scopes": [
+                                                    "kartverk:matrikkel:brukernavn"
+                                                ],
+                                                "title": {
+                                                    "en": "Matrikkel API",
+                                                    "nb": "Matrikkel-API",
+                                                    "nn": "Matrikkel-API"
+                                                },
+                                                "description": {
+                                                    "en": "Access to the Matrikkel API",
+                                                    "nb": "Tilgang til Matrikkel-API-et",
+                                                    "nn": "Tilgang til Matrikkel-API-et"
+                                                },
+                                                "delegationDescription": {
+                                                    "en": "May use the Matrikkel API",
+                                                    "nb": "Kan bruke Matrikkel-API-et",
+                                                    "nn": "Kan bruke Matrikkel-API-et"
+                                                },
+                                                "homepage": "https://kartverket.github.io/api-dokumentasjon/docs/matrikkelen",
+                                                "contactPoints": [
+                                                    {
+                                                        "category": "Kartverket Kundesenter",
+                                                        "email": "kundesenter@kartverket.no"
+                                                    }
+                                                ],
+                                                "keywords": [
+                                                    {
+                                                        "word": "matrikkel",
+                                                        "language": "nb"
+                                                    }
+                                                ],
+                                                "status": "Completed",
+                                                "delegable": true,
+                                                "visible": true
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "The query is not exactly one `scope`, or `scope` is blank, contains whitespace or is not URL-encoded correctly, or the `X-Forwarded-Client-Cert` header is missing.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "MissingScope": {
+                                        "value": {
+                                            "type": "about:blank",
+                                            "title": "Bad Request",
+                                            "status": 400,
+                                            "detail": "Validation failed",
+                                            "code": "VALIDATION_ERROR",
+                                            "errors": [
+                                                {
+                                                    "field": "scope",
+                                                    "code": "MISSING",
+                                                    "message": "scope is required"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "MissingClientCertificate": {
+                                        "value": {
+                                            "type": "about:blank",
+                                            "title": "Bad Request",
+                                            "status": 400,
+                                            "detail": "Validation failed",
+                                            "code": "VALIDATION_ERROR",
+                                            "errors": [
+                                                {
+                                                    "field": "X-Forwarded-Client-Cert",
+                                                    "code": "MISSING",
+                                                    "message": "X-Forwarded-Client-Cert is required"
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "This API could not get a usable answer from Altinn, or from the service that says which resources the calling app has access to. Your request did not cause it.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "UpstreamError": {
+                                        "value": {
+                                            "type": "about:blank",
+                                            "title": "Bad Gateway",
+                                            "status": 502,
+                                            "detail": "The call to Altinn failed",
+                                            "code": "UPSTREAM_ERROR"
+                                        }
+                                    },
+                                    "FilteringError": {
+                                        "value": {
+                                            "type": "about:blank",
+                                            "title": "Bad Gateway",
+                                            "status": 502,
+                                            "detail": "The call to the filtering service failed",
+                                            "code": "UPSTREAM_ERROR"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ContactPoint": {
+                "type": "object",
+                "title": "ContactPoint",
+                "properties": {
+                    "category": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "What the contact point is, for example `Kundesenter`."
+                    },
+                    "email": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "telephone": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "contactPage": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                }
+            },
+            "Keyword": {
+                "type": "object",
+                "title": "Keyword",
+                "properties": {
+                    "word": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "language": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "The keyword's language, for example `nb`."
+                    }
+                }
+            },
+            "MaskinportenSchema": {
+                "type": "object",
+                "title": "MaskinportenSchema",
+                "required": [
+                    "resourceId",
+                    "scopes",
+                    "title",
+                    "description",
+                    "delegationDescription",
+                    "contactPoints",
+                    "keywords",
+                    "delegable",
+                    "visible"
+                ],
+                "properties": {
+                    "resourceId": {
+                        "type": "string",
+                        "description": "The resource's id in Altinn, for example `kv-matrikkel-brukernavn`."
+                    },
+                    "scopes": {
+                        "type": "array",
+                        "description": "The Maskinporten scopes the resource gives access to.",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "title": {
+                        "type": "object",
+                        "description": "The name, by language: `en`, `nb` and `nn`.",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    },
+                    "description": {
+                        "type": "object",
+                        "description": "What the resource is, by language: `en`, `nb` and `nn`.",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    },
+                    "delegationDescription": {
+                        "type": "object",
+                        "description": "What a recipient may do when the resource is delegated to them, by language: `en`, `nb` and `nn`. Altinn calls it `rightDescription`.",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    },
+                    "homepage": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "A page about the resource, when it has one."
+                    },
+                    "contactPoints": {
+                        "type": "array",
+                        "description": "Who to contact about the resource.",
+                        "items": {
+                            "$ref": "#/components/schemas/ContactPoint"
+                        }
+                    },
+                    "keywords": {
+                        "type": "array",
+                        "description": "Words to find the resource by in Altinn.",
+                        "items": {
+                            "$ref": "#/components/schemas/Keyword"
+                        }
+                    },
+                    "status": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "The resource's status in Altinn, for example `Completed`, `Active` or `Withdrawn`, when it has one."
+                    },
+                    "delegable": {
+                        "type": "boolean",
+                        "description": "Whether organisations can delegate access to the resource. A withdrawn resource cannot."
+                    },
+                    "visible": {
+                        "type": "boolean",
+                        "description": "Whether Altinn shows the resource. A withdrawn resource is hidden."
+                    }
+                }
+            },
+            "FieldError": {
+                "type": "object",
+                "title": "FieldError",
+                "required": [
+                    "field",
+                    "code",
+                    "message"
+                ],
+                "properties": {
+                    "field": {
+                        "type": "string",
+                        "description": "The query parameter, path parameter, header or body field, for example `scope`."
+                    },
+                    "code": {
+                        "type": "string",
+                        "description": "- `MISSING`: the field is absent or blank.\n- `INVALID_FORMAT`: the field is there, but not valid.\n- `NOT_ALLOWED`: the field is not accepted here, or was sent more than once.",
+                        "enum": [
+                            "MISSING",
+                            "INVALID_FORMAT",
+                            "NOT_ALLOWED"
+                        ]
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "What is wrong, for people to read. The wording may change."
+                    }
+                }
+            },
+            "ErrorResponse": {
+                "type": "object",
+                "title": "ErrorResponse",
+                "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "code"
+                ],
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "description": "Always `about:blank`. `code` says what went wrong."
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "The HTTP status text, for example `Bad Request`."
+                    },
+                    "status": {
+                        "type": "integer",
+                        "description": "The HTTP status code, the same as the response's."
+                    },
+                    "detail": {
+                        "type": "string",
+                        "description": "What went wrong, for people to read. The wording may change, so check `code` in your code."
+                    },
+                    "code": {
+                        "type": "string",
+                        "description": "What went wrong. These values do not change, so your code can rely on them.\n\n- `VALIDATION_ERROR` (400): one or more query parameters or headers are missing, invalid or not allowed. `errors`\n  lists all of them.\n- `MALFORMED_REQUEST` (400): the request could not be read, for example a query that is not a list of names and\n  values.\n- `NOT_FOUND` (404): there is no endpoint at this path.\n- `METHOD_NOT_ALLOWED` (405): the endpoint at this path does not accept this HTTP method.\n- `UPSTREAM_ERROR` (502): this API could not get a usable answer from Altinn, or from the service that says which\n  resources the calling app has access to. Your request did not cause it.\n- `INTERNAL_ERROR` (500): an unexpected error in this API.",
+                        "enum": [
+                            "VALIDATION_ERROR",
+                            "MALFORMED_REQUEST",
+                            "NOT_FOUND",
+                            "METHOD_NOT_ALLOWED",
+                            "UPSTREAM_ERROR",
+                            "INTERNAL_ERROR"
+                        ]
+                    },
+                    "errors": {
+                        "type": "array",
+                        "description": "Only with `VALIDATION_ERROR`: every field that failed, so you can fix them all at once.",
+                        "items": {
+                            "$ref": "#/components/schemas/FieldError"
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

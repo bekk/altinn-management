@@ -4,6 +4,10 @@ server:
 altinn:
   environment: "$?ALTINN_ENVIRONMENT"
 
+externalFiltering:
+  enabled: "$?EXTERNAL_FILTERING_ENABLED"
+  url: "$?EXTERNAL_FILTERING_URL"
+
 accessLog:
   enabled: "$?ACCESS_LOG_ENABLED"
 

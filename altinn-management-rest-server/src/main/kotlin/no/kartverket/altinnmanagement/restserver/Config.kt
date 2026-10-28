@@ -3,12 +3,14 @@ package no.kartverket.altinnmanagement.restserver
 import io.ktor.server.config.ApplicationConfig
 import io.ktor.server.config.yaml.YamlConfig
 import java.io.File
+import java.net.URI
 
 internal class AppConfig(
     val port: Int,
     val accessLog: Boolean,
     val logbackConfigFile: String?,
     val altinnEnvironment: AltinnEnvironmentSetting,
+    val externalFilteringUrl: URI?,
 ) {
     companion object {
         fun load(config: ApplicationConfig = loadApplicationConfig()): AppConfig = AppConfig(
@@ -16,6 +18,11 @@ internal class AppConfig(
             accessLog = config.boolean("accessLog.enabled", default = true),
             logbackConfigFile = config.file("logback.configFile"),
             altinnEnvironment = config.enum("altinn.environment"),
+            externalFilteringUrl = if (config.boolean("externalFiltering.enabled", default = false)) {
+                config.url("externalFiltering.url")
+            } else {
+                null
+            },
         )
     }
 }
@@ -45,6 +52,18 @@ internal fun ApplicationConfig.port(path: String): Int {
     val raw = required(path)
     return raw.toIntOrNull()?.takeIf { it in 1..65535 }
         ?: error("$path must be a port number, but was \"$raw\" (see .env.example)")
+}
+
+internal fun ApplicationConfig.url(path: String): URI {
+    val raw = required(path)
+    val uri = runCatching { URI(raw) }.getOrNull()
+    check(uri != null && uri.scheme?.lowercase() in setOf("http", "https") && !uri.host.isNullOrEmpty()) {
+        "$path must be an http or https URL, but was \"$raw\" (see .env.example)"
+    }
+    check(uri.rawQuery == null && uri.rawFragment == null) {
+        "$path must not have a query or fragment, but was \"$raw\" (see .env.example)"
+    }
+    return uri
 }
 
 internal fun ApplicationConfig.file(path: String): String? {

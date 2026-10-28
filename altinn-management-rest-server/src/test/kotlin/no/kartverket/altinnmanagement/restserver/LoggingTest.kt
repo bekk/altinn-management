@@ -46,7 +46,7 @@ class LoggingTest {
     private fun linesFor(accessLog: Boolean?) = run {
         testApplication {
             application {
-                if (accessLog == null) module() else module(accessLog)
+                if (accessLog == null) module(testRegistry(), testFiltering()) else module(testRegistry(), testFiltering(), accessLog)
             }
             client.get("/health/live")
         }
@@ -61,7 +61,7 @@ class LoggingTest {
         }
         testApplication {
             application {
-                module(accessLog)
+                module(testRegistry(), testFiltering(), accessLog)
                 routing {
                     get("/logs") {
                         call.application.log.info("before")
@@ -203,7 +203,7 @@ class LoggingTest {
     fun `the response has the request id, so the caller can find the call in our logs`() {
         val replied = mutableListOf<String?>()
         testApplication {
-            application { module() }
+            application { module(testRegistry(), testFiltering()) }
             replied += client.get("/health/live") { header(HttpHeaders.XRequestId, "abc-123") }.headers[HttpHeaders.XRequestId]
             replied += client.get("/health/live").headers[HttpHeaders.XRequestId]
         }

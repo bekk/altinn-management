@@ -44,6 +44,25 @@ class ConfigTest {
     }
 
     @Test
+    fun `external filtering is off unless switched on, and then needs an http or https URL`() {
+        val required = arrayOf("server.port" to "8080", "altinn.environment" to "LOCAL")
+        fun load(vararg settings: Pair<String, String>) = AppConfig.load(MapApplicationConfig(*required, *settings))
+
+        assertEquals(null, load("externalFiltering.url" to "http://localhost:8090/filtering").externalFilteringUrl)
+        assertEquals(
+            URI("http://localhost:8090/filtering"),
+            load("externalFiltering.enabled" to "true", "externalFiltering.url" to "http://localhost:8090/filtering").externalFilteringUrl,
+        )
+        for (url in listOf(null, "localhost:8090/filtering", "ftp://opa/filtering", "http://opa/filtering?x=1")) {
+            val settings = listOfNotNull("externalFiltering.enabled" to "true", url?.let { "externalFiltering.url" to it })
+            val e = assertFailsWith<IllegalStateException>("$url") { load(*settings.toTypedArray()) }
+
+            assertContains(e.message!!, "externalFiltering.url")
+            assertContains(e.message!!, "(see .env.example)")
+        }
+    }
+
+    @Test
     fun `a flag must be true or false`() {
         val e = assertFailsWith<IllegalStateException> { MapApplicationConfig("flag" to "yes").boolean("flag", default = true) }
 
