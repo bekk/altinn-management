@@ -82,7 +82,7 @@ class ServerTest {
     @Test
     fun `an unexpected exception gives 500, of type internal-error, without its message`() = testApplication {
         application {
-            module(testResourceRegistryClient(), accessLog = false)
+            module(testResourceRegistryClient(), noFiltering, accessLog = false)
             routing { get("/fails") { error("internal detail") } }
         }
 

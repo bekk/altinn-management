@@ -11,7 +11,7 @@ internal class MaskinportenSchemaNotFoundException : RuntimeException("There is 
 internal fun resourceRegistryClient(config: AppConfig): ResourceRegistryClient =
     ResourceRegistryClient(config.altinnEnvironment.platformBaseUrl, httpClient())
 
-private fun httpClient(): OutgoingHttpClient = LoggingOutgoingHttpClient(
+internal fun httpClient(): OutgoingHttpClient = LoggingOutgoingHttpClient(
     JavaOutgoingHttpClient(
         HttpClient.newBuilder()
             .connectTimeout(CONNECT_TIMEOUT)

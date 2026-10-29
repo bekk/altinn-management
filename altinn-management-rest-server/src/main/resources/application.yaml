@@ -13,3 +13,8 @@ logback:
 maskinporten:
   clientId: "$?MASKINPORTEN_CLIENT_ID"
   clientJwk: "$?MASKINPORTEN_CLIENT_JWK"
+
+externalFiltering:
+  enabled: "$?EXTERNAL_FILTERING_ENABLED"
+  url: "$?EXTERNAL_FILTERING_URL"
+  cacheSeconds: "$?EXTERNAL_FILTERING_CACHE_SECONDS"
