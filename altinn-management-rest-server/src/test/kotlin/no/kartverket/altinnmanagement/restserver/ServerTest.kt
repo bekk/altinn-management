@@ -6,6 +6,7 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
+import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.testApplication
@@ -62,6 +63,20 @@ class ServerTest {
             ),
             response.errorResponse(),
         )
+    }
+
+    @Test
+    fun `a request Ktor cannot read gives 400, of type malformed-request`() = testApplication {
+        application {
+            module(accessLog = false)
+            routing { get("/unreadable") { throw BadRequestException("Can't transform call to resource") } }
+        }
+
+        val response = client.get("/unreadable")
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertEquals(ContentType.Application.ProblemJson, response.contentType()?.withoutParameters())
+        assertEquals(ErrorResponse.of(ProblemType.MALFORMED_REQUEST, HttpStatusCode.BadRequest), response.errorResponse())
     }
 
     @Test
