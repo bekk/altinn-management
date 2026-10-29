@@ -6,6 +6,151 @@
         "description": "Manages Kartverket's resources in Altinn's Resource Registry."
     },
     "paths": {
+        "/api/maskinportenschemas": {
+            "get": {
+                "summary": "List Kartverket's MaskinportenSchemas",
+                "description": "Gets Kartverket's resources of type `MaskinportenSchema` from Altinn.",
+                "parameters": [
+                    {
+                        "name": "X-Request-ID",
+                        "in": "header",
+                        "description": "An id to find this call by in this API's logs. Up to 128 ASCII letters, digits, `-`, `_`, `.` and `:`. Without it, or with any other value, this API makes a new one. Every response has the id in its `X-Request-Id` header.",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "3f2b8c1e-7d4a-4f0e-9b6a-2c5d8e1f4a7b"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Kartverket's MaskinportenSchemas. The list is empty if there are none.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/MaskinportenSchema"
+                                    }
+                                },
+                                "examples": {
+                                    "MaskinportenSchemas": {
+                                        "value": [
+                                            {
+                                                "resourceId": "kv-matrikkel-brukernavn",
+                                                "scopes": [
+                                                    "kartverk:matrikkel:brukernavn"
+                                                ],
+                                                "title": {
+                                                    "en": "Cadastre API",
+                                                    "nb": "Matrikkel API",
+                                                    "nn": "Matrikkel API"
+                                                },
+                                                "description": {
+                                                    "en": "Machine-to-machine access to the Cadastre.",
+                                                    "nb": "Maskinell tilgang til Matrikkelen.",
+                                                    "nn": "Maskinell tilgang til Matrikkelen."
+                                                },
+                                                "delegationDescription": {
+                                                    "en": "Allows a system provider to use the Matrikkel API on behalf of your organisation.",
+                                                    "nb": "Gir en systemleverandør rett til å bruke Matrikkel API på vegne av virksomheten din.",
+                                                    "nn": "Gir ein systemleverandør rett til å bruke Matrikkel API på vegner av verksemda di."
+                                                },
+                                                "homepage": "https://kartverket.github.io/api-dokumentasjon/docs/matrikkelen",
+                                                "contactPoints": [
+                                                    {
+                                                        "category": "Kartverket Kundesenter",
+                                                        "email": "kundesenter@kartverket.no"
+                                                    }
+                                                ],
+                                                "keywords": [
+                                                    {
+                                                        "word": "matrikkel",
+                                                        "language": "nb"
+                                                    },
+                                                    {
+                                                        "word": "cadastre",
+                                                        "language": "en"
+                                                    }
+                                                ],
+                                                "status": "Completed",
+                                                "delegable": true,
+                                                "visible": true
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "This API could not get an answer from Altinn. Your request did not cause it.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "UpstreamError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:upstream-error",
+                                            "title": "A service this API depends on failed",
+                                            "status": 502,
+                                            "detail": "The call to Altinn failed"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "An unexpected error in this API.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "InternalError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:internal-error",
+                                            "title": "Internal error",
+                                            "status": 500
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/maskinportenschemas/{id}": {
             "get": {
                 "summary": "Get a MaskinportenSchema",

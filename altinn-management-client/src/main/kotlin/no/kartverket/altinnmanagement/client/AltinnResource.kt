@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 internal data class AltinnResource(
+    val identifier: String? = null,
     val title: Map<String, String?>? = null,
     val description: Map<String, String?>? = null,
     val rightDescription: Map<String, String?>? = null,
@@ -55,7 +56,7 @@ internal data class AltinnResourceReference(
     val referenceType: String? = null,
 )
 
-private const val MASKINPORTEN_SCHEMA = "MaskinportenSchema"
+internal const val MASKINPORTEN_SCHEMA = "MaskinportenSchema"
 
 private const val MASKINPORTEN_SCOPE = "MaskinportenScope"
 
