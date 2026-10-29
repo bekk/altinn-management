@@ -111,4 +111,30 @@ class JavaOutgoingHttpClientTest {
             }
         }
     }
+
+    @Test
+    fun `gives up when the server stalls in the middle of the body`() {
+        val finish = CountDownLatch(1)
+        serving(
+            { exchange ->
+                exchange.sendResponseHeaders(200, 100)
+                exchange.responseBody.write("""{"access_token":""".toByteArray())
+                exchange.responseBody.flush()
+                finish.await()
+                exchange.close()
+            },
+        ) { url ->
+            try {
+                assertFailsWith<HttpTimeoutException> {
+                    runBlocking {
+                        withTimeout(5_000) {
+                            JavaOutgoingHttpClient(noRedirects, Duration.ofMillis(100)).send(OutgoingRequest(HttpMethod.GET, url, emptyMap()))
+                        }
+                    }
+                }
+            } finally {
+                finish.countDown()
+            }
+        }
+    }
 }
