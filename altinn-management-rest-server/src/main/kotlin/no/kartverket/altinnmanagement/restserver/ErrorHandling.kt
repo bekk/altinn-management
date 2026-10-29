@@ -4,6 +4,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.log
+import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.plugins.statuspages.StatusPagesConfig
 import io.ktor.server.response.respondText
 import kotlinx.serialization.json.Json
@@ -13,6 +14,11 @@ import no.kartverket.altinnmanagement.restserver.models.FieldError
 import no.kartverket.altinnmanagement.restserver.models.ProblemType
 
 internal fun StatusPagesConfig.errorResponses() {
+    exception<BadRequestException> { call, cause ->
+        val causes = generateSequence<Throwable>(cause) { it.cause }.joinToString(" caused by ") { it.javaClass.name }
+        call.application.log.warn("Malformed request: $causes")
+        call.respondProblem(ProblemType.MALFORMED_REQUEST, HttpStatusCode.BadRequest)
+    }
     exception<InvalidRequestException> { call, cause ->
         call.respondProblem(ProblemType.VALIDATION_ERROR, HttpStatusCode.BadRequest, errors = cause.errors)
     }
