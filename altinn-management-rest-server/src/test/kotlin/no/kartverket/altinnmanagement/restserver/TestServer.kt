@@ -19,7 +19,7 @@ internal fun testServer(
 }
 
 internal fun testResourceRegistryClient(httpClient: OutgoingHttpClient = unexpectedCall) =
-    ResourceRegistryClient(AltinnEnvironment.TT02, httpClient)
+    ResourceRegistryClient(AltinnEnvironment.TT02.platformBaseUrl, httpClient)
 
 private val unexpectedCall = OutgoingHttpClient { error("unexpected call to ${it.url}") }
 

@@ -11,9 +11,6 @@ public class ResourceRegistryClient(
     platformBaseUrl: URI,
     private val httpClient: OutgoingHttpClient,
 ) {
-    public constructor(environment: AltinnEnvironment, httpClient: OutgoingHttpClient) :
-        this(environment.platformBaseUrl, httpClient)
-
     private val platformBaseUrl = platformBaseUrl.toString()
 
     public suspend fun getMaskinportenSchema(id: ResourceId): MaskinportenSchema? {
