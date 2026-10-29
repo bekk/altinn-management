@@ -19,6 +19,7 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.time.Clock
 import java.time.Duration
+import java.time.Instant
 import java.util.Date
 import java.util.UUID
 
@@ -66,11 +67,13 @@ internal class MaskinportenClient(
             body = body.encodeToByteArray(),
         )
 
+        // Maskinporten may issue the token any time after the request, so its lifetime counts from before it
+        val requestedAt = clock.instant()
         val response = Http.sendExpectingOk(httpClient, request, "Maskinporten", ::MaskinportenException)
-        return parseTokenResponse(response.body.decodeToString())
+        return parseTokenResponse(response.body.decodeToString(), requestedAt)
     }
 
-    private fun parseTokenResponse(body: String): MaskinportenToken {
+    private fun parseTokenResponse(body: String, requestedAt: Instant): MaskinportenToken {
         val parsed = try {
             Http.json.decodeFromString(MaskinportenTokenResponse.serializer(), body)
         } catch (_: SerializationException) {
@@ -81,7 +84,7 @@ internal class MaskinportenClient(
         }
         val lifetimeSeconds = parsed.expiresIn
             ?: throw MaskinportenException("The response from Maskinporten had no expires_in")
-        return MaskinportenToken(parsed.accessToken, clock.instant().plusSeconds(lifetimeSeconds))
+        return MaskinportenToken(parsed.accessToken, requestedAt.plusSeconds(lifetimeSeconds))
     }
 
     companion object {

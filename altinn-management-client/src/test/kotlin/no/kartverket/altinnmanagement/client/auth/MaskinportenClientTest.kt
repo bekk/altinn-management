@@ -4,6 +4,7 @@ import com.nimbusds.jose.crypto.RSASSAVerifier
 import com.nimbusds.jwt.SignedJWT
 import kotlinx.coroutines.runBlocking
 import no.kartverket.altinnmanagement.client.exception.MaskinportenException
+import no.kartverket.altinnmanagement.client.support.MutableClock
 import no.kartverket.altinnmanagement.client.support.NOW
 import no.kartverket.altinnmanagement.client.support.TOKEN_PATH
 import no.kartverket.altinnmanagement.client.support.TestHttpServer
@@ -16,6 +17,7 @@ import no.kartverket.altinnmanagement.client.support.maskinportenTokenResponse
 import no.kartverket.altinnmanagement.client.support.testHttpClient
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets.UTF_8
+import java.time.Duration
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -96,6 +98,19 @@ class MaskinportenClientTest {
         val token = client().getToken()
 
         assertEquals("maskinporten-token", token.value)
+        assertEquals(NOW.plusSeconds(120), token.expiresAt)
+    }
+
+    @Test
+    fun `the token's lifetime counts from when it was requested, not from when Maskinporten answered`() = runBlocking {
+        val clock = MutableClock()
+        server.on(TOKEN_PATH) {
+            clock.advance(Duration.ofSeconds(5))
+            TestResponse(body = maskinportenTokenResponse("maskinporten-token", expiresIn = 120))
+        }
+
+        val token = MaskinportenClient(maskinportenConfig(tokenUrl = server.baseUrl + TOKEN_PATH), testHttpClient, clock = clock).getToken()
+
         assertEquals(NOW.plusSeconds(120), token.expiresAt)
     }
 
