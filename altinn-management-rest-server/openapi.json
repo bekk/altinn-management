@@ -9,8 +9,16 @@
         "/api/maskinportenschemas": {
             "get": {
                 "summary": "List Kartverket's MaskinportenSchemas",
-                "description": "Gets Kartverket's resources of type `MaskinportenSchema` from Altinn. When filtering is on, this API only returns the ones the calling app has access to: the resource, and every one of its scopes, must be in the app's `exact` list or start with one of its prefixes. This API reads which app is calling from the `X-Forwarded-Client-Cert` header, which Istio usually sets. Altinn's search returns the newest version of each resource that matches, so if a resource's type or owner has changed, the list can hold an older version of it. Get a resource by its id to be sure you have its current version.",
+                "description": "Gets Kartverket's resources of type `MaskinportenSchema` from Altinn, or with `scope`, only the ones that give that Maskinporten scope. When filtering is on, this API only returns the ones the calling app has access to: the resource, and every one of its scopes, must be in the app's `exact` list or start with one of its prefixes. With `scope`, only the resource is checked, since OPA has already checked that the app may use that scope. This API reads which app is calling from the `X-Forwarded-Client-Cert` header, which Istio usually sets. Altinn's search returns the newest version of each resource that matches, so if a resource's type or owner has changed, the list can hold an older version of it. Get a resource by its id to be sure you have its current version.",
                 "parameters": [
+                    {
+                        "name": "scope",
+                        "in": "query",
+                        "description": "Only the resources that give this Maskinporten scope, for example `kartverk:matrikkel:brukernavn`. It must match exactly, case included. Send it at most once.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     {
                         "name": "X-Forwarded-Client-Cert",
                         "in": "header",
@@ -31,7 +39,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Kartverket's MaskinportenSchemas, or when filtering is on, the ones the calling app has access to. The list is empty if there are none.",
+                        "description": "Kartverket's MaskinportenSchemas, only those that give `scope` when it is sent, and when filtering is on, only those the calling app has access to. The list is empty if there are none.",
                         "headers": {
                             "X-Request-ID": {
                                 "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
@@ -100,7 +108,7 @@
                         }
                     },
                     "400": {
-                        "description": "Filtering is on and the `X-Forwarded-Client-Cert` header is missing, so this API cannot tell which app is calling.",
+                        "description": "`scope` is blank or is sent more than once, or filtering is on and the `X-Forwarded-Client-Cert` header is missing, so this API cannot tell which app is calling.",
                         "headers": {
                             "X-Request-ID": {
                                 "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
@@ -116,6 +124,20 @@
                                     "$ref": "#/components/schemas/ErrorResponse"
                                 },
                                 "examples": {
+                                    "InvalidScope": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:validation-error",
+                                            "title": "Validation failed",
+                                            "status": 400,
+                                            "errors": [
+                                                {
+                                                    "field": "scope",
+                                                    "code": "INVALID_FORMAT",
+                                                    "message": "scope must not be blank"
+                                                }
+                                            ]
+                                        }
+                                    },
                                     "MissingClientCertificate": {
                                         "value": {
                                             "type": "tag:kartverket.no,2026:validation-error",
