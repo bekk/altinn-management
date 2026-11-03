@@ -58,6 +58,7 @@ dependencies {
     implementation(libs.logstash.logback.encoder)
     // logstash-logback-encoder pulls in an older Jackson 3 with known vulnerabilities.
     implementation(platform(libs.jackson.bom))
+    implementation(libs.jackson.databind)
 
     testImplementation(ktorLibs.server.testHost)
     testImplementation(testFixtures(project(":altinn-management-client")))

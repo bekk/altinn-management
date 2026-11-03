@@ -1,10 +1,11 @@
 package no.kartverket.altinnmanagement.client.auth
 
 @JvmInline
-internal value class AccessToken private constructor(val value: String) {
+public value class AccessToken private constructor(public val value: String) {
+    // Hides the token, so a log line or exception message that includes it does not leak it
     override fun toString(): String = "AccessToken(***)"
 
-    companion object {
-        fun of(value: String): AccessToken = AccessToken(value)
+    public companion object {
+        public fun of(value: String): AccessToken = AccessToken(value)
     }
 }

@@ -1,32 +1,41 @@
 package no.kartverket.altinnmanagement.client.auth
 
+import no.kartverket.altinnmanagement.client.AltinnEnvironment
 import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
+import java.net.URI
 import java.time.Clock
 import java.time.Duration
 
-internal class MaskinportenAltinnTokenProvider(
+/**
+ * Gets a token from Maskinporten with a JWT grant that [MaskinportenKey] signs, exchanges it for an Altinn token, and
+ * reuses both until shortly before they expire.
+ */
+public class MaskinportenAltinnTokenProvider internal constructor(
     private val maskinportenClient: MaskinportenClient,
     private val exchanger: AltinnTokenExchanger,
     clock: Clock = Clock.systemUTC(),
     refreshLeeway: Duration = TokenCache.DEFAULT_REFRESH_LEEWAY,
 ) : AccessTokenProvider {
 
-    constructor(
-        maskinportenConfig: MaskinportenConfig,
-        platformBaseUrl: String,
+    public constructor(
+        maskinportenTokenUrl: URI,
+        clientId: String,
+        key: MaskinportenKey,
+        platformBaseUrl: URI,
         httpClient: OutgoingHttpClient,
-        clock: Clock = Clock.systemUTC(),
-        refreshLeeway: Duration = TokenCache.DEFAULT_REFRESH_LEEWAY,
     ) : this(
-        MaskinportenClient(maskinportenConfig, httpClient, clock, refreshLeeway),
-        AltinnTokenExchanger(platformBaseUrl, httpClient),
-        clock,
-        refreshLeeway,
+        MaskinportenClient(MaskinportenConfig(maskinportenTokenUrl.toString(), clientId, key), httpClient),
+        AltinnTokenExchanger(platformBaseUrl.toString(), httpClient),
     )
+
+    public constructor(environment: AltinnEnvironment, clientId: String, key: MaskinportenKey, httpClient: OutgoingHttpClient) :
+        this(environment.maskinportenTokenUrl, clientId, key, environment.platformBaseUrl, httpClient)
 
     private val cache = TokenCache<AltinnToken>(clock, refreshLeeway)
 
     override suspend fun accessToken(): AccessToken = AccessToken.of(
         cache.get { exchanger.exchange(maskinportenClient.getToken()) }.value,
     )
+
+    override suspend fun refused(token: AccessToken): Unit = cache.clear(token.value)
 }
