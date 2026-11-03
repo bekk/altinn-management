@@ -2,20 +2,50 @@ package no.kartverket.altinnmanagement.restserver
 
 import io.ktor.server.config.MapApplicationConfig
 import no.kartverket.altinnmanagement.client.AltinnEnvironment
+import no.kartverket.altinnmanagement.client.support.testJwk
 import java.net.URI
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 
 class ConfigTest {
 
+    private val required = arrayOf(
+        "server.port" to "9090",
+        "altinn.environment" to "TT02",
+        "maskinporten.clientId" to "my-client",
+        "maskinporten.clientJwk" to testJwk,
+    )
+
     @Test
-    fun `the port and the Altinn environment are read from their keys`() {
-        val config = AppConfig.load(MapApplicationConfig("server.port" to "9090", "altinn.environment" to "TT02"))
+    fun `the port, the Altinn environment and the Maskinporten client are read from their keys`() {
+        val config = AppConfig.load(MapApplicationConfig(*required))
 
         assertEquals(9090, config.port)
         assertEquals(AltinnEnvironmentSetting.TT02, config.altinnEnvironment)
+        assertEquals("my-client", config.maskinportenClientId)
+    }
+
+    @Test
+    fun `a key that is not an RSA private key names the setting, but not the key`() {
+        val secret = """{"kty":"oct","k":"c2VjcmV0LXZhbHVl"}"""
+        val e = assertFailsWith<IllegalStateException> {
+            MapApplicationConfig("maskinporten.clientJwk" to secret).maskinportenKey("maskinporten.clientJwk")
+        }
+
+        assertContains(e.message!!, "maskinporten.clientJwk")
+        assertFalse("c2VjcmV0LXZhbHVl" in e.message!!)
+    }
+
+    @Test
+    fun `the Maskinporten client id is required`() {
+        val e = assertFailsWith<IllegalStateException> {
+            AppConfig.load(MapApplicationConfig(*required.filterNot { it.first == "maskinporten.clientId" }.toTypedArray()))
+        }
+
+        assertContains(e.message!!, "maskinporten.clientId")
     }
 
     @Test
@@ -37,8 +67,6 @@ class ConfigTest {
 
     @Test
     fun `the access log is on unless switched off`() {
-        val required = arrayOf("server.port" to "8080", "altinn.environment" to "TT02")
-
         assertEquals(true, AppConfig.load(MapApplicationConfig(*required)).accessLog)
         assertEquals(false, AppConfig.load(MapApplicationConfig(*required, "accessLog.enabled" to "false")).accessLog)
     }
