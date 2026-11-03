@@ -3,6 +3,11 @@ package no.kartverket.altinnmanagement.client.auth
 import java.time.Duration
 import java.time.Instant
 
+// RFC 6750's b64token: anything else could break the Authorization header or make the JDK reject it
+private val BEARER_TOKEN = Regex("[A-Za-z0-9._~+/-]+=*")
+
+internal fun isValidBearerToken(value: String): Boolean = BEARER_TOKEN.matches(value)
+
 internal sealed interface ExpiringToken {
     val value: String
     val expiresAt: Instant

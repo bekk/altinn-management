@@ -25,7 +25,13 @@ public class JavaOutgoingHttpClient(
     override suspend fun send(request: OutgoingRequest): OutgoingResponse {
         val body = request.body?.let(HttpRequest.BodyPublishers::ofByteArray) ?: HttpRequest.BodyPublishers.noBody()
         val builder = HttpRequest.newBuilder(request.url).method(request.method.name, body)
-        request.headers.forEach { (name, value) -> builder.header(name, value) }
+        request.headers.forEach { (name, value) ->
+            try {
+                builder.header(name, value)
+            } catch (_: IllegalArgumentException) {
+                throw IllegalArgumentException("Invalid HTTP request header $name")
+            }
+        }
 
         // HttpRequest.timeout stops counting once the headers have arrived, so a server that stalls in the
         // body would leave the call hanging. This timeout covers the whole exchange.
