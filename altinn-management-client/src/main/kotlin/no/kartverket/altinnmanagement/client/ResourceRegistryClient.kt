@@ -14,6 +14,7 @@ public class ResourceRegistryClient(
     private val platformBaseUrl = platformBaseUrl.toString()
 
     public suspend fun getMaskinportenSchema(id: ResourceId): MaskinportenSchema? {
+        if (id.value in FIXED_ROUTES) return null
         val request = OutgoingRequest(
             method = HttpMethod.GET,
             url = Http.url(platformBaseUrl, "$RESOURCE_PATH/${id.value}"),
@@ -36,6 +37,8 @@ public class ResourceRegistryClient(
 
     internal companion object {
         const val RESOURCE_PATH = "/resourceregistry/api/v1/resource"
+
+        private val FIXED_ROUTES = setOf("resourcelist", "export", "search", "updated", "changes", "orgs")
 
         private const val TARGET = "Altinn Resource Registry"
     }

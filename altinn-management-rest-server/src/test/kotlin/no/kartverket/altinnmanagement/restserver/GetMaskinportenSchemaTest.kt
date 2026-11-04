@@ -127,6 +127,15 @@ class GetMaskinportenSchemaTest {
     }
 
     @Test
+    fun `gives 404 for an id that is one of Altinn's fixed routes, without asking Altinn`() = testServer(altinn(body = "[]")) {
+        for (id in listOf("resourcelist", "export", "search", "updated", "changes", "orgs")) {
+            client.get("/api/maskinportenschemas/$id").assertProblem(notFound)
+        }
+
+        assertTrue(sent.isEmpty(), "Altinn was called: $sent")
+    }
+
+    @Test
     fun `gives 400 for an id Altinn would not accept, without asking Altinn`() = testServer(altinn()) {
         for (id in listOf("abc", "Kv-matrikkel", "kv.matrikkel", "..", "..%2Fsearch", "kv%2Fx")) {
             client.get("/api/maskinportenschemas/$id").assertProblem(
