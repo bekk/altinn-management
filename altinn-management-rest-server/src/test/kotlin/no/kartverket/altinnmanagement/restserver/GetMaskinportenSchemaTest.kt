@@ -1,9 +1,11 @@
 package no.kartverket.altinnmanagement.restserver
 
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import kotlinx.serialization.json.Json
@@ -81,6 +83,17 @@ class GetMaskinportenSchemaTest {
             ),
             response.maskinportenSchema(),
         )
+    }
+
+    @Test
+    fun `answers with JSON also when the caller asks for another type`() = testServer(altinn()) {
+        val response = client.get("/api/maskinportenschemas/kv-matrikkel-brukernavn") {
+            header(HttpHeaders.Accept, "application/xml")
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(ContentType.Application.Json, response.contentType()?.withoutParameters())
+        assertEquals("kv-matrikkel-brukernavn", response.maskinportenSchema().resourceId)
     }
 
     @Test

@@ -54,7 +54,10 @@ fun Application.module(
         disableDefaultColors()
         filter { accessLog }
     }
-    install(ContentNegotiation) { json(Json(DefaultJson) { explicitNulls = false }) }
+    install(ContentNegotiation) {
+        json(Json(DefaultJson) { explicitNulls = false })
+        accept { _, _ -> emptyList() }
+    }
     install(StatusPages) { errorResponses() }
 
     val spec by lazy { openApiSpec() }
