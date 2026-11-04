@@ -4,6 +4,7 @@ import com.nimbusds.jose.crypto.RSASSAVerifier
 import com.nimbusds.jwt.SignedJWT
 import kotlinx.coroutines.runBlocking
 import no.kartverket.altinnmanagement.client.exception.MaskinportenException
+import no.kartverket.altinnmanagement.client.support.MutableClock
 import no.kartverket.altinnmanagement.client.support.NOW
 import no.kartverket.altinnmanagement.client.support.TOKEN_PATH
 import no.kartverket.altinnmanagement.client.support.TestHttpServer
@@ -16,6 +17,7 @@ import no.kartverket.altinnmanagement.client.support.maskinportenTokenResponse
 import no.kartverket.altinnmanagement.client.support.testHttpClient
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets.UTF_8
+import java.time.Duration
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -100,10 +102,24 @@ class MaskinportenClientTest {
     }
 
     @Test
+    fun `the token's lifetime counts from when it was requested, not from when Maskinporten answered`() = runBlocking {
+        val clock = MutableClock()
+        server.on(TOKEN_PATH) {
+            clock.advance(Duration.ofSeconds(5))
+            TestResponse(body = maskinportenTokenResponse("maskinporten-token", expiresIn = 120))
+        }
+
+        val token = MaskinportenClient(maskinportenConfig(tokenUrl = server.baseUrl + TOKEN_PATH), testHttpClient, clock = clock).getToken()
+
+        assertEquals(NOW.plusSeconds(120), token.expiresAt)
+    }
+
+    @Test
     fun `fails on an answer it cannot take a token from`() = runBlocking {
         val cases = mapOf(
             "no expires_in" to (maskinportenTokenResponse(expiresIn = null) to "expires_in"),
             "no access_token" to ("""{"token_type":"Bearer"}""" to "access_token"),
+            "an access_token with a newline" to ("""{"access_token":"mp\ntoken","expires_in":3600}""" to "access_token"),
             "a body that is not JSON" to ("<html>gateway error</html>" to ""),
         )
         for ((why, case) in cases) {
@@ -123,5 +139,14 @@ class MaskinportenClientTest {
         val e = assertFailsWith<MaskinportenException> { client().getToken() }
 
         assertNoTokenIn(e, "secret-mp-token")
+    }
+
+    @Test
+    fun `keeps the token out of the error when it is not a valid bearer token`() = runBlocking {
+        server.on(TOKEN_PATH) { TestResponse(body = """{"access_token":"secret-mp\ntoken","expires_in":3600}""") }
+
+        val e = assertFailsWith<MaskinportenException> { client().getToken() }
+
+        assertNoTokenIn(e, "secret-mp")
     }
 }

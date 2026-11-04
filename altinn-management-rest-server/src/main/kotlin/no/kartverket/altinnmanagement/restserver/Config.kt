@@ -63,5 +63,5 @@ internal fun ApplicationConfig.file(path: String): String? {
 internal fun ApplicationConfig.maskinportenKey(path: String): MaskinportenKey = try {
     MaskinportenKey.parse(required(path))
 } catch (e: MaskinportenException) {
-    error("$path must be an RSA private key as a JWK (see .env.example)")
+    error("$path must be an RSA private key as a JWK with a kid (see .env.example)")
 }

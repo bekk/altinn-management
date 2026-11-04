@@ -4,6 +4,7 @@ import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import no.kartverket.altinnmanagement.client.support.assertNoTokenIn
 import java.net.InetSocketAddress
 import java.net.URI
 import java.net.http.HttpClient
@@ -75,6 +76,19 @@ class JavaOutgoingHttpClientTest {
     }
 
     @Test
+    fun `keeps a header value the JDK rejects out of the error`() {
+        val url = URI("http://localhost/resourceregistry/api/v1/resource")
+        val request = OutgoingRequest(HttpMethod.GET, url, mapOf("Authorization" to "Bearer secret-mp\ntoken"))
+
+        val e = assertFailsWith<IllegalArgumentException> {
+            runBlocking { JavaOutgoingHttpClient(noRedirects, Duration.ofSeconds(3)).send(request) }
+        }
+
+        assertContains(e.message!!, "Authorization")
+        assertNoTokenIn(e, "secret-mp")
+    }
+
+    @Test
     fun `returns the status, content type and body bytes as the server sent them`() {
         val body = """{"error":"ikke funnet: æøå"}""".toByteArray(Charsets.ISO_8859_1)
         serving(
@@ -108,6 +122,32 @@ class JavaOutgoingHttpClientTest {
                 }
             } finally {
                 answer.countDown()
+            }
+        }
+    }
+
+    @Test
+    fun `gives up when the server stalls in the middle of the body`() {
+        val finish = CountDownLatch(1)
+        serving(
+            { exchange ->
+                exchange.sendResponseHeaders(200, 100)
+                exchange.responseBody.write("""{"access_token":""".toByteArray())
+                exchange.responseBody.flush()
+                finish.await()
+                exchange.close()
+            },
+        ) { url ->
+            try {
+                assertFailsWith<HttpTimeoutException> {
+                    runBlocking {
+                        withTimeout(5_000) {
+                            JavaOutgoingHttpClient(noRedirects, Duration.ofMillis(100)).send(OutgoingRequest(HttpMethod.GET, url, emptyMap()))
+                        }
+                    }
+                }
+            } finally {
+                finish.countDown()
             }
         }
     }
