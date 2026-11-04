@@ -10,6 +10,7 @@ import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.callid.CallId
 import io.ktor.server.plugins.callid.callIdMdc
 import io.ktor.server.plugins.calllogging.CallLogging
+import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
@@ -43,6 +44,7 @@ fun Application.module(accessLog: Boolean = true) {
         disableDefaultColors()
         filter { accessLog }
     }
+    install(StatusPages) { errorResponses() }
 
     val spec by lazy { openApiSpec() }
 

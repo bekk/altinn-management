@@ -9,6 +9,7 @@ buildscript {
 
 plugins {
     alias(ktorLibs.plugins.ktor)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.jib)
 }
 
@@ -46,6 +47,7 @@ dependencies {
     implementation(ktorLibs.server.netty)
     // ktor pulls in an older netty with known vulnerabilities
     implementation(platform(libs.netty.bom))
+    implementation(ktorLibs.server.statusPages)
     implementation(ktorLibs.server.callLogging)
     implementation(ktorLibs.server.callId)
     implementation(ktorLibs.server.routingOpenapi)
