@@ -132,7 +132,7 @@ class ConfigTest {
 
     @Test
     fun `an http or https URL is accepted as it is`() {
-        for (raw in listOf("http://localhost:8090/filtering", "https://opa.test/v1/data/altinn", "HTTPS://opa.test")) {
+        for (raw in listOf("http://localhost:8090/filtering", "https://filtering.test/v1/data/altinn", "HTTPS://filtering.test")) {
             assertEquals(URI(raw), MapApplicationConfig("externalFiltering.url" to raw).url("externalFiltering.url"))
         }
     }

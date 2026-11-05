@@ -74,8 +74,8 @@ internal val maskinportenSchemasListOperation: Operation.Builder.() -> Unit = {
     description = "Gets Kartverket's resources of type `MaskinportenSchema` from Altinn, or with `scope`, only the ones " +
         "that give that Maskinporten scope. When filtering is on, this API only returns the ones the calling app has " +
         "access to: the resource, and every one of its scopes, must be in the app's `exact` list or start with one of " +
-        "its prefixes. With `scope`, only the resource is checked, since OPA has already checked that the app may use " +
-        "that scope. This API reads which app is calling from the `X-Forwarded-Client-Cert` header, which Istio " +
+        "its prefixes. This holds with `scope` too, so a resource that also gives a scope the app may not see is left " +
+        "out. This API reads which app is calling from the `X-Forwarded-Client-Cert` header, which Istio " +
         "usually sets. Altinn's search returns the newest version of each resource that matches, so if a resource's " +
         "type or owner has changed, the list can hold an older version of it. Get a resource by its id to be sure you " +
         "have its current version."

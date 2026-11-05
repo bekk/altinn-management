@@ -195,7 +195,7 @@ class ListMaskinportenSchemasTest {
     }
 
     @Test
-    fun `with a scope, lists the resources the calling app has access to without checking their scopes`() = testServer(
+    fun `with a scope, lists only the resources the calling app has access to, along with every one of their scopes`() = testServer(
         altinn = altinn(
             body = listOf(
                 resource("res-a", "kartverk:a"),
@@ -205,7 +205,7 @@ class ListMaskinportenSchemasTest {
             ).joinToString(prefix = "[", postfix = "]"),
         ),
         filtering = filteringAllowing(
-            scopes = """{"exact":[],"prefix":[]}""",
+            scopes = """{"exact":["kartverk:a"],"prefix":[]}""",
             resources = """{"exact":[],"prefix":["res-"]}""",
         ),
     ) {
@@ -215,7 +215,24 @@ class ListMaskinportenSchemasTest {
         }
 
         assertEquals(HttpStatusCode.OK, response.status)
-        assertEquals(listOf("res-a", "res-a-and-b"), response.maskinportenSchemas().map { it.resourceId })
+        assertEquals(listOf("res-a"), response.maskinportenSchemas().map { it.resourceId })
+    }
+
+    @Test
+    fun `with a scope the calling app may not use, answers an empty list`() = testServer(
+        altinn = altinn(body = "[${resource("res-a", "kartverk:a")}]"),
+        filtering = filteringAllowing(
+            scopes = """{"exact":["kartverk:b"],"prefix":[]}""",
+            resources = """{"exact":[],"prefix":["res-"]}""",
+        ),
+    ) {
+        val response = client.get("/api/maskinportenschemas") {
+            parameter("scope", "kartverk:a")
+            header(CLIENT_CERTIFICATE_HEADER, certificate)
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals("[]", response.bodyAsText())
     }
 
     @Test

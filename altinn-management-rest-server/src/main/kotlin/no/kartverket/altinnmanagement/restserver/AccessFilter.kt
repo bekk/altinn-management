@@ -31,7 +31,3 @@ data class Filter(
 
 internal fun List<MaskinportenSchema>.allowedBy(filter: AccessFilter?): List<MaskinportenSchema> =
     if (filter == null) this else filter(filter::allows)
-
-// OPA has already checked that the calling app may use the scope, so only the resource is checked here
-internal fun List<MaskinportenSchema>.givingScopeAllowedBy(scope: String, filter: AccessFilter?): List<MaskinportenSchema> =
-    filter { scope in it.scopes.orEmpty() && (filter == null || filter.resources.allows(it.resourceId.value)) }

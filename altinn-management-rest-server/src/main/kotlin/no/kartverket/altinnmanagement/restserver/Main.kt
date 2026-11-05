@@ -76,8 +76,8 @@ fun Application.module(
             val certificate = clientCertificate(call.request.headers[CLIENT_CERTIFICATE_HEADER], required = externalFiltering.isOn)
             val filter = externalFiltering.filterFor(certificate)
             val schemas = client.listMaskinportenSchemas()
-            val allowed = if (scope == null) schemas.allowedBy(filter) else schemas.givingScopeAllowedBy(scope, filter)
-            call.respond(allowed.map(MaskinportenSchema::from))
+            val matching = if (scope == null) schemas else schemas.filter { scope in it.scopes.orEmpty() }
+            call.respond(matching.allowedBy(filter).map(MaskinportenSchema::from))
         }.describe(maskinportenSchemasListOperation)
 
         get("/api/maskinportenschemas/{id}") {
