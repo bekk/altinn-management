@@ -68,7 +68,7 @@ class ServerTest {
     @Test
     fun `a request Ktor cannot read gives 400, of type malformed-request`() = testApplication {
         application {
-            module(accessLog = false)
+            module(testResourceRegistryClient(), accessLog = false)
             routing { get("/unreadable") { throw BadRequestException("Can't transform call to resource") } }
         }
 
@@ -82,7 +82,7 @@ class ServerTest {
     @Test
     fun `an unexpected exception gives 500, of type internal-error, without its message`() = testApplication {
         application {
-            module(accessLog = false)
+            module(testResourceRegistryClient(), accessLog = false)
             routing { get("/fails") { error("internal detail") } }
         }
 
