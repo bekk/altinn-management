@@ -74,7 +74,9 @@ internal val maskinportenSchemasListOperation: Operation.Builder.() -> Unit = {
     description = "Gets Kartverket's resources of type `MaskinportenSchema` from Altinn. When filtering is on, this " +
         "API only returns the ones the calling app has access to: the resource, and every one of its scopes, must be " +
         "in the app's `exact` list or start with one of its prefixes. This API reads which app is calling from the " +
-        "`X-Forwarded-Client-Cert` header, which Istio usually sets."
+        "`X-Forwarded-Client-Cert` header, which Istio usually sets. Altinn's search returns the newest version of " +
+        "each resource that matches, so if a resource's type or owner has changed, the list can hold an older version " +
+        "of it. Get a resource by its id to be sure you have its current version."
 
     parameters {
         clientCertificate()
