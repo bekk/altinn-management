@@ -20,6 +20,7 @@ internal fun scope(values: List<String>?): String? {
     if (values == null) return null
     val scope = values.singleOrNull() ?: invalidScope("scope must be sent once")
     if (scope.isBlank()) invalidScope("scope must not be blank")
+    if (scope.any(Char::isWhitespace)) invalidScope("scope must not contain whitespace")
     return scope
 }
 

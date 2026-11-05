@@ -244,11 +244,14 @@ class ListMaskinportenSchemasTest {
     }
 
     @Test
-    fun `gives 400 when the scope is blank or sent more than once, without asking anyone`() =
+    fun `gives 400 when the scope is blank, holds whitespace or is sent more than once, without asking anyone`() =
         testServer(altinn(), filteringAllowing(scopes = """{"exact":[],"prefix":[]}""", resources = """{"exact":[],"prefix":[]}""")) {
             val cases = mapOf(
                 "scope=" to "scope must not be blank",
                 "scope=%20" to "scope must not be blank",
+                "scope=kartverk%3Aa%20" to "scope must not contain whitespace",
+                "scope=kartverk%3Aa%20kartverk%3Ab" to "scope must not contain whitespace",
+                "scope=kartverk%3Aa%09" to "scope must not contain whitespace",
                 "scope=kartverk%3Aa&scope=kartverk%3Ab" to "scope must be sent once",
             )
             for ((query, message) in cases) {

@@ -14,7 +14,7 @@
                     {
                         "name": "scope",
                         "in": "query",
-                        "description": "Only the resources that give this Maskinporten scope, for example `kartverk:matrikkel:brukernavn`. It must match exactly, case included. Send it at most once.",
+                        "description": "Only the resources that give this Maskinporten scope, for example `kartverk:matrikkel:brukernavn`. It must match exactly, case included. Send one scope, at most once.",
                         "schema": {
                             "type": "string"
                         }
@@ -108,7 +108,7 @@
                         }
                     },
                     "400": {
-                        "description": "`scope` is blank or is sent more than once, or filtering is on and the `X-Forwarded-Client-Cert` header is missing, so this API cannot tell which app is calling.",
+                        "description": "`scope` is blank, holds whitespace or is sent more than once, or filtering is on and the `X-Forwarded-Client-Cert` header is missing, so this API cannot tell which app is calling.",
                         "headers": {
                             "X-Request-ID": {
                                 "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",

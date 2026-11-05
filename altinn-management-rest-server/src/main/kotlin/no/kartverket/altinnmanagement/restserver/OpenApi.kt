@@ -84,7 +84,7 @@ internal val maskinportenSchemasListOperation: Operation.Builder.() -> Unit = {
         query("scope") {
             required = false
             description = "Only the resources that give this Maskinporten scope, for example " +
-                "`kartverk:matrikkel:brukernavn`. It must match exactly, case included. Send it at most once."
+                "`kartverk:matrikkel:brukernavn`. It must match exactly, case included. Send one scope, at most once."
             schema = JsonSchema(type = JsonType.STRING)
         }
         clientCertificate()
@@ -103,7 +103,7 @@ internal val maskinportenSchemasListOperation: Operation.Builder.() -> Unit = {
         }
 
         HttpStatusCode.BadRequest {
-            description = "`scope` is blank or is sent more than once, or filtering is on and the " +
+            description = "`scope` is blank, holds whitespace or is sent more than once, or filtering is on and the " +
                 "`X-Forwarded-Client-Cert` header is missing, so this API cannot tell which app is calling."
             headers { requestId() }
             ContentType.Application.ProblemJson {
