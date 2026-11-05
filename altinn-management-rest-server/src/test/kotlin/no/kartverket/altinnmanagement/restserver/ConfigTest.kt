@@ -4,6 +4,7 @@ import io.ktor.server.config.MapApplicationConfig
 import no.kartverket.altinnmanagement.client.AltinnEnvironment
 import no.kartverket.altinnmanagement.client.support.testJwk
 import java.net.URI
+import java.time.Duration
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -76,6 +77,64 @@ class ConfigTest {
         val e = assertFailsWith<IllegalStateException> { MapApplicationConfig("flag" to "yes").boolean("flag", default = true) }
 
         assertContains(e.message!!, "must be true or false")
+    }
+
+    @Test
+    fun `external filtering is off unless switched on, and then needs a URL`() {
+        val off = AppConfig.load(MapApplicationConfig(*required, "externalFiltering.url" to "http://localhost:8090/filtering"))
+        assertEquals(null, off.externalFilteringUrl)
+        assertEquals(Duration.ZERO, off.externalFilteringCacheDuration)
+
+        val on = AppConfig.load(
+            MapApplicationConfig(*required, "externalFiltering.enabled" to "true", "externalFiltering.url" to "http://localhost:8090/filtering"),
+        )
+        assertEquals(URI("http://localhost:8090/filtering"), on.externalFilteringUrl)
+        assertEquals(Duration.ofMinutes(1), on.externalFilteringCacheDuration)
+
+        val e = assertFailsWith<IllegalStateException> {
+            AppConfig.load(MapApplicationConfig(*required, "externalFiltering.enabled" to "true"))
+        }
+        assertContains(e.message!!, "externalFiltering.url")
+    }
+
+    @Test
+    fun `seconds must be a whole number, 0 or more, and default when unset`() {
+        assertEquals(Duration.ofSeconds(30), MapApplicationConfig("key" to "30").seconds("key", default = Duration.ZERO))
+        assertEquals(Duration.ZERO, MapApplicationConfig("key" to "0").seconds("key", default = Duration.ofMinutes(1)))
+        assertEquals(Duration.ofMinutes(1), MapApplicationConfig().seconds("key", default = Duration.ofMinutes(1)))
+        for (raw in listOf("-1", "1.5", "1m")) {
+            val e = assertFailsWith<IllegalStateException>(raw) { MapApplicationConfig("key" to raw).seconds("key", default = Duration.ZERO) }
+            assertContains(e.message!!, "must be a whole number of seconds", message = raw)
+        }
+    }
+
+    @Test
+    fun `a URL must be http or https, with a host`() {
+        for (raw in listOf("localhost:8080", "ftp://filtering.test", "https://", "not a url")) {
+            val e = assertFailsWith<IllegalStateException>(raw) {
+                MapApplicationConfig("externalFiltering.url" to raw).url("externalFiltering.url")
+            }
+
+            assertContains(e.message!!, "http or https URL", message = raw)
+        }
+    }
+
+    @Test
+    fun `a URL must not have a query or fragment`() {
+        for (raw in listOf("https://filtering.test?x=1", "https://filtering.test#top")) {
+            val e = assertFailsWith<IllegalStateException>(raw) {
+                MapApplicationConfig("externalFiltering.url" to raw).url("externalFiltering.url")
+            }
+
+            assertContains(e.message!!, "query or fragment", message = raw)
+        }
+    }
+
+    @Test
+    fun `an http or https URL is accepted as it is`() {
+        for (raw in listOf("http://localhost:8090/filtering", "https://opa.test/v1/data/altinn", "HTTPS://opa.test")) {
+            assertEquals(URI(raw), MapApplicationConfig("externalFiltering.url" to raw).url("externalFiltering.url"))
+        }
     }
 
     @Test

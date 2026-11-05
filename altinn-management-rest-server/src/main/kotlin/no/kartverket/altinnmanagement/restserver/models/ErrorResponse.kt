@@ -18,8 +18,8 @@ data class ErrorResponse(
 - `tag:kartverket.no,2026:not-found` (404): there is nothing at this path: no endpoint, or no MaskinportenSchema
   with this id.
 - `tag:kartverket.no,2026:method-not-allowed` (405): the endpoint at this path does not accept this HTTP method.
-- `tag:kartverket.no,2026:upstream-error` (502): this API could not get an answer from Altinn. Your request did
-  not cause it.
+- `tag:kartverket.no,2026:upstream-error` (502): this API could not get a usable answer from Altinn, or from the
+  service that says which resources and scopes the calling app has access to. Your request did not cause it.
 - `tag:kartverket.no,2026:internal-error` (500): an unexpected error in this API.""",
     )
     val type: ProblemType,

@@ -12,11 +12,14 @@ import no.kartverket.altinnmanagement.restserver.models.ErrorResponse
 
 internal fun testServer(
     altinn: OutgoingHttpClient = unexpectedCall,
+    filtering: ExternalFiltering = noFiltering,
     block: suspend ApplicationTestBuilder.() -> Unit,
 ) = testApplication {
-    application { module(testResourceRegistryClient(altinn)) }
+    application { module(testResourceRegistryClient(altinn), filtering) }
     block()
 }
+
+internal val noFiltering = ExternalFiltering(null)
 
 internal fun testResourceRegistryClient(httpClient: OutgoingHttpClient = unexpectedCall) =
     ResourceRegistryClient(AltinnEnvironment.TT02.platformBaseUrl, httpClient)
