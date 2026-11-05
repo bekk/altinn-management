@@ -71,22 +71,30 @@ private val exampleMaskinportenSchema = MaskinportenSchema(
 
 internal val maskinportenSchemasListOperation: Operation.Builder.() -> Unit = {
     summary = "List Kartverket's MaskinportenSchemas"
-    description = "Gets Kartverket's resources of type `MaskinportenSchema` from Altinn. When filtering is on, this " +
-        "API only returns the ones the calling app has access to: the resource, and every one of its scopes, must be " +
-        "in the app's `exact` list or start with one of its prefixes. This API reads which app is calling from the " +
-        "`X-Forwarded-Client-Cert` header, which Istio usually sets. Altinn's search returns the newest version of " +
-        "each resource that matches, so if a resource's type or owner has changed, the list can hold an older version " +
-        "of it. Get a resource by its id to be sure you have its current version."
+    description = "Gets Kartverket's resources of type `MaskinportenSchema` from Altinn, or with `scope`, only the ones " +
+        "that give that Maskinporten scope. When filtering is on, this API only returns the ones the calling app has " +
+        "access to: the resource, and every one of its scopes, must be in the app's `exact` list or start with one of " +
+        "its prefixes. This holds with `scope` too, so a resource that also gives a scope the app may not see is left " +
+        "out. This API reads which app is calling from the `X-Forwarded-Client-Cert` header, which Istio " +
+        "usually sets. Altinn's search returns the newest version of each resource that matches, so if a resource's " +
+        "type or owner has changed, the list can hold an older version of it. Get a resource by its id to be sure you " +
+        "have its current version."
 
     parameters {
+        query("scope") {
+            required = false
+            description = "Only the resources that give this Maskinporten scope, for example " +
+                "`kartverk:matrikkel:brukernavn`. It must match exactly, case included. Send one scope, at most once."
+            schema = JsonSchema(type = JsonType.STRING)
+        }
         clientCertificate()
         requestId()
     }
 
     responses {
         HttpStatusCode.OK {
-            description = "Kartverket's MaskinportenSchemas, or when filtering is on, the ones the calling app has " +
-                "access to. The list is empty if there are none."
+            description = "Kartverket's MaskinportenSchemas, only those that give `scope` when it is sent, and when " +
+                "filtering is on, only those the calling app has access to. The list is empty if there are none."
             headers { requestId() }
             ContentType.Application.Json {
                 schema = JsonSchema(type = JsonType.ARRAY, items = ReferenceOr.Value(jsonSchema<MaskinportenSchema>()))
@@ -95,11 +103,19 @@ internal val maskinportenSchemasListOperation: Operation.Builder.() -> Unit = {
         }
 
         HttpStatusCode.BadRequest {
-            description = "Filtering is on and the `X-Forwarded-Client-Cert` header is missing, so this API cannot " +
-                "tell which app is calling."
+            description = "`scope` is blank, holds whitespace or is sent more than once, or filtering is on and the " +
+                "`X-Forwarded-Client-Cert` header is missing, so this API cannot tell which app is calling."
             headers { requestId() }
             ContentType.Application.ProblemJson {
                 schema = jsonSchema<ErrorResponse>()
+                example(
+                    "InvalidScope",
+                    ErrorResponse.of(
+                        ProblemType.VALIDATION_ERROR,
+                        HttpStatusCode.BadRequest,
+                        errors = listOf(FieldError("scope", ValidationCode.INVALID_FORMAT, "scope must not be blank")),
+                    ),
+                )
                 example(
                     "MissingClientCertificate",
                     ErrorResponse.of(
