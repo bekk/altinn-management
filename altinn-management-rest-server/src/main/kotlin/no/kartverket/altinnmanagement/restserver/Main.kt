@@ -72,9 +72,12 @@ fun Application.module(
         get("/openapi") { call.respondText(spec, ContentType.Application.Json) }.hide()
 
         get("/api/maskinportenschemas") {
+            val scope = scope(call.queryParameters.getAll("scope"))
             val certificate = clientCertificate(call.request.headers[CLIENT_CERTIFICATE_HEADER], required = externalFiltering.isOn)
             val filter = externalFiltering.filterFor(certificate)
-            call.respond(client.listMaskinportenSchemas().allowedBy(filter).map(MaskinportenSchema::from))
+            val schemas = client.listMaskinportenSchemas()
+            val matching = if (scope == null) schemas else schemas.filter { scope in it.scopes.orEmpty() }
+            call.respond(matching.allowedBy(filter).map(MaskinportenSchema::from))
         }.describe(maskinportenSchemasListOperation)
 
         get("/api/maskinportenschemas/{id}") {

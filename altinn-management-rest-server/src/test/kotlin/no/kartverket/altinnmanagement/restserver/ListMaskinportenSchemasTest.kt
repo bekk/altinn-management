@@ -2,6 +2,7 @@ package no.kartverket.altinnmanagement.restserver
 
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.parameter
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
@@ -161,6 +162,110 @@ class ListMaskinportenSchemasTest {
             )
 
             assertTrue(sentToAltinn.isEmpty(), "Altinn was called: $sentToAltinn")
+        }
+
+    @Test
+    fun `with a scope, lists only the resources that give exactly that Maskinporten scope`() = testServer(
+        altinn(
+            body = listOf(
+                resource("res-exact", "kartverk:a"),
+                resource("res-longer", "kartverk:a.read"),
+                resource("res-case", "KARTVERK:A"),
+                """{"identifier":"res-other-type","resourceType":"MaskinportenSchema",
+                   "resourceReferences":[{"reference":"kartverk:a","referenceType":"ServiceCode"}]}""",
+                resource("res-second", "kartverk:b", "kartverk:a"),
+                resource("res-none"),
+            ).joinToString(prefix = "[", postfix = "]"),
+        ),
+    ) {
+        val response = client.get("/api/maskinportenschemas") { parameter("scope", "kartverk:a") }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(listOf("res-exact", "res-second"), response.maskinportenSchemas().map { it.resourceId })
+    }
+
+    @Test
+    fun `with a scope, asks Altinn's search the same as without one`() = testServer(altinn()) {
+        client.get("/api/maskinportenschemas") { parameter("scope", "kartverk:a") }
+
+        assertEquals(
+            "https://platform.tt02.altinn.no/resourceregistry/api/v1/resource/search?organizationId=971040238&resourceType=MaskinportenSchema",
+            sentToAltinn.single().url.toString(),
+        )
+    }
+
+    @Test
+    fun `with a scope, lists only the resources the calling app has access to, along with every one of their scopes`() = testServer(
+        altinn = altinn(
+            body = listOf(
+                resource("res-a", "kartverk:a"),
+                resource("res-a-and-b", "kartverk:a", "kartverk:b"),
+                resource("other-a", "kartverk:a"),
+                resource("res-c", "kartverk:c"),
+            ).joinToString(prefix = "[", postfix = "]"),
+        ),
+        filtering = filteringAllowing(
+            scopes = """{"exact":["kartverk:a"],"prefix":[]}""",
+            resources = """{"exact":[],"prefix":["res-"]}""",
+        ),
+    ) {
+        val response = client.get("/api/maskinportenschemas") {
+            parameter("scope", "kartverk:a")
+            header(CLIENT_CERTIFICATE_HEADER, certificate)
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(listOf("res-a"), response.maskinportenSchemas().map { it.resourceId })
+    }
+
+    @Test
+    fun `with a scope the calling app may not use, answers an empty list`() = testServer(
+        altinn = altinn(body = "[${resource("res-a", "kartverk:a")}]"),
+        filtering = filteringAllowing(
+            scopes = """{"exact":["kartverk:b"],"prefix":[]}""",
+            resources = """{"exact":[],"prefix":["res-"]}""",
+        ),
+    ) {
+        val response = client.get("/api/maskinportenschemas") {
+            parameter("scope", "kartverk:a")
+            header(CLIENT_CERTIFICATE_HEADER, certificate)
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals("[]", response.bodyAsText())
+    }
+
+    @Test
+    fun `with a scope that no resource gives, answers an empty list`() = testServer(altinn(body = "[${resource("res-a", "kartverk:a")}]")) {
+        val response = client.get("/api/maskinportenschemas") { parameter("scope", "kartverk:unknown") }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals("[]", response.bodyAsText())
+    }
+
+    @Test
+    fun `gives 400 when the scope is blank, holds whitespace or is sent more than once, without asking anyone`() =
+        testServer(altinn(), filteringAllowing(scopes = """{"exact":[],"prefix":[]}""", resources = """{"exact":[],"prefix":[]}""")) {
+            val cases = mapOf(
+                "scope=" to "scope must not be blank",
+                "scope=%20" to "scope must not be blank",
+                "scope=kartverk%3Aa%20" to "scope must not contain whitespace",
+                "scope=kartverk%3Aa%20kartverk%3Ab" to "scope must not contain whitespace",
+                "scope=kartverk%3Aa%09" to "scope must not contain whitespace",
+                "scope=kartverk%3Aa&scope=kartverk%3Ab" to "scope must be sent once",
+            )
+            for ((query, message) in cases) {
+                client.get("/api/maskinportenschemas?$query") { header(CLIENT_CERTIFICATE_HEADER, certificate) }.assertProblem(
+                    ErrorResponse.of(
+                        ProblemType.VALIDATION_ERROR,
+                        HttpStatusCode.BadRequest,
+                        errors = listOf(FieldError("scope", ValidationCode.INVALID_FORMAT, message)),
+                    ),
+                )
+            }
+
+            assertTrue(sentToAltinn.isEmpty(), "Altinn was called: $sentToAltinn")
+            assertTrue(sentToFiltering.isEmpty(), "The filtering service was called: $sentToFiltering")
         }
 
     @Test

@@ -16,6 +16,17 @@ internal fun clientCertificate(value: String?, required: Boolean): String? {
     return certificate
 }
 
+internal fun scope(values: List<String>?): String? {
+    if (values == null) return null
+    val scope = values.singleOrNull() ?: invalidScope("scope must be sent once")
+    if (scope.isBlank()) invalidScope("scope must not be blank")
+    if (scope.any(Char::isWhitespace)) invalidScope("scope must not contain whitespace")
+    return scope
+}
+
+private fun invalidScope(message: String): Nothing =
+    throw InvalidRequestException(listOf(FieldError("scope", ValidationCode.INVALID_FORMAT, message)))
+
 internal fun resourceId(name: String, value: String): ResourceId = try {
     ResourceId.of(value)
 } catch (e: IllegalArgumentException) {
