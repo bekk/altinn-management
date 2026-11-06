@@ -1,6 +1,5 @@
 package no.kartverket.altinnmanagement.client.auth
 
-import no.kartverket.altinnmanagement.client.AltinnEnvironment
 import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
 import java.net.URI
 import java.time.Clock
@@ -27,9 +26,6 @@ public class MaskinportenAltinnTokenProvider internal constructor(
         MaskinportenClient(MaskinportenConfig(maskinportenTokenUrl.toString(), clientId, key), httpClient),
         AltinnTokenExchanger(platformBaseUrl.toString(), httpClient),
     )
-
-    public constructor(environment: AltinnEnvironment, clientId: String, key: MaskinportenKey, httpClient: OutgoingHttpClient) :
-        this(environment.maskinportenTokenUrl, clientId, key, environment.platformBaseUrl, httpClient)
 
     private val cache = TokenCache<AltinnToken>(clock, refreshLeeway)
 

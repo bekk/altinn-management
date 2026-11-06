@@ -17,12 +17,12 @@ import java.net.URI
 
 /**
  * Reads Altinn's resources without a token, and changes them with a token from [accessTokenProvider], such as a
- * [no.kartverket.altinnmanagement.client.auth.MaskinportenAltinnTokenProvider].
+ * [no.kartverket.altinnmanagement.client.auth.MaskinportenAltinnTokenProvider]. A client that only reads needs none.
  */
 public class ResourceRegistryClient(
     platformBaseUrl: URI,
     private val httpClient: OutgoingHttpClient,
-    private val accessTokenProvider: AccessTokenProvider,
+    private val accessTokenProvider: AccessTokenProvider? = null,
 ) {
     private val platformBaseUrl = platformBaseUrl.toString()
 
@@ -33,10 +33,12 @@ public class ResourceRegistryClient(
 
     /**
      * Replaces [content] in the MaskinportenSchema with the id [id], and keeps the rest of it as it is in Altinn. Returns
-     * the changed MaskinportenSchema, or null when Kartverket has no MaskinportenSchema with this id. Throws
-     * [AltinnRejectedException] when Altinn would not take the change.
+     * the MaskinportenSchema as it was sent to Altinn, or null when Kartverket has no MaskinportenSchema with this id.
+     * Throws [AltinnRejectedException] when Altinn would not take the change, and [IllegalStateException] when this
+     * client has no [AccessTokenProvider].
      */
     public suspend fun updateMaskinportenSchema(id: ResourceId, content: MaskinportenSchemaContent): MaskinportenSchema? {
+        val accessTokenProvider = checkNotNull(accessTokenProvider) { "Changing a resource needs an AccessTokenProvider" }
         val (json, resource) = getResource(id) ?: return null
         if (!resource.isMaskinportenSchema || !resource.isKartverkets) return null
         val changed = json.withContent(content)

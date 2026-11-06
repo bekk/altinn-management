@@ -265,7 +265,7 @@ internal val maskinportenSchemaPutOperation: Operation.Builder.() -> Unit = {
 
     responses {
         HttpStatusCode.OK {
-            description = "The MaskinportenSchema, as it is in Altinn after the change."
+            description = "The MaskinportenSchema as this API sent it to Altinn, since Altinn answers a change without a body."
             headers { requestId() }
             ContentType.Application.Json {
                 schema = jsonSchema<MaskinportenSchema>()

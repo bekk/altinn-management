@@ -18,7 +18,7 @@ public data class MaskinportenSchemaContent(
     public val scopes: List<String>,
     public val title: MultilingualText,
     public val description: MultilingualText,
-    public val delegationDescription: MultilingualText,
+    public val delegationDescription: MultilingualText?,
     public val homepage: String?,
     public val contactPoints: List<ContactPoint>,
     public val keywords: List<Keyword>,

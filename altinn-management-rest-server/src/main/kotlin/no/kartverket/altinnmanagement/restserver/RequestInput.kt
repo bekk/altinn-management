@@ -60,20 +60,19 @@ internal fun maskinportenSchemaContent(id: ResourceId, request: MaskinportenSche
         }
         if (request.scopes.isNullOrEmpty()) add(missing("scopes"))
         request.scopes?.forEachIndexed { index, scope ->
-            if (scope.isBlank() || scope.any(Char::isWhitespace)) {
-                add(FieldError("scopes[$index]", ValidationCode.INVALID_FORMAT, "scopes[$index] must not be blank or contain whitespace"))
+            if (scope.isBlank()) {
+                add(FieldError("scopes[$index]", ValidationCode.INVALID_FORMAT, "scopes[$index] must not be blank"))
             }
         }
         addAll(textErrors("title", request.title))
         addAll(textErrors("description", request.description))
-        addAll(textErrors("delegationDescription", request.delegationDescription))
     }
     if (errors.isNotEmpty()) throw InvalidRequestException(errors)
     return MaskinportenSchemaContent(
         scopes = request.scopes!!,
         title = request.title!!.toClient(),
         description = request.description!!.toClient(),
-        delegationDescription = request.delegationDescription!!.toClient(),
+        delegationDescription = request.delegationDescription?.toClient(),
         homepage = request.homepage,
         contactPoints = request.contactPoints.orEmpty().map { it.toClient() },
         keywords = request.keywords.orEmpty().map { it.toClient() },
@@ -103,7 +102,9 @@ private val strictJsonMapper = JsonMapper.builder()
     .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
     .build()
 
-// Jackson's reason is not given, since it can quote the body
+// The filtering service reads the body before this app does. kotlinx keeps the last of two equal names, so a body that
+// gives a name twice could have it allow other scopes than the ones sent to Altinn. Jackson's reason is not given,
+// since it can quote the body
 private fun strictJson(body: String): String {
     try {
         strictJsonMapper.readTree(body)

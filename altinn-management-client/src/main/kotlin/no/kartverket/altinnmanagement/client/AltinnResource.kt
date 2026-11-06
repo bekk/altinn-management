@@ -87,7 +87,7 @@ internal fun JsonObject.withContent(content: MaskinportenSchemaContent): JsonObj
         AltinnResource(
             title = content.title.toMap(),
             description = content.description.toMap(),
-            rightDescription = content.delegationDescription.toMap(),
+            rightDescription = content.delegationDescription?.toMap(),
             homepage = content.homepage,
             contactPoints = content.contactPoints.map { AltinnContactPoint(it.category, it.email, it.telephone, it.contactPage) },
             keywords = content.keywords.map { AltinnKeyword(it.word, it.language) },
@@ -105,6 +105,6 @@ private val REPLACED_FIELDS = setOf(
     "versionId", "createdAt", "updatedAt",
 )
 
-private fun MultilingualText.toMap() = mapOf("en" to en, "nb" to nb, "nn" to nn)
+private fun MultilingualText.toMap() = mapOf("en" to en, "nb" to nb, "nn" to nn).filterValues { it != null }
 
 private fun multilingualText(texts: Map<String, String?>) = MultilingualText(en = texts["en"], nb = texts["nb"], nn = texts["nn"])

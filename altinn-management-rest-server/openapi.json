@@ -302,7 +302,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "The MaskinportenSchema, as it is in Altinn after the change.",
+                        "description": "The MaskinportenSchema as this API sent it to Altinn, since Altinn answers a change without a body.",
                         "headers": {
                             "X-Request-ID": {
                                 "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
@@ -938,6 +938,28 @@
                     }
                 }
             },
+            "MultilingualText3": {
+                "type": [
+                    "object",
+                    "null"
+                ],
+                "title": "MultilingualText3",
+                "description": "Required, in `en`, `nb` and `nn`, when the resource is `delegable`, since Altinn rejects the resource without it. Optional otherwise.",
+                "properties": {
+                    "en": {
+                        "type": "string",
+                        "description": "In English. Left out if missing."
+                    },
+                    "nb": {
+                        "type": "string",
+                        "description": "In Norwegian Bokmål. Left out if missing."
+                    },
+                    "nn": {
+                        "type": "string",
+                        "description": "In Norwegian Nynorsk. Left out if missing."
+                    }
+                }
+            },
             "MaskinportenSchemaRequest": {
                 "type": "object",
                 "title": "MaskinportenSchemaRequest",
@@ -961,7 +983,7 @@
                         "$ref": "#/components/schemas/MultilingualText2"
                     },
                     "delegationDescription": {
-                        "$ref": "#/components/schemas/MultilingualText2"
+                        "$ref": "#/components/schemas/MultilingualText3"
                     },
                     "homepage": {
                         "type": "string",

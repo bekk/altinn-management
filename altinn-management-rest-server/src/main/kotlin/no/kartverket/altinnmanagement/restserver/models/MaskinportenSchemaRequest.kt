@@ -27,7 +27,10 @@ data class MaskinportenSchemaRequest(
     @JsonSchema.Description("Required, in `en`, `nb` and `nn`.")
     val description: MultilingualText? = null,
 
-    @JsonSchema.Description("Required, in `en`, `nb` and `nn`.")
+    @JsonSchema.Description(
+        "Required, in `en`, `nb` and `nn`, when the resource is `delegable`, since Altinn rejects the resource without it. " +
+            "Optional otherwise.",
+    )
     val delegationDescription: MultilingualText? = null,
 
     @JsonSchema.Type(JsonType.STRING)

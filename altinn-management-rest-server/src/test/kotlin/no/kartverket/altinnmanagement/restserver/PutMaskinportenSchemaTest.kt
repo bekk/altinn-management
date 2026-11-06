@@ -16,7 +16,9 @@ import io.ktor.http.contentType
 import io.ktor.server.testing.ApplicationTestBuilder
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import no.kartverket.altinnmanagement.client.auth.AccessToken
 import no.kartverket.altinnmanagement.client.auth.AccessTokenProvider
 import no.kartverket.altinnmanagement.client.http.HttpMethod
@@ -200,7 +202,6 @@ class PutMaskinportenSchemaTest {
                 FieldError("scopes", ValidationCode.MISSING, "scopes is required"),
                 FieldError("title", ValidationCode.MISSING, "title is required"),
                 FieldError("description", ValidationCode.MISSING, "description is required"),
-                FieldError("delegationDescription", ValidationCode.MISSING, "delegationDescription is required"),
             ),
         )
 
@@ -215,24 +216,49 @@ class PutMaskinportenSchemaTest {
     }
 
     @Test
-    fun `gives 400 for a scope that is blank or has whitespace`() = testServer(altinn()) {
-        put(requiredOnly.replace("""["kartverk:matrikkel:ny"]""", """["kartverk:ok", " ", "kartverk:a b"]""")).assertProblem(
+    fun `gives 400 for a blank scope`() = testServer(altinn()) {
+        put(requiredOnly.replace("""["kartverk:matrikkel:ny"]""", """["kartverk:ok", " ", ""]""")).assertProblem(
             validationError(
-                FieldError("scopes[1]", ValidationCode.INVALID_FORMAT, "scopes[1] must not be blank or contain whitespace"),
-                FieldError("scopes[2]", ValidationCode.INVALID_FORMAT, "scopes[2] must not be blank or contain whitespace"),
+                FieldError("scopes[1]", ValidationCode.INVALID_FORMAT, "scopes[1] must not be blank"),
+                FieldError("scopes[2]", ValidationCode.INVALID_FORMAT, "scopes[2] must not be blank"),
             ),
         )
     }
 
     @Test
-    fun `gives 400 for a text that is missing or blank in a language, since Altinn requires all three`() = testServer(altinn()) {
-        put(requiredOnly.replace(""""nn": "Ny Matrikkel API"""", """"nn": " """").replace(""""en": "New rights.", """, "")).assertProblem(
-            validationError(
-                FieldError("title.nn", ValidationCode.MISSING, "title.nn is required"),
-                FieldError("delegationDescription.en", ValidationCode.MISSING, "delegationDescription.en is required"),
-            ),
-        )
+    fun `leaves it to Altinn to judge a scope with whitespace, since Altinn does not check for it`() = testServer(altinn()) {
+        val response = put(requiredOnly.replace("""["kartverk:matrikkel:ny"]""", """["kartverk:a b"]"""))
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals("kartverk:a b", sentResource["resourceReferences"]!!.jsonArray[0].jsonObject["reference"]!!.jsonPrimitive.content)
     }
+
+    @Test
+    fun `gives 400 for a title or description that is missing or blank in a language, since Altinn requires all three`() =
+        testServer(altinn()) {
+            put(requiredOnly.replace(""""nn": "Ny Matrikkel API"""", """"nn": " """").replace(""""en": "New description.", """, ""))
+                .assertProblem(
+                    validationError(
+                        FieldError("title.nn", ValidationCode.MISSING, "title.nn is required"),
+                        FieldError("description.en", ValidationCode.MISSING, "description.en is required"),
+                    ),
+                )
+        }
+
+    @Test
+    fun `leaves it to Altinn to require the delegation description, since Altinn only does so for a delegable resource`() =
+        testServer(altinn()) {
+            val withoutEnglish = put(requiredOnly.replace(""""en": "New rights.", """, ""))
+
+            assertEquals(HttpStatusCode.OK, withoutEnglish.status)
+            assertEquals("""{"nb":"Nye rettigheter.","nn":"Nye rettar."}""", sentResource["rightDescription"].toString())
+
+            sent.clear()
+            val withoutDelegationDescription = put(requiredOnly.replace(Regex(""",\s*"delegationDescription": \{[^}]*\}"""), ""))
+
+            assertEquals(HttpStatusCode.OK, withoutDelegationDescription.status)
+            assertFalse("rightDescription" in sentResource)
+        }
 
     @Test
     fun `gives 400 for an id Altinn would not accept, without asking Altinn`() = testServer(altinn()) {

@@ -30,6 +30,7 @@ import java.util.UUID
 
 internal val apiJson = Json(DefaultJson) {
     explicitNulls = false
+    // DefaultJson is lenient, and would read 42 as the string "42"
     isLenient = false
 }
 
