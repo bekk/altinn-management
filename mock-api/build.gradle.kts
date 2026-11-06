@@ -1,9 +1,23 @@
 plugins {
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.ktlint)
     alias(ktorLibs.plugins.ktor)
+}
+
+kotlin {
+    jvmToolchain(25)
+}
+
+ktlint {
+    version.set(libs.versions.ktlint.cli.get())
 }
 
 application {
     mainClass = "no.kartverket.altinnmanagement.mock.MainKt"
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
 }
 
 dependencies {
@@ -14,5 +28,6 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.logback.classic)
 
+    testImplementation(kotlin("test"))
     testImplementation(ktorLibs.server.testHost)
 }
