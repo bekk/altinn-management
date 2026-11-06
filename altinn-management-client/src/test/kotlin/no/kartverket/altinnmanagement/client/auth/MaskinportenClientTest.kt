@@ -4,22 +4,21 @@ import com.nimbusds.jose.crypto.RSASSAVerifier
 import com.nimbusds.jwt.SignedJWT
 import kotlinx.coroutines.runBlocking
 import no.kartverket.altinnmanagement.client.exception.MaskinportenException
+import no.kartverket.altinnmanagement.client.http.HttpMethod
+import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
+import no.kartverket.altinnmanagement.client.http.OutgoingRequest
 import no.kartverket.altinnmanagement.client.support.MutableClock
 import no.kartverket.altinnmanagement.client.support.NOW
-import no.kartverket.altinnmanagement.client.support.TOKEN_PATH
-import no.kartverket.altinnmanagement.client.support.TestHttpServer
 import no.kartverket.altinnmanagement.client.support.TestKeys
-import no.kartverket.altinnmanagement.client.support.TestResponse
 import no.kartverket.altinnmanagement.client.support.assertNoTokenIn
 import no.kartverket.altinnmanagement.client.support.fixedClock
 import no.kartverket.altinnmanagement.client.support.maskinportenConfig
 import no.kartverket.altinnmanagement.client.support.maskinportenTokenResponse
-import no.kartverket.altinnmanagement.client.support.testHttpClient
+import no.kartverket.altinnmanagement.client.support.recording
+import no.kartverket.altinnmanagement.client.support.response
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.Duration
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -29,21 +28,13 @@ import kotlin.test.assertTrue
 
 class MaskinportenClientTest {
 
-    private lateinit var server: TestHttpServer
+    private val sent = mutableListOf<OutgoingRequest>()
 
-    @BeforeTest
-    fun startServer() {
-        server = TestHttpServer.start()
-    }
-
-    @AfterTest
-    fun stopServer() = server.close()
-
-    private fun client() =
-        MaskinportenClient(maskinportenConfig(tokenUrl = server.baseUrl + TOKEN_PATH), testHttpClient, clock = fixedClock())
+    private fun clientAnswering(body: String) =
+        MaskinportenClient(maskinportenConfig(), recording(sent) { response(200, "application/json", body) }, clock = fixedClock())
 
     private fun offlineClient(config: MaskinportenConfig) =
-        MaskinportenClient(config, testHttpClient, clock = fixedClock())
+        MaskinportenClient(config, OutgoingHttpClient { error("unexpected call to ${it.url}") }, clock = fixedClock())
 
     @Test
     fun `signs the client assertion with the configured key`() {
@@ -71,16 +62,16 @@ class MaskinportenClientTest {
 
     @Test
     fun `posts the JWT grant as a form-encoded body`() = runBlocking {
-        server.on(TOKEN_PATH) { TestResponse(body = maskinportenTokenResponse("maskinporten-token")) }
+        clientAnswering(maskinportenTokenResponse("maskinporten-token")).getToken()
 
-        client().getToken()
+        val request = sent.single()
+        assertEquals(HttpMethod.POST, request.method)
+        assertEquals("https://test.maskinporten.no/token", request.url.toString())
+        assertEquals("application/x-www-form-urlencoded", request.headers["Content-Type"])
+        val body = request.body!!.decodeToString()
+        assertContains(body, "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer")
 
-        val request = server.lastRequest(TOKEN_PATH)
-        assertEquals("POST", request.method)
-        assertEquals("application/x-www-form-urlencoded", request.header("Content-Type"))
-        assertContains(request.body, "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer")
-
-        val form = request.body.split("&").associate {
+        val form = body.split("&").associate {
             val (key, value) = it.split("=", limit = 2)
             URLDecoder.decode(key, UTF_8) to URLDecoder.decode(value, UTF_8)
         }
@@ -93,9 +84,7 @@ class MaskinportenClientTest {
 
     @Test
     fun `reads the access token and its lifetime from the response`() = runBlocking {
-        server.on(TOKEN_PATH) { TestResponse(body = maskinportenTokenResponse("maskinporten-token", expiresIn = 120)) }
-
-        val token = client().getToken()
+        val token = clientAnswering(maskinportenTokenResponse("maskinporten-token", expiresIn = 120)).getToken()
 
         assertEquals("maskinporten-token", token.value)
         assertEquals(NOW.plusSeconds(120), token.expiresAt)
@@ -104,12 +93,12 @@ class MaskinportenClientTest {
     @Test
     fun `the token's lifetime counts from when it was requested, not from when Maskinporten answered`() = runBlocking {
         val clock = MutableClock()
-        server.on(TOKEN_PATH) {
+        val http = OutgoingHttpClient {
             clock.advance(Duration.ofSeconds(5))
-            TestResponse(body = maskinportenTokenResponse("maskinporten-token", expiresIn = 120))
+            response(200, "application/json", maskinportenTokenResponse("maskinporten-token", expiresIn = 120))
         }
 
-        val token = MaskinportenClient(maskinportenConfig(tokenUrl = server.baseUrl + TOKEN_PATH), testHttpClient, clock = clock).getToken()
+        val token = MaskinportenClient(maskinportenConfig(), http, clock = clock).getToken()
 
         assertEquals(NOW.plusSeconds(120), token.expiresAt)
     }
@@ -124,9 +113,8 @@ class MaskinportenClientTest {
         )
         for ((why, case) in cases) {
             val (body, expectedInMessage) = case
-            server.on(TOKEN_PATH) { TestResponse(body = body) }
 
-            val e = assertFailsWith<MaskinportenException>(why) { client().getToken() }
+            val e = assertFailsWith<MaskinportenException>(why) { clientAnswering(body).getToken() }
 
             assertContains(e.message!!, expectedInMessage, message = "for $why")
         }
@@ -134,18 +122,18 @@ class MaskinportenClientTest {
 
     @Test
     fun `keeps the token out of the error when the rest of the answer is unusable`() = runBlocking {
-        server.on(TOKEN_PATH) { TestResponse(body = """{"access_token":"secret-mp-token","expires_in":"soon"}""") }
-
-        val e = assertFailsWith<MaskinportenException> { client().getToken() }
+        val e = assertFailsWith<MaskinportenException> {
+            clientAnswering("""{"access_token":"secret-mp-token","expires_in":"soon"}""").getToken()
+        }
 
         assertNoTokenIn(e, "secret-mp-token")
     }
 
     @Test
     fun `keeps the token out of the error when it is not a valid bearer token`() = runBlocking {
-        server.on(TOKEN_PATH) { TestResponse(body = """{"access_token":"secret-mp\ntoken","expires_in":3600}""") }
-
-        val e = assertFailsWith<MaskinportenException> { client().getToken() }
+        val e = assertFailsWith<MaskinportenException> {
+            clientAnswering("""{"access_token":"secret-mp\ntoken","expires_in":3600}""").getToken()
+        }
 
         assertNoTokenIn(e, "secret-mp")
     }
