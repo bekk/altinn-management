@@ -1,10 +1,10 @@
 package no.kartverket.altinnmanagement.client.auth
 
 import kotlinx.coroutines.runBlocking
+import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
 import no.kartverket.altinnmanagement.client.support.NOW
-import no.kartverket.altinnmanagement.client.support.TestHttpServer
+import no.kartverket.altinnmanagement.client.support.bothTokens
 import no.kartverket.altinnmanagement.client.support.maskinportenAltinnTokenProvider
-import no.kartverket.altinnmanagement.client.support.serveBothTokens
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -36,13 +36,9 @@ class AccessTokenTest {
 
     @Test
     fun `does not show the token the Maskinporten provider hands out`() = runBlocking {
-        TestHttpServer.start().use { server ->
-            server.serveBothTokens()
+        val token = maskinportenAltinnTokenProvider(OutgoingHttpClient { bothTokens()(it) }).accessToken()
 
-            val token = maskinportenAltinnTokenProvider(server).accessToken()
-
-            assertFalse(token.value in token.toString())
-        }
+        assertFalse(token.value in token.toString())
     }
 
     @Test
