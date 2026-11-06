@@ -22,8 +22,9 @@ scripts/dev.sh           # run the server on :8080 with the variables in .env
 
 ## Conventions
 
-- `main()` reads the settings into `AppConfig`, sets up logging and starts the server. `Application.module()` installs
-  the plugins and adds the routes, so tests and production run the same code.
+- `main()` sets the Logback path, reads the settings into `AppConfig` and starts the server. The Logback path comes
+  first, since Logback only reads it when the first logger is created and ignores it after that without an error.
+  `Application.module()` installs the plugins and adds the routes, so tests and production run the same code.
 - A new setting goes in `application.yaml` as `"$?ENV_VAR"` and in `.env.example`. Its errors name the
   `application.yaml` key and end with `(see .env.example)`, like the helpers in `Config.kt`.
 - The OpenAPI spec is generated from the routes and `OpenApi.kt`. A test fails if the checked-in `openapi.json` is
