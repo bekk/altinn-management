@@ -11,7 +11,6 @@ import java.time.Duration
 internal class AppConfig(
     val port: Int,
     val accessLog: Boolean,
-    val logbackConfigFile: String?,
     val altinnEnvironment: AltinnEnvironmentSetting,
     val maskinportenClientId: String,
     val maskinportenKey: MaskinportenKey,
@@ -24,7 +23,6 @@ internal class AppConfig(
             return AppConfig(
                 port = config.port("server.port"),
                 accessLog = config.boolean("accessLog.enabled", default = true),
-                logbackConfigFile = config.file("logback.configFile"),
                 altinnEnvironment = config.enum("altinn.environment"),
                 maskinportenClientId = config.required("maskinporten.clientId"),
                 maskinportenKey = config.maskinportenKey("maskinporten.clientJwk"),
