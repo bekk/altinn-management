@@ -8,6 +8,8 @@ buildscript {
 }
 
 plugins {
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.ktlint)
     alias(ktorLibs.plugins.ktor)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.jib)
@@ -21,8 +23,20 @@ val dockerTags = providers.gradleProperty("dockerTags").orNull
     ?.toSet()
     ?: emptySet()
 
+kotlin {
+    jvmToolchain(25)
+}
+
+ktlint {
+    version.set(libs.versions.ktlint.cli.get())
+}
+
 application {
     mainClass = "no.kartverket.altinnmanagement.restserver.MainKt"
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
 }
 
 tasks.test {
@@ -59,6 +73,7 @@ dependencies {
     // logstash-logback-encoder pulls in an older Jackson 3 with known vulnerabilities.
     implementation(platform(libs.jackson.bom))
 
+    testImplementation(kotlin("test"))
     testImplementation(ktorLibs.server.testHost)
     testImplementation(testFixtures(project(":altinn-management-client")))
 }
