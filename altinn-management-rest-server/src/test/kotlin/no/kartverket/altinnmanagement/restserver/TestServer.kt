@@ -2,6 +2,9 @@ package no.kartverket.altinnmanagement.restserver
 
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import kotlinx.serialization.json.Json
@@ -11,6 +14,8 @@ import no.kartverket.altinnmanagement.client.auth.AccessToken
 import no.kartverket.altinnmanagement.client.auth.AccessTokenProvider
 import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
 import no.kartverket.altinnmanagement.restserver.models.ErrorResponse
+import no.kartverket.altinnmanagement.restserver.models.ProblemType
+import kotlin.test.assertEquals
 
 internal fun testServer(
     altinn: OutgoingHttpClient = unexpectedCall,
@@ -37,3 +42,13 @@ private val unexpectedCall = OutgoingHttpClient { error("unexpected call to ${it
 
 internal suspend fun HttpResponse.errorResponse(): ErrorResponse =
     Json.decodeFromString(ErrorResponse.serializer(), bodyAsText())
+
+internal suspend fun HttpResponse.assertProblem(expected: ErrorResponse) {
+    assertEquals(expected.status, status.value)
+    assertEquals(ContentType.Application.ProblemJson, contentType()?.withoutParameters())
+    assertEquals(expected, errorResponse())
+}
+
+internal val notFound = ErrorResponse.of(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, "There is no MaskinportenSchema with this id")
+
+internal val upstreamError = ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed")

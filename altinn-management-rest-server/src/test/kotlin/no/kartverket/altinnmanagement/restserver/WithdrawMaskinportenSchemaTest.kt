@@ -1,11 +1,8 @@
 package no.kartverket.altinnmanagement.restserver
 
 import io.ktor.client.request.put
-import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
-import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
-import io.ktor.http.contentType
 import io.ktor.server.testing.ApplicationTestBuilder
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -54,14 +51,6 @@ class WithdrawMaskinportenSchemaTest {
             "status" to JsonPrimitive("Withdrawn"),
         ),
     )
-
-    private suspend fun HttpResponse.assertProblem(expected: ErrorResponse) {
-        assertEquals(expected.status, status.value)
-        assertEquals(ContentType.Application.ProblemJson, contentType()?.withoutParameters())
-        assertEquals(expected, errorResponse())
-    }
-
-    private val notFound = ErrorResponse.of(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, "There is no MaskinportenSchema with this id")
 
     @Test
     fun `answers with the withdrawn MaskinportenSchema`() = testServer(altinn()) {
