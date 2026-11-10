@@ -15,17 +15,21 @@ import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.request.path
+import io.ktor.server.request.receive
+import io.ktor.server.response.header
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.openapi.describe
 import io.ktor.server.routing.openapi.hide
+import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.routing
 import io.ktor.utils.io.ExperimentalKtorApi
 import kotlinx.serialization.json.Json
 import no.kartverket.altinnmanagement.client.ResourceRegistryClient
 import no.kartverket.altinnmanagement.restserver.models.MaskinportenSchema
+import no.kartverket.altinnmanagement.restserver.models.NewMaskinportenSchema
 import org.slf4j.LoggerFactory
 import java.util.UUID
 
@@ -91,6 +95,13 @@ fun Application.module(
             val matching = if (scope == null) schemas else schemas.filter { scope in it.scopes.orEmpty() }
             call.respond(matching.allowedBy(filter).map(MaskinportenSchema::from))
         }.describe(maskinportenSchemasListOperation)
+
+        post("/api/maskinportenschemas") {
+            val schema = newMaskinportenSchema(call.receive<NewMaskinportenSchema>())
+            val created = client.createMaskinportenSchema(schema)
+            call.response.header(HttpHeaders.Location, "/api/maskinportenschemas/${created.resourceId.value}")
+            call.respond(HttpStatusCode.Created, MaskinportenSchema.from(created))
+        }.describe(maskinportenSchemaCreateOperation)
 
         get("/api/maskinportenschemas/{id}") {
             val id = resourceId("id", call.pathParameters["id"]!!)

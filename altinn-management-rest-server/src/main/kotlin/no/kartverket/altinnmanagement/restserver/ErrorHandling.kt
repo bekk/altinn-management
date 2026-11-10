@@ -5,21 +5,23 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.log
 import io.ktor.server.plugins.BadRequestException
+import io.ktor.server.plugins.CannotTransformContentToTypeException
+import io.ktor.server.plugins.UnsupportedMediaTypeException
 import io.ktor.server.plugins.statuspages.StatusPagesConfig
 import io.ktor.server.response.respondText
 import kotlinx.serialization.json.Json
 import no.kartverket.altinnmanagement.client.exception.AltinnManagementException
 import no.kartverket.altinnmanagement.client.exception.AltinnRejectedException
+import no.kartverket.altinnmanagement.client.exception.ResourceAlreadyExistsException
 import no.kartverket.altinnmanagement.restserver.models.ErrorResponse
 import no.kartverket.altinnmanagement.restserver.models.FieldError
 import no.kartverket.altinnmanagement.restserver.models.ProblemType
 
 internal fun StatusPagesConfig.errorResponses() {
-    exception<BadRequestException> { call, cause ->
-        val causes = generateSequence<Throwable>(cause) { it.cause }.joinToString(" caused by ") { it.javaClass.name }
-        call.application.log.warn("Malformed request: $causes")
-        call.respondProblem(ProblemType.MALFORMED_REQUEST, HttpStatusCode.BadRequest)
-    }
+    exception<BadRequestException> { call, cause -> call.respondMalformedRequest(cause) }
+    // Ktor throws these when the body is not JSON, and they are not BadRequestExceptions
+    exception<UnsupportedMediaTypeException> { call, cause -> call.respondMalformedRequest(cause) }
+    exception<CannotTransformContentToTypeException> { call, cause -> call.respondMalformedRequest(cause) }
     exception<InvalidRequestException> { call, cause ->
         call.respondProblem(ProblemType.VALIDATION_ERROR, HttpStatusCode.BadRequest, errors = cause.errors)
     }
@@ -28,6 +30,9 @@ internal fun StatusPagesConfig.errorResponses() {
     }
     exception<MaskinportenSchemaNotFoundException> { call, cause ->
         call.respondProblem(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, cause.message)
+    }
+    exception<ResourceAlreadyExistsException> { call, _ ->
+        call.respondProblem(ProblemType.CONFLICT, HttpStatusCode.Conflict, "Altinn already has a resource with this id")
     }
     exception<AltinnRejectedException> { call, cause ->
         call.application.log.warn("Altinn rejected the resource: statusCode=${cause.statusCode}")
@@ -56,6 +61,12 @@ internal fun StatusPagesConfig.errorResponses() {
     status(HttpStatusCode.MethodNotAllowed) { call, status ->
         call.respondProblem(ProblemType.METHOD_NOT_ALLOWED, status, "The endpoint at this path does not accept this method")
     }
+}
+
+private suspend fun ApplicationCall.respondMalformedRequest(cause: Throwable) {
+    val causes = generateSequence(cause) { it.cause }.joinToString(" caused by ") { it.javaClass.name }
+    application.log.warn("Malformed request: $causes")
+    respondProblem(ProblemType.MALFORMED_REQUEST, HttpStatusCode.BadRequest)
 }
 
 private suspend fun ApplicationCall.respondProblem(

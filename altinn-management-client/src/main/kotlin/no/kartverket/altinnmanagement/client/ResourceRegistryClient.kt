@@ -9,6 +9,7 @@ import kotlinx.serialization.json.jsonObject
 import no.kartverket.altinnmanagement.client.auth.AccessTokenProvider
 import no.kartverket.altinnmanagement.client.exception.AltinnException
 import no.kartverket.altinnmanagement.client.exception.AltinnRejectedException
+import no.kartverket.altinnmanagement.client.exception.ResourceAlreadyExistsException
 import no.kartverket.altinnmanagement.client.http.Http
 import no.kartverket.altinnmanagement.client.http.HttpMethod
 import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
@@ -84,6 +85,36 @@ public class ResourceRegistryClient(
         } catch (e: IllegalArgumentException) {
             throw AltinnException("Failed to parse the resources from $TARGET: ${e.message}", response.statusCode, body, e)
         }
+    }
+
+    /**
+     * Creates the resource in Altinn, owned by Kartverket, and returns it as it was sent. Altinn answers a create
+     * without the resource, so the result holds the values this client sets, not ones read back from Altinn. Throws
+     * [ResourceAlreadyExistsException] when Altinn has a resource with this id, [AltinnRejectedException] when Altinn
+     * would not take it, and [IllegalStateException] when this client has no [AccessTokenProvider].
+     */
+    public suspend fun createMaskinportenSchema(schema: NewMaskinportenSchema): MaskinportenSchema {
+        val accessTokenProvider = checkNotNull(accessTokenProvider) { "Changing a resource needs an AccessTokenProvider" }
+        val resource = newAltinnResource(schema)
+        val token = accessTokenProvider.accessToken()
+        val request = OutgoingRequest(
+            method = HttpMethod.POST,
+            url = Http.url(platformBaseUrl, RESOURCE_PATH),
+            headers = mapOf(
+                "Authorization" to "Bearer ${token.value}",
+                "Content-Type" to "application/json",
+                "Accept" to "application/json",
+            ),
+            body = Http.json.encodeToString(AltinnResource.serializer(), resource).encodeToByteArray(),
+        )
+        val response = Http.send(httpClient, request, TARGET, ::AltinnException)
+        if (response.statusCode == 201) return resource.toMaskinportenSchema(schema.resourceId)
+        val body = response.body.decodeToString()
+        if (response.statusCode == 409) throw ResourceAlreadyExistsException(schema.resourceId, response.statusCode, body)
+        val e = AltinnException("$TARGET responded ${response.statusCode}", response.statusCode, body)
+        rejection(e)?.let { throw it }
+        if (e.statusCode == 401) accessTokenProvider.refused(token)
+        throw e
     }
 
     // Whole, since a change must send back what this client does not read

@@ -8,9 +8,11 @@ import io.ktor.server.request.receive
 import kotlinx.serialization.SerializationException
 import no.kartverket.altinnmanagement.client.MaskinportenSchemaContent
 import no.kartverket.altinnmanagement.client.ResourceId
+import no.kartverket.altinnmanagement.client.ResourceStatus
 import no.kartverket.altinnmanagement.restserver.models.FieldError
 import no.kartverket.altinnmanagement.restserver.models.MaskinportenSchemaRequest
 import no.kartverket.altinnmanagement.restserver.models.MultilingualText
+import no.kartverket.altinnmanagement.restserver.models.NewMaskinportenSchema
 import no.kartverket.altinnmanagement.restserver.models.ValidationCode
 import tools.jackson.core.JacksonException
 import tools.jackson.core.StreamReadFeature
@@ -18,6 +20,10 @@ import tools.jackson.databind.DeserializationFeature
 import tools.jackson.databind.json.JsonMapper
 import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
+import no.kartverket.altinnmanagement.client.ContactPoint as ClientContactPoint
+import no.kartverket.altinnmanagement.client.Keyword as ClientKeyword
+import no.kartverket.altinnmanagement.client.MultilingualText as ClientMultilingualText
+import no.kartverket.altinnmanagement.client.NewMaskinportenSchema as ClientNewMaskinportenSchema
 
 internal class InvalidRequestException(val errors: List<FieldError>) : RuntimeException(errors.joinToString("; ") { it.message })
 
@@ -132,4 +138,62 @@ private fun ApplicationCall.requireJsonContentType() {
     if (contentType?.withoutParameters() != ContentType.Application.Json) {
         throw MalformedRequestException("The body must be JSON, sent with Content-Type application/json")
     }
+}
+
+// Checks every field before it fails, so the caller gets all the errors at once
+internal fun newMaskinportenSchema(body: NewMaskinportenSchema): ClientNewMaskinportenSchema {
+    val errors = mutableListOf<FieldError>()
+    val resourceId = when {
+        body.resourceId.isNullOrBlank() -> null.also { errors += missing("resourceId") }
+
+        else -> try {
+            ResourceId.of(body.resourceId)
+        } catch (e: IllegalArgumentException) {
+            errors += FieldError("resourceId", ValidationCode.INVALID_FORMAT, "resourceId must be 4 or more of a-z, 0-9, _ and -")
+            null
+        }
+    }
+    if (body.scopes.isNullOrEmpty()) {
+        errors += FieldError("scopes", ValidationCode.MISSING, "scopes must have at least one scope")
+    }
+    body.scopes.orEmpty().forEachIndexed { index, scope ->
+        val field = "scopes[$index]"
+        when {
+            scope.isBlank() -> errors += FieldError(field, ValidationCode.MISSING, "$field must not be blank")
+            scope.any(Char::isWhitespace) -> errors += FieldError(field, ValidationCode.INVALID_FORMAT, "$field must not contain whitespace")
+        }
+    }
+    val title = multilingualText("title", body.title, errors)
+    val description = multilingualText("description", body.description, errors)
+    val delegationDescription = multilingualText("delegationDescription", body.delegationDescription, errors)
+    val status = body.status?.let { value -> ResourceStatus.entries.find { it.value == value } }
+    if (body.status != null && status == null) {
+        val values = ResourceStatus.entries.joinToString { it.value }
+        errors += FieldError("status", ValidationCode.INVALID_FORMAT, "status must be one of $values")
+    }
+    if (errors.isNotEmpty()) throw InvalidRequestException(errors)
+
+    return ClientNewMaskinportenSchema(
+        resourceId = resourceId!!,
+        scopes = body.scopes!!,
+        title = title!!,
+        description = description!!,
+        delegationDescription = delegationDescription!!,
+        homepage = body.homepage?.takeIf { it.isNotBlank() },
+        contactPoints = body.contactPoints.orEmpty().map {
+            ClientContactPoint(category = it.category, email = it.email, telephone = it.telephone, contactPage = it.contactPage)
+        },
+        keywords = body.keywords.orEmpty().map { ClientKeyword(word = it.word, language = it.language) },
+        status = status,
+    )
+}
+
+private fun multilingualText(field: String, text: MultilingualText?, errors: MutableList<FieldError>): ClientMultilingualText? {
+    if (text == null) {
+        errors += missing(field)
+        return null
+    }
+    val missing = listOf("en" to text.en, "nb" to text.nb, "nn" to text.nn).filter { (_, value) -> value.isNullOrBlank() }
+    missing.forEach { (language, _) -> errors += missing("$field.$language") }
+    return if (missing.isEmpty()) ClientMultilingualText(en = text.en, nb = text.nb, nn = text.nn) else null
 }
