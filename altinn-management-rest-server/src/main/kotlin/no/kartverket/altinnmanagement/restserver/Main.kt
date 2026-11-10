@@ -121,5 +121,11 @@ fun Application.module(
             val schema = client.withdrawMaskinportenSchema(id) ?: throw MaskinportenSchemaNotFoundException()
             call.respond(MaskinportenSchema.from(schema))
         }.describe(maskinportenSchemaWithdrawOperation)
+
+        put("/api/maskinportenschemas/{id}/policy") {
+            val id = resourceId("id", call.pathParameters["id"]!!)
+            if (!client.setMaskinportenSchemaPolicy(id)) throw MaskinportenSchemaNotFoundException()
+            call.respond(HttpStatusCode.NoContent)
+        }.describe(maskinportenSchemaPolicyPutOperation)
     }
 }

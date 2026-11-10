@@ -117,6 +117,35 @@ public class ResourceRegistryClient(
         throw e
     }
 
+    /**
+     * Gives Kartverket's MaskinportenSchema [id] the policy every MaskinportenSchema gets, in place of any policy it
+     * has. Returns false, and changes nothing, when Altinn has no MaskinportenSchema of Kartverket's with this id.
+     * Throws [AltinnRejectedException] when Altinn would not take the policy, and [IllegalStateException] when this
+     * client has no [AccessTokenProvider].
+     */
+    public suspend fun setMaskinportenSchemaPolicy(id: ResourceId): Boolean {
+        val accessTokenProvider = checkNotNull(accessTokenProvider) { "Changing a resource needs an AccessTokenProvider" }
+        val (_, resource) = getResource(id) ?: return false
+        // Without this check, the policy could replace the one on another kind of Kartverket resource
+        if (!resource.isMaskinportenSchema || !resource.isKartverkets) return false
+        val token = accessTokenProvider.accessToken()
+        val request = OutgoingRequest(
+            method = HttpMethod.PUT,
+            url = Http.url(platformBaseUrl, "$RESOURCE_PATH/${id.value}/policy"),
+            headers = mapOf(
+                "Authorization" to "Bearer ${token.value}",
+                "Content-Type" to "multipart/form-data; boundary=$POLICY_BOUNDARY",
+            ),
+            body = policyFormData(maskinportenSchemaPolicy(id)),
+        )
+        val response = Http.send(httpClient, request, TARGET, ::AltinnException)
+        if (response.statusCode in 200..299) return true
+        val e = AltinnException("$TARGET responded ${response.statusCode}", response.statusCode, response.body.decodeToString())
+        rejection(e)?.let { throw it }
+        if (e.statusCode == 401) accessTokenProvider.refused(token)
+        throw e
+    }
+
     // Whole, since a change must send back what this client does not read
     private suspend fun getResource(id: ResourceId): Pair<JsonObject, AltinnResource>? {
         if (id.value in FIXED_ROUTES) return null
@@ -165,3 +194,16 @@ public class ResourceRegistryClient(
             (element as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.content }
     }
 }
+
+// A resource id has no capital letters, so the boundary cannot turn up inside the policy
+private const val POLICY_BOUNDARY = "AltinnManagementPolicyBoundary"
+
+// Altinn takes the policy as a file in the form field policyFile
+private fun policyFormData(policy: String): ByteArray = (
+    "--$POLICY_BOUNDARY\r\n" +
+        "Content-Disposition: form-data; name=\"policyFile\"; filename=\"policy.xml\"\r\n" +
+        "Content-Type: application/xml\r\n" +
+        "\r\n" +
+        policy + "\r\n" +
+        "--$POLICY_BOUNDARY--\r\n"
+    ).encodeToByteArray()

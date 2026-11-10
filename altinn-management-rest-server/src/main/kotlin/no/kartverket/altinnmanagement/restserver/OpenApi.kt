@@ -172,7 +172,8 @@ internal val maskinportenSchemaCreateOperation: Operation.Builder.() -> Unit = {
     summary = "Create a MaskinportenSchema"
     description = "Creates a resource of type `MaskinportenSchema` in Altinn, owned by Kartverket. This API checks " +
         "the fields first, and Altinn checks them again, so a resource that passes here can still be rejected. The " +
-        "resource has no policy yet, so it cannot be delegated until it gets one."
+        "resource has no policy yet, so it cannot be delegated until it gets one with " +
+        "`PUT /api/maskinportenschemas/{id}/policy`."
 
     parameters {
         requestId()
@@ -530,6 +531,88 @@ internal val maskinportenSchemaWithdrawOperation: Operation.Builder.() -> Unit =
         HttpStatusCode.BadGateway {
             description = "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
                 "did not cause it, and the resource may or may not have been withdrawn."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
+            }
+        }
+
+        HttpStatusCode.InternalServerError {
+            description = "An unexpected error in this API."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example("InternalError", ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError))
+            }
+        }
+    }
+}
+
+internal val maskinportenSchemaPolicyPutOperation: Operation.Builder.() -> Unit = {
+    summary = "Give a MaskinportenSchema its policy"
+    description = "Uploads to Altinn the policy every MaskinportenSchema gets, in place of any policy the resource " +
+        "has. The policy lets anyone with the access package `maskinporten-scopes` use the resource's scopes and " +
+        "delegate them, after logging in at security level 3 or higher. A resource cannot be delegated until it has " +
+        "a policy, so call this after `POST /api/maskinportenschemas`. It only works on Kartverket's " +
+        "MaskinportenSchemas, and takes no body."
+
+    parameters {
+        path("id") {
+            required = true
+            description = "The resource's id: 4 or more of `a-z`, `0-9`, `_` and `-`, for example " +
+                "`kv-matrikkel-brukernavn`."
+            schema = JsonSchema(type = JsonType.STRING, pattern = "^[a-z0-9_-]{4,}$")
+        }
+        requestId()
+    }
+
+    responses {
+        HttpStatusCode.NoContent {
+            description = "Altinn has the policy."
+            headers { requestId() }
+        }
+
+        HttpStatusCode.BadRequest {
+            description = "The id is not valid, or Altinn rejected the policy. When Altinn rejects it, `detail` has " +
+                "Altinn's reasons."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example(
+                    "InvalidId",
+                    ErrorResponse.of(
+                        ProblemType.VALIDATION_ERROR,
+                        HttpStatusCode.BadRequest,
+                        errors = listOf(FieldError("id", ValidationCode.INVALID_FORMAT, "id must be 4 or more of a-z, 0-9, _ and -")),
+                    ),
+                )
+                example(
+                    "RejectedByAltinn",
+                    ErrorResponse.of(
+                        ProblemType.UPSTREAM_REJECTED,
+                        HttpStatusCode.BadRequest,
+                        "Altinn rejected the resource: Unknown resource",
+                    ),
+                )
+            }
+        }
+
+        HttpStatusCode.NotFound {
+            description = "Altinn has no MaskinportenSchema of Kartverket's with this id."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example(
+                    "NotFound",
+                    ErrorResponse.of(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, "There is no MaskinportenSchema with this id"),
+                )
+            }
+        }
+
+        HttpStatusCode.BadGateway {
+            description = "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
+                "did not cause it. Altinn may or may not have the policy."
             headers { requestId() }
             ContentType.Application.ProblemJson {
                 schema = jsonSchema<ErrorResponse>()
