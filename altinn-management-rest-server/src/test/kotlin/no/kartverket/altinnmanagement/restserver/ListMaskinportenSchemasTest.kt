@@ -63,16 +63,8 @@ class ListMaskinportenSchemasTest {
         }
     """.trimIndent()
 
-    private val upstreamError = ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed")
-
     private suspend fun HttpResponse.maskinportenSchemas(): List<MaskinportenSchema> =
         Json.decodeFromString(ListSerializer(MaskinportenSchema.serializer()), bodyAsText())
-
-    private suspend fun HttpResponse.assertProblem(expected: ErrorResponse) {
-        assertEquals(expected.status, status.value)
-        assertEquals(ContentType.Application.ProblemJson, contentType()?.withoutParameters())
-        assertEquals(expected, errorResponse())
-    }
 
     @Test
     fun `lists the MaskinportenSchemas in this API's model, the same as getting each one`() = testServer({ request ->

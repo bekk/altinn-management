@@ -38,18 +38,8 @@ class GetMaskinportenSchemaTest {
         response(status, "application/json; charset=utf-8", body)
     }
 
-    private val notFound = ErrorResponse.of(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, "There is no MaskinportenSchema with this id")
-
-    private val upstreamError = ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed")
-
     private suspend fun HttpResponse.maskinportenSchema(): MaskinportenSchema =
         Json.decodeFromString(MaskinportenSchema.serializer(), bodyAsText())
-
-    private suspend fun HttpResponse.assertProblem(expected: ErrorResponse) {
-        assertEquals(expected.status, status.value)
-        assertEquals(ContentType.Application.ProblemJson, contentType()?.withoutParameters())
-        assertEquals(expected, errorResponse())
-    }
 
     @Test
     fun `answers with the MaskinportenSchema in this API's model`() = testServer(altinn()) {

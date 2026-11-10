@@ -7,7 +7,6 @@ import ch.qos.logback.core.read.ListAppender
 import io.ktor.client.request.header
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
-import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
@@ -92,18 +91,8 @@ class PutMaskinportenSchemaTest {
 
     private val sentResource get() = Json.parseToJsonElement(puts.single().body!!.decodeToString()).jsonObject
 
-    private suspend fun HttpResponse.assertProblem(expected: ErrorResponse) {
-        assertEquals(expected.status, status.value)
-        assertEquals(ContentType.Application.ProblemJson, contentType()?.withoutParameters())
-        assertEquals(expected, errorResponse())
-    }
-
     private fun validationError(vararg errors: FieldError) =
         ErrorResponse.of(ProblemType.VALIDATION_ERROR, HttpStatusCode.BadRequest, errors = errors.toList())
-
-    private val notFound = ErrorResponse.of(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, "There is no MaskinportenSchema with this id")
-
-    private val upstreamError = ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed")
 
     private fun JsonObject.with(vararg fields: Pair<String, String>) =
         JsonObject(this + fields.associate { (key, value) -> key to Json.parseToJsonElement(value) })

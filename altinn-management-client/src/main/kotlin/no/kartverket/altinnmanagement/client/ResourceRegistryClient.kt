@@ -37,11 +37,17 @@ public class ResourceRegistryClient(
      * Throws [AltinnRejectedException] when Altinn would not take the change, and [IllegalStateException] when this
      * client has no [AccessTokenProvider].
      */
-    public suspend fun updateMaskinportenSchema(id: ResourceId, content: MaskinportenSchemaContent): MaskinportenSchema? {
+    public suspend fun updateMaskinportenSchema(id: ResourceId, content: MaskinportenSchemaContent): MaskinportenSchema? =
+        change(id) { it.withContent(content) }
+
+    /** Altinn does not let a resource be deleted in production, so it is made neither delegable nor visible instead. */
+    public suspend fun withdrawMaskinportenSchema(id: ResourceId): MaskinportenSchema? = change(id) { it.withdrawn() }
+
+    private suspend fun change(id: ResourceId, change: (JsonObject) -> JsonObject): MaskinportenSchema? {
         val accessTokenProvider = checkNotNull(accessTokenProvider) { "Changing a resource needs an AccessTokenProvider" }
         val (json, resource) = getResource(id) ?: return null
         if (!resource.isMaskinportenSchema || !resource.isKartverkets) return null
-        val changed = json.withContent(content)
+        val changed = change(json)
         val token = accessTokenProvider.accessToken()
         val request = OutgoingRequest(
             method = HttpMethod.PUT,

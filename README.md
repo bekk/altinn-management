@@ -98,12 +98,13 @@ setting them yourself.
 
 ## 🔌 API
 
-| Endpoint                            | What it is                                                              |
-| :---------------------------------- | :---------------------------------------------------------------------- |
-| `GET /api/maskinportenschemas`      | Lists Kartverket's MaskinportenSchemas, or with `?scope=` those for one |
-| `GET /api/maskinportenschemas/{id}` | Gets a MaskinportenSchema                                               |
-| `GET /openapi`                      | The OpenAPI spec as JSON                                                |
-| `GET /health/live`                  | Liveness probe for the platform, left out of the spec                   |
+| Endpoint                                     | What it is                                                              |
+| :------------------------------------------- | :---------------------------------------------------------------------- |
+| `GET /api/maskinportenschemas`               | Lists Kartverket's MaskinportenSchemas, or with `?scope=` those for one |
+| `GET /api/maskinportenschemas/{id}`          | Gets a MaskinportenSchema                                               |
+| `PUT /api/maskinportenschemas/{id}/withdraw` | Withdraws a MaskinportenSchema                                          |
+| `GET /openapi`                               | The OpenAPI spec as JSON                                                |
+| `GET /health/live`                           | Liveness probe for the platform, left out of the spec                   |
 
 The server does no authentication itself: the platform checks the calling app before a call reaches it. When
 filtering is on, the server sends the caller's `X-Forwarded-Client-Cert` header, which Istio sets, to the filtering
