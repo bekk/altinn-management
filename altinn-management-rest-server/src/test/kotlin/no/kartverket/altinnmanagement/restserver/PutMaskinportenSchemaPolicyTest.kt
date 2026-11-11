@@ -28,7 +28,6 @@ class PutMaskinportenSchemaPolicyTest {
 
     private val path = "/api/maskinportenschemas/kv-matrikkel-brukernavn/policy"
 
-    // Answers a GET with the resource, or 404 when it is null, and the policy upload with the status and body
     private fun altinn(resource: String? = resourceJson(), status: Int = 201, body: String = "") = OutgoingHttpClient { request ->
         sent += request
         when {
