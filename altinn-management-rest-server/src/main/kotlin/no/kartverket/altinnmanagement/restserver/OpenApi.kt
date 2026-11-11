@@ -207,7 +207,8 @@ internal val maskinportenSchemaCreateOperation: Operation.Builder.() -> Unit = {
 
         HttpStatusCode.BadRequest {
             description = "The body cannot be read or has fields that are missing or invalid, or Altinn rejected the " +
-                "resource. When Altinn rejects it, `detail` has Altinn's reasons."
+                "resource. When Altinn rejects it, `detail` has Altinn's reasons. The body must be UTF-8 JSON that " +
+                "gives each name once."
             headers { requestId() }
             ContentType.Application.ProblemJson {
                 schema = jsonSchema<ErrorResponse>()
@@ -222,14 +223,20 @@ internal val maskinportenSchemaCreateOperation: Operation.Builder.() -> Unit = {
                         ),
                     ),
                 )
-                example("MalformedRequest", ErrorResponse.of(ProblemType.MALFORMED_REQUEST, HttpStatusCode.BadRequest))
+                example(
+                    "MalformedBody",
+                    ErrorResponse.of(
+                        ProblemType.MALFORMED_REQUEST,
+                        HttpStatusCode.BadRequest,
+                        "The body must be one JSON object, with no name given twice",
+                    ),
+                )
                 example(
                     "RejectedByAltinn",
                     ErrorResponse.of(
                         ProblemType.UPSTREAM_REJECTED,
                         HttpStatusCode.BadRequest,
-                        "Altinn rejected the request: Not authorized for creating resource with the listed scopes; " +
-                            "InvalidPrefix: skatteetaten:demo",
+                        "Altinn rejected the resource: InvalidPrefix: skatteetaten:demo",
                     ),
                 )
             }

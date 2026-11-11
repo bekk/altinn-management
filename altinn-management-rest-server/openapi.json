@@ -147,7 +147,7 @@
                         }
                     },
                     "400": {
-                        "description": "The body cannot be read or has fields that are missing or invalid, or Altinn rejected the resource. When Altinn rejects it, `detail` has Altinn's reasons.",
+                        "description": "The body cannot be read or has fields that are missing or invalid, or Altinn rejected the resource. When Altinn rejects it, `detail` has Altinn's reasons. The body must be UTF-8 JSON that gives each name once.",
                         "headers": {
                             "X-Request-ID": {
                                 "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
@@ -182,11 +182,12 @@
                                             ]
                                         }
                                     },
-                                    "MalformedRequest": {
+                                    "MalformedBody": {
                                         "value": {
                                             "type": "tag:kartverket.no,2026:malformed-request",
                                             "title": "Malformed request",
-                                            "status": 400
+                                            "status": 400,
+                                            "detail": "The body must be one JSON object, with no name given twice"
                                         }
                                     },
                                     "RejectedByAltinn": {
@@ -194,7 +195,7 @@
                                             "type": "tag:kartverket.no,2026:upstream-rejected",
                                             "title": "A service this API depends on rejected the request",
                                             "status": 400,
-                                            "detail": "Altinn rejected the request: Not authorized for creating resource with the listed scopes; InvalidPrefix: skatteetaten:demo"
+                                            "detail": "Altinn rejected the resource: InvalidPrefix: skatteetaten:demo"
                                         }
                                     }
                                 }

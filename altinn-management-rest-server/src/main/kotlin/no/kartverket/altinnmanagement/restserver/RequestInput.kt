@@ -5,6 +5,7 @@ import io.ktor.http.ContentType
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.contentType
 import io.ktor.server.request.receive
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
 import no.kartverket.altinnmanagement.client.MaskinportenSchemaContent
 import no.kartverket.altinnmanagement.client.ResourceId
@@ -94,10 +95,15 @@ private fun textErrors(field: String, text: MultilingualText?): List<FieldError>
 
 private fun missing(field: String) = FieldError(field, ValidationCode.MISSING, "$field is required")
 
-internal suspend fun ApplicationCall.maskinportenSchemaRequest(): MaskinportenSchemaRequest {
+internal suspend fun ApplicationCall.maskinportenSchemaRequest(): MaskinportenSchemaRequest =
+    strictBody(MaskinportenSchemaRequest.serializer())
+
+internal suspend fun ApplicationCall.newMaskinportenSchemaRequest(): NewMaskinportenSchema = strictBody(NewMaskinportenSchema.serializer())
+
+private suspend fun <T> ApplicationCall.strictBody(serializer: KSerializer<T>): T {
     val body = strictJson(jsonBody())
     return try {
-        apiJson.decodeFromString(MaskinportenSchemaRequest.serializer(), body)
+        apiJson.decodeFromString(serializer, body)
     } catch (e: SerializationException) {
         throw MalformedRequestException("The body must be a JSON object with only this API's fields, each of the right type")
     }

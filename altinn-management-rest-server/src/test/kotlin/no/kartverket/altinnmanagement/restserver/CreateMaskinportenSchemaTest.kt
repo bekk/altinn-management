@@ -1,5 +1,6 @@
 package no.kartverket.altinnmanagement.restserver
 
+import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
@@ -213,14 +214,58 @@ class CreateMaskinportenSchemaTest {
 
     @Test
     fun `gives 400 malformed-request for a body this API cannot read, without asking Altinn`() = testServer(altinn()) {
-        val malformed = ErrorResponse.of(ProblemType.MALFORMED_REQUEST, HttpStatusCode.BadRequest)
+        val unreadable = listOf(
+            "not json",
+            "",
+            "[]",
+            minimalBody.replace("""["kartverk:eksempel.read"]""", "\"kartverk:eksempel.read\""),
+            minimalBody.replace("delegationDescription", "rightDescription"),
+        )
+        for (body in unreadable) {
+            val response = create(body)
 
-        create("not json").assertProblem(malformed)
-        create("").assertProblem(malformed)
-        create("[]").assertProblem(malformed)
-        create(minimalBody.replace("""["kartverk:eksempel.read"]""", "\"kartverk:eksempel.read\"")).assertProblem(malformed)
-        create(minimalBody.replace("delegationDescription", "rightDescription")).assertProblem(malformed)
-        create(minimalBody, ContentType.Text.Plain).assertProblem(malformed)
+            assertEquals(HttpStatusCode.BadRequest, response.status, "for $body")
+            assertEquals(ProblemType.MALFORMED_REQUEST, response.errorResponse().type, "for $body")
+        }
+
+        assertTrue(sent.isEmpty(), "Altinn was called: $sent")
+    }
+
+    private suspend fun ApplicationTestBuilder.createBytes(body: ByteArray, contentType: String?) = client.post("/api/maskinportenschemas") {
+        contentType?.let { header(HttpHeaders.ContentType, it) }
+        setBody(body)
+    }
+
+    private fun malformed(detail: String) = ErrorResponse.of(ProblemType.MALFORMED_REQUEST, HttpStatusCode.BadRequest, detail)
+
+    @Test
+    fun `gives 400 for a body that gives a name twice or holds more than one value, so it is read as filtering reads it`() = testServer(altinn()) {
+        val ambiguous = listOf(
+            minimalBody.replaceFirst("{", """{ "scopes": ["kartverk:annet"],"""),
+            minimalBody.replace(""""resourceId": "kv-eksempel",""", """"resourceId": "kv-eksempel", "resourceId": "kv-annet","""),
+            "$minimalBody {}",
+        )
+        for (ambiguousBody in ambiguous) {
+            create(ambiguousBody).assertProblem(malformed("The body must be one JSON object, with no name given twice"))
+        }
+
+        assertTrue(sent.isEmpty(), "Altinn was called: $sent")
+    }
+
+    @Test
+    fun `gives 400 for a body that is not UTF-8, whatever charset it names`() = testServer(altinn()) {
+        createBytes(minimalBody.toByteArray(Charsets.ISO_8859_1), "application/json; charset=ISO-8859-1")
+            .assertProblem(malformed("The body must be UTF-8"))
+
+        assertTrue(sent.isEmpty(), "Altinn was called: $sent")
+    }
+
+    @Test
+    fun `gives 400 for a body that is not sent as JSON`() = testServer(altinn()) {
+        for (contentType in listOf(null, "text/plain", "application/xml", "application/json-patch+json")) {
+            createBytes(minimalBody.toByteArray(), contentType)
+                .assertProblem(malformed("The body must be JSON, sent with Content-Type application/json"))
+        }
 
         assertTrue(sent.isEmpty(), "Altinn was called: $sent")
     }

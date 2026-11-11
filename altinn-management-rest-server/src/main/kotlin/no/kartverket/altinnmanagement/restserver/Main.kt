@@ -15,7 +15,6 @@ import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.request.path
-import io.ktor.server.request.receive
 import io.ktor.server.response.header
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
@@ -29,7 +28,6 @@ import io.ktor.utils.io.ExperimentalKtorApi
 import kotlinx.serialization.json.Json
 import no.kartverket.altinnmanagement.client.ResourceRegistryClient
 import no.kartverket.altinnmanagement.restserver.models.MaskinportenSchema
-import no.kartverket.altinnmanagement.restserver.models.NewMaskinportenSchema
 import org.slf4j.LoggerFactory
 import java.util.UUID
 
@@ -97,7 +95,7 @@ fun Application.module(
         }.describe(maskinportenSchemasListOperation)
 
         post("/api/maskinportenschemas") {
-            val schema = newMaskinportenSchema(call.receive<NewMaskinportenSchema>())
+            val schema = newMaskinportenSchema(call.newMaskinportenSchemaRequest())
             val created = client.createMaskinportenSchema(schema)
             call.response.header(HttpHeaders.Location, "/api/maskinportenschemas/${created.resourceId.value}")
             call.respond(HttpStatusCode.Created, MaskinportenSchema.from(created))
