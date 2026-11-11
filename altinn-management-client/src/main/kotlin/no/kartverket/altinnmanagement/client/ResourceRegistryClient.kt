@@ -45,24 +45,17 @@ public class ResourceRegistryClient(
     public suspend fun withdrawMaskinportenSchema(id: ResourceId): MaskinportenSchema? = change(id) { it.withdrawn() }
 
     private suspend fun change(id: ResourceId, change: (JsonObject) -> JsonObject): MaskinportenSchema? {
-        val accessTokenProvider = checkNotNull(accessTokenProvider) { "Changing a resource needs an AccessTokenProvider" }
+        val tokens = tokens()
         val (json, resource) = getResource(id) ?: return null
         if (!resource.isMaskinportenSchema || !resource.isKartverkets) return null
         val changed = change(json)
-        val token = accessTokenProvider.accessToken()
         val request = OutgoingRequest(
             method = HttpMethod.PUT,
             url = resourceUrl(id),
-            headers = mapOf("Authorization" to "Bearer ${token.value}", "Content-Type" to "application/json"),
+            headers = mapOf("Content-Type" to "application/json"),
             body = changed.toString().encodeToByteArray(),
         )
-        try {
-            Http.sendExpectingOk(httpClient, request, TARGET, ::AltinnException)
-        } catch (e: AltinnException) {
-            rejection(e)?.let { throw it }
-            if (e.statusCode == 401) accessTokenProvider.refused(token)
-            throw e
-        }
+        sendWrite(tokens, request) { it == 200 }
         return Http.json.decodeFromJsonElement(AltinnResource.serializer(), changed).toMaskinportenSchema(id)
     }
 
@@ -94,27 +87,21 @@ public class ResourceRegistryClient(
      * would not take it, and [IllegalStateException] when this client has no [AccessTokenProvider].
      */
     public suspend fun createMaskinportenSchema(schema: NewMaskinportenSchema): MaskinportenSchema {
-        val accessTokenProvider = checkNotNull(accessTokenProvider) { "Changing a resource needs an AccessTokenProvider" }
+        val tokens = tokens()
         val resource = newAltinnResource(schema)
-        val token = accessTokenProvider.accessToken()
         val request = OutgoingRequest(
             method = HttpMethod.POST,
             url = Http.url(platformBaseUrl, RESOURCE_PATH),
-            headers = mapOf(
-                "Authorization" to "Bearer ${token.value}",
-                "Content-Type" to "application/json",
-                "Accept" to "application/json",
-            ),
+            headers = mapOf("Content-Type" to "application/json", "Accept" to "application/json"),
             body = Http.json.encodeToString(AltinnResource.serializer(), resource).encodeToByteArray(),
         )
-        val response = Http.send(httpClient, request, TARGET, ::AltinnException)
-        if (response.statusCode == 201) return resource.toMaskinportenSchema(schema.resourceId)
-        val body = response.body.decodeToString()
-        if (response.statusCode == 409) throw ResourceAlreadyExistsException(schema.resourceId, response.statusCode, body)
-        val e = AltinnException("$TARGET responded ${response.statusCode}", response.statusCode, body)
-        rejection(e)?.let { throw it }
-        if (e.statusCode == 401) accessTokenProvider.refused(token)
-        throw e
+        try {
+            sendWrite(tokens, request) { it == 201 }
+        } catch (e: AltinnException) {
+            if (e.statusCode == 409) throw ResourceAlreadyExistsException(schema.resourceId, 409, e.responseBody.orEmpty())
+            throw e
+        }
+        return resource.toMaskinportenSchema(schema.resourceId)
     }
 
     /**
@@ -124,25 +111,31 @@ public class ResourceRegistryClient(
      * client has no [AccessTokenProvider].
      */
     public suspend fun setMaskinportenSchemaPolicy(id: ResourceId): Boolean {
-        val accessTokenProvider = checkNotNull(accessTokenProvider) { "Changing a resource needs an AccessTokenProvider" }
+        val tokens = tokens()
         val (_, resource) = getResource(id) ?: return false
         // Without this check, the policy could replace the one on another kind of Kartverket resource
         if (!resource.isMaskinportenSchema || !resource.isKartverkets) return false
-        val token = accessTokenProvider.accessToken()
         val request = OutgoingRequest(
             method = HttpMethod.PUT,
             url = Http.url(platformBaseUrl, "$RESOURCE_PATH/${id.value}/policy"),
-            headers = mapOf(
-                "Authorization" to "Bearer ${token.value}",
-                "Content-Type" to "multipart/form-data; boundary=$POLICY_BOUNDARY",
-            ),
+            headers = mapOf("Content-Type" to "multipart/form-data; boundary=$POLICY_BOUNDARY"),
             body = policyFormData(maskinportenSchemaPolicy(id)),
         )
-        val response = Http.send(httpClient, request, TARGET, ::AltinnException)
-        if (response.statusCode in 200..299) return true
+        sendWrite(tokens, request) { it in 200..299 }
+        return true
+    }
+
+    private fun tokens(): AccessTokenProvider = checkNotNull(accessTokenProvider) { "Changing a resource needs an AccessTokenProvider" }
+
+    // A rejection is about what was sent. Any other 401 means Altinn did not take the token, so the next call gets a new one
+    private suspend fun sendWrite(tokens: AccessTokenProvider, request: OutgoingRequest, isSuccess: (Int) -> Boolean) {
+        val token = tokens.accessToken()
+        val headers = request.headers + ("Authorization" to "Bearer ${token.value}")
+        val response = Http.send(httpClient, OutgoingRequest(request.method, request.url, headers, request.body), TARGET, ::AltinnException)
+        if (isSuccess(response.statusCode)) return
         val e = AltinnException("$TARGET responded ${response.statusCode}", response.statusCode, response.body.decodeToString())
         rejection(e)?.let { throw it }
-        if (e.statusCode == 401) accessTokenProvider.refused(token)
+        if (e.statusCode == 401) tokens.refused(token)
         throw e
     }
 
