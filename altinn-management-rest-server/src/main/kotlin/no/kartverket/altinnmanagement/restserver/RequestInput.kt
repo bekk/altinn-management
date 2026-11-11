@@ -21,9 +21,6 @@ import tools.jackson.databind.DeserializationFeature
 import tools.jackson.databind.json.JsonMapper
 import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
-import no.kartverket.altinnmanagement.client.ContactPoint as ClientContactPoint
-import no.kartverket.altinnmanagement.client.Keyword as ClientKeyword
-import no.kartverket.altinnmanagement.client.MultilingualText as ClientMultilingualText
 import no.kartverket.altinnmanagement.client.NewMaskinportenSchema as ClientNewMaskinportenSchema
 
 internal class InvalidRequestException(val errors: List<FieldError>) : RuntimeException(errors.joinToString("; ") { it.message })
@@ -51,13 +48,16 @@ internal fun scope(values: List<String>?): String? {
 private fun invalidScope(message: String): Nothing =
     throw InvalidRequestException(listOf(FieldError("scope", ValidationCode.INVALID_FORMAT, message)))
 
-internal fun resourceId(name: String, value: String): ResourceId = try {
+internal fun resourceId(name: String, value: String): ResourceId =
+    resourceIdOrNull(value) ?: throw InvalidRequestException(listOf(invalidResourceId(name)))
+
+private fun resourceIdOrNull(value: String): ResourceId? = try {
     ResourceId.of(value)
 } catch (e: IllegalArgumentException) {
-    throw InvalidRequestException(
-        listOf(FieldError(name, ValidationCode.INVALID_FORMAT, "$name must be 4 or more of a-z, 0-9, _ and -")),
-    )
+    null
 }
+
+private fun invalidResourceId(name: String) = FieldError(name, ValidationCode.INVALID_FORMAT, "$name must be 4 or more of a-z, 0-9, _ and -")
 
 // Checks what Altinn would refuse, so that a caller gets every error at once, by this API's field names
 internal fun maskinportenSchemaContent(id: ResourceId, request: MaskinportenSchemaRequest): MaskinportenSchemaContent {
@@ -65,12 +65,7 @@ internal fun maskinportenSchemaContent(id: ResourceId, request: MaskinportenSche
         if (request.resourceId != null && request.resourceId != id.value) {
             add(FieldError("resourceId", ValidationCode.INVALID_FORMAT, "resourceId must be the id in the path"))
         }
-        if (request.scopes.isNullOrEmpty()) add(missing("scopes"))
-        request.scopes?.forEachIndexed { index, scope ->
-            if (scope.isBlank()) {
-                add(FieldError("scopes[$index]", ValidationCode.INVALID_FORMAT, "scopes[$index] must not be blank"))
-            }
-        }
+        addAll(scopeErrors(request.scopes))
         addAll(textErrors("title", request.title))
         addAll(textErrors("description", request.description))
     }
@@ -84,6 +79,14 @@ internal fun maskinportenSchemaContent(id: ResourceId, request: MaskinportenSche
         contactPoints = request.contactPoints.orEmpty().map { it.toClient() },
         keywords = request.keywords.orEmpty().map { it.toClient() },
     )
+}
+
+// Altinn does not check a scope for whitespace, so neither does this API
+private fun scopeErrors(scopes: List<String>?): List<FieldError> {
+    if (scopes.isNullOrEmpty()) return listOf(missing("scopes"))
+    return scopes.withIndex().filter { (_, scope) -> scope.isBlank() }.map { (index, _) ->
+        FieldError("scopes[$index]", ValidationCode.INVALID_FORMAT, "scopes[$index] must not be blank")
+    }
 }
 
 private fun textErrors(field: String, text: MultilingualText?): List<FieldError> {
@@ -148,58 +151,33 @@ private fun ApplicationCall.requireJsonContentType() {
 
 // Checks every field before it fails, so the caller gets all the errors at once
 internal fun newMaskinportenSchema(body: NewMaskinportenSchema): ClientNewMaskinportenSchema {
-    val errors = mutableListOf<FieldError>()
-    val resourceId = when {
-        body.resourceId.isNullOrBlank() -> null.also { errors += missing("resourceId") }
-
-        else -> try {
-            ResourceId.of(body.resourceId)
-        } catch (e: IllegalArgumentException) {
-            errors += FieldError("resourceId", ValidationCode.INVALID_FORMAT, "resourceId must be 4 or more of a-z, 0-9, _ and -")
-            null
-        }
-    }
-    if (body.scopes.isNullOrEmpty()) {
-        errors += FieldError("scopes", ValidationCode.MISSING, "scopes must have at least one scope")
-    }
-    body.scopes.orEmpty().forEachIndexed { index, scope ->
-        val field = "scopes[$index]"
-        when {
-            scope.isBlank() -> errors += FieldError(field, ValidationCode.MISSING, "$field must not be blank")
-            scope.any(Char::isWhitespace) -> errors += FieldError(field, ValidationCode.INVALID_FORMAT, "$field must not contain whitespace")
-        }
-    }
-    val title = multilingualText("title", body.title, errors)
-    val description = multilingualText("description", body.description, errors)
-    val delegationDescription = multilingualText("delegationDescription", body.delegationDescription, errors)
+    val resourceId = body.resourceId?.let(::resourceIdOrNull)
     val status = body.status?.let { value -> ResourceStatus.entries.find { it.value == value } }
-    if (body.status != null && status == null) {
-        val values = ResourceStatus.entries.joinToString { it.value }
-        errors += FieldError("status", ValidationCode.INVALID_FORMAT, "status must be one of $values")
+    val errors = buildList {
+        when {
+            body.resourceId.isNullOrBlank() -> add(missing("resourceId"))
+            resourceId == null -> add(invalidResourceId("resourceId"))
+        }
+        addAll(scopeErrors(body.scopes))
+        addAll(textErrors("title", body.title))
+        addAll(textErrors("description", body.description))
+        addAll(textErrors("delegationDescription", body.delegationDescription))
+        if (body.status != null && status == null) {
+            val values = ResourceStatus.entries.joinToString { it.value }
+            add(FieldError("status", ValidationCode.INVALID_FORMAT, "status must be one of $values"))
+        }
     }
     if (errors.isNotEmpty()) throw InvalidRequestException(errors)
 
     return ClientNewMaskinportenSchema(
         resourceId = resourceId!!,
         scopes = body.scopes!!,
-        title = title!!,
-        description = description!!,
-        delegationDescription = delegationDescription!!,
+        title = body.title!!.toClient(),
+        description = body.description!!.toClient(),
+        delegationDescription = body.delegationDescription!!.toClient(),
         homepage = body.homepage?.takeIf { it.isNotBlank() },
-        contactPoints = body.contactPoints.orEmpty().map {
-            ClientContactPoint(category = it.category, email = it.email, telephone = it.telephone, contactPage = it.contactPage)
-        },
-        keywords = body.keywords.orEmpty().map { ClientKeyword(word = it.word, language = it.language) },
+        contactPoints = body.contactPoints.orEmpty().map { it.toClient() },
+        keywords = body.keywords.orEmpty().map { it.toClient() },
         status = status,
     )
-}
-
-private fun multilingualText(field: String, text: MultilingualText?, errors: MutableList<FieldError>): ClientMultilingualText? {
-    if (text == null) {
-        errors += missing(field)
-        return null
-    }
-    val missing = listOf("en" to text.en, "nb" to text.nb, "nn" to text.nn).filter { (_, value) -> value.isNullOrBlank() }
-    missing.forEach { (language, _) -> errors += missing("$field.$language") }
-    return if (missing.isEmpty()) ClientMultilingualText(en = text.en, nb = text.nb, nn = text.nn) else null
 }

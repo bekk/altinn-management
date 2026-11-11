@@ -218,7 +218,7 @@ internal val maskinportenSchemaCreateOperation: Operation.Builder.() -> Unit = {
                         ProblemType.VALIDATION_ERROR,
                         HttpStatusCode.BadRequest,
                         errors = listOf(
-                            FieldError("scopes", ValidationCode.MISSING, "scopes must have at least one scope"),
+                            FieldError("scopes", ValidationCode.MISSING, "scopes is required"),
                             FieldError("title.nn", ValidationCode.MISSING, "title.nn is required"),
                         ),
                     ),

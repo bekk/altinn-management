@@ -164,7 +164,7 @@ class CreateMaskinportenSchemaTest {
         create("{}").assertProblem(
             validationError(
                 FieldError("resourceId", ValidationCode.MISSING, "resourceId is required"),
-                FieldError("scopes", ValidationCode.MISSING, "scopes must have at least one scope"),
+                FieldError("scopes", ValidationCode.MISSING, "scopes is required"),
                 FieldError("title", ValidationCode.MISSING, "title is required"),
                 FieldError("description", ValidationCode.MISSING, "description is required"),
                 FieldError("delegationDescription", ValidationCode.MISSING, "delegationDescription is required"),
@@ -179,7 +179,7 @@ class CreateMaskinportenSchemaTest {
         val body = """
             {
               "resourceId": "Kv eksempel",
-              "scopes": ["kartverk:eksempel.read", " ", "kartverk:a kartverk:b"],
+              "scopes": ["kartverk:eksempel.read", " "],
               "title": {"en":"Example","nb":"Eksempel"},
               "description": {"en":"","nb":"Eksempel","nn":"Døme"},
               "delegationDescription": $texts,
@@ -190,8 +190,7 @@ class CreateMaskinportenSchemaTest {
         create(body).assertProblem(
             validationError(
                 FieldError("resourceId", ValidationCode.INVALID_FORMAT, "resourceId must be 4 or more of a-z, 0-9, _ and -"),
-                FieldError("scopes[1]", ValidationCode.MISSING, "scopes[1] must not be blank"),
-                FieldError("scopes[2]", ValidationCode.INVALID_FORMAT, "scopes[2] must not contain whitespace"),
+                FieldError("scopes[1]", ValidationCode.INVALID_FORMAT, "scopes[1] must not be blank"),
                 FieldError("title.nn", ValidationCode.MISSING, "title.nn is required"),
                 FieldError("description.en", ValidationCode.MISSING, "description.en is required"),
                 FieldError(
@@ -208,8 +207,16 @@ class CreateMaskinportenSchemaTest {
     @Test
     fun `gives 400 when the list of scopes is empty`() = testServer(altinn()) {
         create(minimalBody.replace("""["kartverk:eksempel.read"]""", "[]")).assertProblem(
-            validationError(FieldError("scopes", ValidationCode.MISSING, "scopes must have at least one scope")),
+            validationError(FieldError("scopes", ValidationCode.MISSING, "scopes is required")),
         )
+    }
+
+    @Test
+    fun `leaves it to Altinn to judge a scope with whitespace, since Altinn does not check for it`() = testServer(altinn()) {
+        val response = create(minimalBody.replace("""["kartverk:eksempel.read"]""", """["kartverk:a b"]"""))
+
+        assertEquals(HttpStatusCode.Created, response.status)
+        assertTrue("kartverk:a b" in sent.single().body!!.decodeToString())
     }
 
     @Test

@@ -172,7 +172,7 @@
                                                 {
                                                     "field": "scopes",
                                                     "code": "MISSING",
-                                                    "message": "scopes must have at least one scope"
+                                                    "message": "scopes is required"
                                                 },
                                                 {
                                                     "field": "title.nn",
