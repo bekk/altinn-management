@@ -25,8 +25,9 @@ scripts/dev.sh           # run the server on :8080 with the variables in .env
 - `main()` sets the Logback path, reads the settings into `AppConfig` and starts the server. The Logback path comes
   first, since Logback only reads it when the first logger is created and ignores it after that without an error.
   `Application.module()` installs the plugins and adds the routes, so tests and production run the same code.
-- A new setting goes in `application.yaml` as `"$?ENV_VAR"` and in `.env.example`. Its errors name the
-  `application.yaml` key and end with `(see .env.example)`, like the helpers in `Config.kt`.
+- A new setting goes in `application.yaml` as `"$?ENV_VAR"`, in `.env.example` and in the environment variable table
+  in the README. Its errors name the `application.yaml` key and end with `(see .env.example)`, like the helpers in
+  `Config.kt`.
 - The OpenAPI spec is generated from the routes and `OpenApi.kt`. A test fails if the checked-in `openapi.json` is
   out of date.
 - Errors follow Problem Details (RFC 9457), as `application/problem+json`. Build them with `ErrorResponse.of(...)`:
