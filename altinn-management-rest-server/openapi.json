@@ -1382,6 +1382,279 @@
                     }
                 }
             }
+        },
+        "/api/genericaccessresources": {
+            "post": {
+                "summary": "Create a GenericAccessResource",
+                "description": "Creates a resource of type `GenericAccessResource` in Altinn, owned by Kartverket, with access lists off. This API checks the fields first, and Altinn checks them again, so a resource that passes here can still be rejected. The resource has no policy yet, so no one gets access to it, and it cannot be delegated, until it gets one.",
+                "parameters": [
+                    {
+                        "name": "X-Request-ID",
+                        "in": "header",
+                        "description": "An id to find this call by in this API's logs. Up to 128 ASCII letters, digits, `-`, `_`, `.` and `:`. Without it, or with any other value, this API makes a new one. Every response has the id in its `X-Request-Id` header.",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "3f2b8c1e-7d4a-4f0e-9b6a-2c5d8e1f4a7b"
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NewGenericAccessResource"
+                            },
+                            "examples": {
+                                "NewGenericAccessResource": {
+                                    "value": {
+                                        "resourceId": "kv-grunnbok-innsyn",
+                                        "title": {
+                                            "en": "Land Register lookup",
+                                            "nb": "Innsyn i grunnboka",
+                                            "nn": "Innsyn i grunnboka"
+                                        },
+                                        "description": {
+                                            "en": "Access to look up registered rights in the Land Register.",
+                                            "nb": "Tilgang til å slå opp tinglyste rettigheter i grunnboka.",
+                                            "nn": "Tilgang til å slå opp tinglyste rettar i grunnboka."
+                                        },
+                                        "delegable": true,
+                                        "delegationDescription": {
+                                            "en": "Allows a system provider to look up the Land Register on behalf of your organisation.",
+                                            "nb": "Gir en systemleverandør rett til å slå opp i grunnboka på vegne av virksomheten din.",
+                                            "nn": "Gir ein systemleverandør rett til å slå opp i grunnboka på vegner av verksemda di."
+                                        },
+                                        "homepage": "https://www.kartverket.no",
+                                        "contactPoints": [
+                                            {
+                                                "category": "Kartverket Kundesenter",
+                                                "email": "kundesenter@kartverket.no"
+                                            }
+                                        ],
+                                        "keywords": [
+                                            {
+                                                "word": "grunnbok",
+                                                "language": "nb"
+                                            },
+                                            {
+                                                "word": "land register",
+                                                "language": "en"
+                                            }
+                                        ],
+                                        "status": "Completed"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "description": "Altinn created the resource. The body has the values this API sent to Altinn.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GenericAccessResource"
+                                },
+                                "examples": {
+                                    "GenericAccessResource": {
+                                        "value": {
+                                            "resourceId": "kv-grunnbok-innsyn",
+                                            "title": {
+                                                "en": "Land Register lookup",
+                                                "nb": "Innsyn i grunnboka",
+                                                "nn": "Innsyn i grunnboka"
+                                            },
+                                            "description": {
+                                                "en": "Access to look up registered rights in the Land Register.",
+                                                "nb": "Tilgang til å slå opp tinglyste rettigheter i grunnboka.",
+                                                "nn": "Tilgang til å slå opp tinglyste rettar i grunnboka."
+                                            },
+                                            "delegationDescription": {
+                                                "en": "Allows a system provider to look up the Land Register on behalf of your organisation.",
+                                                "nb": "Gir en systemleverandør rett til å slå opp i grunnboka på vegne av virksomheten din.",
+                                                "nn": "Gir ein systemleverandør rett til å slå opp i grunnboka på vegner av verksemda di."
+                                            },
+                                            "homepage": "https://www.kartverket.no",
+                                            "contactPoints": [
+                                                {
+                                                    "category": "Kartverket Kundesenter",
+                                                    "email": "kundesenter@kartverket.no"
+                                                }
+                                            ],
+                                            "keywords": [
+                                                {
+                                                    "word": "grunnbok",
+                                                    "language": "nb"
+                                                },
+                                                {
+                                                    "word": "land register",
+                                                    "language": "en"
+                                                }
+                                            ],
+                                            "status": "Completed",
+                                            "delegable": true,
+                                            "visible": true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "The body cannot be read or has fields that are missing or invalid, or Altinn rejected the resource. When Altinn rejects it, `detail` has Altinn's reasons. The body must be UTF-8 JSON that gives each name once.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "ValidationError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:validation-error",
+                                            "title": "Validation failed",
+                                            "status": 400,
+                                            "errors": [
+                                                {
+                                                    "field": "delegable",
+                                                    "code": "MISSING",
+                                                    "message": "delegable is required"
+                                                },
+                                                {
+                                                    "field": "title.nn",
+                                                    "code": "MISSING",
+                                                    "message": "title.nn is required"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "MalformedBody": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:malformed-request",
+                                            "title": "Malformed request",
+                                            "status": 400,
+                                            "detail": "The body must be one JSON object, with no name given twice"
+                                        }
+                                    },
+                                    "RejectedByAltinn": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:upstream-rejected",
+                                            "title": "A service this API depends on rejected the request",
+                                            "status": 400,
+                                            "detail": "Altinn rejected the resource: RightDescription: Missing RightDescription in english en"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Altinn already has a resource with this id. It may be of another type or owner.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "Conflict": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:conflict",
+                                            "title": "Conflict",
+                                            "status": 409,
+                                            "detail": "Altinn already has a resource with this id"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "This API could not get an answer from Altinn, or a token from Maskinporten. Your request did not cause it. Altinn may or may not have created the resource.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "UpstreamError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:upstream-error",
+                                            "title": "A service this API depends on failed",
+                                            "status": 502,
+                                            "detail": "The call to Altinn failed"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "An unexpected error in this API.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "InternalError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:internal-error",
+                                            "title": "Internal error",
+                                            "status": 500
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -1735,6 +2008,140 @@
                         "items": {
                             "$ref": "#/components/schemas/Keyword"
                         }
+                    }
+                }
+            },
+            "MultilingualText4": {
+                "type": [
+                    "object",
+                    "null"
+                ],
+                "title": "MultilingualText4",
+                "description": "The rights an organisation gets when the resource is delegated to it. Required, in `en`, `nb` and `nn`, when `delegable` is `true`, since Altinn rejects the resource without it. Optional otherwise.",
+                "properties": {
+                    "en": {
+                        "type": "string",
+                        "description": "In English. Left out if missing."
+                    },
+                    "nb": {
+                        "type": "string",
+                        "description": "In Norwegian Bokmål. Left out if missing."
+                    },
+                    "nn": {
+                        "type": "string",
+                        "description": "In Norwegian Nynorsk. Left out if missing."
+                    }
+                }
+            },
+            "NewGenericAccessResource": {
+                "type": "object",
+                "title": "NewGenericAccessResource",
+                "description": "A new resource of type `GenericAccessResource` for Altinn. This API makes Kartverket its owner, sets `visible` to `true` and turns access lists off. `title` and `description` must each have `en`, `nb` and `nn`.",
+                "required": [
+                    "resourceId",
+                    "title",
+                    "description",
+                    "delegable"
+                ],
+                "properties": {
+                    "resourceId": {
+                        "type": "string",
+                        "description": "The resource's id in Altinn: 4 or more of `a-z`, `0-9`, `_` and `-`. It must not be taken by any resource in Altinn, of any owner, and it cannot be changed later."
+                    },
+                    "title": {
+                        "$ref": "#/components/schemas/MultilingualText"
+                    },
+                    "description": {
+                        "$ref": "#/components/schemas/MultilingualText"
+                    },
+                    "delegable": {
+                        "type": "boolean",
+                        "description": "If `true`, organisations can delegate the resource to others in Altinn."
+                    },
+                    "delegationDescription": {
+                        "$ref": "#/components/schemas/MultilingualText4"
+                    },
+                    "homepage": {
+                        "type": "string",
+                        "description": "A web page about the resource."
+                    },
+                    "contactPoints": {
+                        "type": "array",
+                        "description": "Where to get help with the resource. Left out, it is empty.",
+                        "items": {
+                            "$ref": "#/components/schemas/ContactPoint"
+                        }
+                    },
+                    "keywords": {
+                        "type": "array",
+                        "description": "Words to find the resource by in Altinn. Left out, it is empty.",
+                        "items": {
+                            "$ref": "#/components/schemas/Keyword"
+                        }
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "Altinn's status for the resource. Left out, the resource has no status, as in Altinn.",
+                        "enum": [
+                            "Completed",
+                            "Active",
+                            "UnderDevelopment",
+                            "Deprecated",
+                            "Withdrawn"
+                        ]
+                    }
+                }
+            },
+            "GenericAccessResource": {
+                "type": "object",
+                "title": "GenericAccessResource",
+                "description": "A resource of type `GenericAccessResource` in Altinn, with the values Altinn has. A field Altinn has no value for is left out. `title` is its name, `description` says what it gives access to, and `delegationDescription` explains the rights an organisation gets when the resource is delegated to it.",
+                "required": [
+                    "resourceId"
+                ],
+                "properties": {
+                    "resourceId": {
+                        "type": "string",
+                        "description": "The resource's id in Altinn: 4 or more of `a-z`, `0-9`, `_` and `-`. It cannot be changed."
+                    },
+                    "title": {
+                        "$ref": "#/components/schemas/MultilingualText"
+                    },
+                    "description": {
+                        "$ref": "#/components/schemas/MultilingualText"
+                    },
+                    "delegationDescription": {
+                        "$ref": "#/components/schemas/MultilingualText"
+                    },
+                    "homepage": {
+                        "type": "string",
+                        "description": "A web page about the resource."
+                    },
+                    "contactPoints": {
+                        "type": "array",
+                        "description": "Where to get help with the resource. Can be empty.",
+                        "items": {
+                            "$ref": "#/components/schemas/ContactPoint"
+                        }
+                    },
+                    "keywords": {
+                        "type": "array",
+                        "description": "Words to find the resource by in Altinn. Can be empty.",
+                        "items": {
+                            "$ref": "#/components/schemas/Keyword"
+                        }
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "Altinn's status for the resource, such as `Completed`, `Active`, `UnderDevelopment`, `Deprecated` or `Withdrawn`."
+                    },
+                    "delegable": {
+                        "type": "boolean",
+                        "description": "If `true`, organisations can delegate the resource to others in Altinn."
+                    },
+                    "visible": {
+                        "type": "boolean",
+                        "description": "If `true`, Altinn shows the resource to its users."
                     }
                 }
             }

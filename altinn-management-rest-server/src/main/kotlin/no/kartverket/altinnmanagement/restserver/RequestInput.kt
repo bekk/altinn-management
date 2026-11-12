@@ -13,6 +13,7 @@ import no.kartverket.altinnmanagement.client.ResourceStatus
 import no.kartverket.altinnmanagement.restserver.models.FieldError
 import no.kartverket.altinnmanagement.restserver.models.MaskinportenSchemaRequest
 import no.kartverket.altinnmanagement.restserver.models.MultilingualText
+import no.kartverket.altinnmanagement.restserver.models.NewGenericAccessResource
 import no.kartverket.altinnmanagement.restserver.models.NewMaskinportenSchema
 import no.kartverket.altinnmanagement.restserver.models.ValidationCode
 import tools.jackson.core.JacksonException
@@ -21,6 +22,7 @@ import tools.jackson.databind.DeserializationFeature
 import tools.jackson.databind.json.JsonMapper
 import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
+import no.kartverket.altinnmanagement.client.NewGenericAccessResource as ClientNewGenericAccessResource
 import no.kartverket.altinnmanagement.client.NewMaskinportenSchema as ClientNewMaskinportenSchema
 
 internal class InvalidRequestException(val errors: List<FieldError>) : RuntimeException(errors.joinToString("; ") { it.message })
@@ -103,6 +105,9 @@ internal suspend fun ApplicationCall.maskinportenSchemaRequest(): MaskinportenSc
 
 internal suspend fun ApplicationCall.newMaskinportenSchemaRequest(): NewMaskinportenSchema = strictBody(NewMaskinportenSchema.serializer())
 
+internal suspend fun ApplicationCall.newGenericAccessResourceRequest(): NewGenericAccessResource =
+    strictBody(NewGenericAccessResource.serializer())
+
 private suspend fun <T> ApplicationCall.strictBody(serializer: KSerializer<T>): T {
     val body = strictJson(jsonBody())
     return try {
@@ -152,20 +157,14 @@ private fun ApplicationCall.requireJsonContentType() {
 // Checks every field before it fails, so the caller gets all the errors at once
 internal fun newMaskinportenSchema(body: NewMaskinportenSchema): ClientNewMaskinportenSchema {
     val resourceId = body.resourceId?.let(::resourceIdOrNull)
-    val status = body.status?.let { value -> ResourceStatus.entries.find { it.value == value } }
+    val status = resourceStatus(body.status)
     val errors = buildList {
-        when {
-            body.resourceId.isNullOrBlank() -> add(missing("resourceId"))
-            resourceId == null -> add(invalidResourceId("resourceId"))
-        }
+        addAll(newResourceIdErrors(body.resourceId, resourceId))
         addAll(scopeErrors(body.scopes))
         addAll(textErrors("title", body.title))
         addAll(textErrors("description", body.description))
         addAll(textErrors("delegationDescription", body.delegationDescription))
-        if (body.status != null && status == null) {
-            val values = ResourceStatus.entries.joinToString { it.value }
-            add(FieldError("status", ValidationCode.INVALID_FORMAT, "status must be one of $values"))
-        }
+        addAll(statusErrors(body.status, status))
     }
     if (errors.isNotEmpty()) throw InvalidRequestException(errors)
 
@@ -180,4 +179,45 @@ internal fun newMaskinportenSchema(body: NewMaskinportenSchema): ClientNewMaskin
         keywords = body.keywords.orEmpty().map { it.toClient() },
         status = status,
     )
+}
+
+internal fun newGenericAccessResource(body: NewGenericAccessResource): ClientNewGenericAccessResource {
+    val resourceId = body.resourceId?.let(::resourceIdOrNull)
+    val status = resourceStatus(body.status)
+    val errors = buildList {
+        addAll(newResourceIdErrors(body.resourceId, resourceId))
+        addAll(textErrors("title", body.title))
+        addAll(textErrors("description", body.description))
+        if (body.delegable == null) add(missing("delegable"))
+        // Altinn requires it only for a resource that can be delegated
+        if (body.delegable == true) addAll(textErrors("delegationDescription", body.delegationDescription))
+        addAll(statusErrors(body.status, status))
+    }
+    if (errors.isNotEmpty()) throw InvalidRequestException(errors)
+
+    return ClientNewGenericAccessResource(
+        resourceId = resourceId!!,
+        title = body.title!!.toClient(),
+        description = body.description!!.toClient(),
+        delegable = body.delegable!!,
+        delegationDescription = body.delegationDescription?.toClient(),
+        homepage = body.homepage?.takeIf { it.isNotBlank() },
+        contactPoints = body.contactPoints.orEmpty().map { it.toClient() },
+        keywords = body.keywords.orEmpty().map { it.toClient() },
+        status = status,
+    )
+}
+
+private fun newResourceIdErrors(value: String?, resourceId: ResourceId?): List<FieldError> = when {
+    value.isNullOrBlank() -> listOf(missing("resourceId"))
+    resourceId == null -> listOf(invalidResourceId("resourceId"))
+    else -> emptyList()
+}
+
+private fun resourceStatus(value: String?): ResourceStatus? = value?.let { ResourceStatus.entries.find { it.value == value } }
+
+private fun statusErrors(value: String?, status: ResourceStatus?): List<FieldError> {
+    if (value == null || status != null) return emptyList()
+    val values = ResourceStatus.entries.joinToString { it.value }
+    return listOf(FieldError("status", ValidationCode.INVALID_FORMAT, "status must be one of $values"))
 }

@@ -87,8 +87,25 @@ public class ResourceRegistryClient(
      * would not take it, and [IllegalStateException] when this client has no [AccessTokenProvider].
      */
     public suspend fun createMaskinportenSchema(schema: NewMaskinportenSchema): MaskinportenSchema {
-        val tokens = tokens()
         val resource = newAltinnResource(schema)
+        create(resource, schema.resourceId)
+        return resource.toMaskinportenSchema(schema.resourceId)
+    }
+
+    /**
+     * Creates the resource in Altinn, owned by Kartverket, and returns it as it was sent. Altinn answers a create
+     * without the resource, so the result holds the values this client sets, not ones read back from Altinn. Throws
+     * [ResourceAlreadyExistsException] when Altinn has a resource with this id, [AltinnRejectedException] when Altinn
+     * would not take it, and [IllegalStateException] when this client has no [AccessTokenProvider].
+     */
+    public suspend fun createGenericAccessResource(resource: NewGenericAccessResource): GenericAccessResource {
+        val altinnResource = newAltinnResource(resource)
+        create(altinnResource, resource.resourceId)
+        return altinnResource.toGenericAccessResource(resource.resourceId)
+    }
+
+    private suspend fun create(resource: AltinnResource, id: ResourceId) {
+        val tokens = tokens()
         val request = OutgoingRequest(
             method = HttpMethod.POST,
             url = Http.url(platformBaseUrl, RESOURCE_PATH),
@@ -98,10 +115,9 @@ public class ResourceRegistryClient(
         try {
             sendWrite(tokens, request) { it == 201 }
         } catch (e: AltinnException) {
-            if (e.statusCode == 409) throw ResourceAlreadyExistsException(schema.resourceId, 409, e.responseBody.orEmpty())
+            if (e.statusCode == 409) throw ResourceAlreadyExistsException(id, 409, e.responseBody.orEmpty())
             throw e
         }
-        return resource.toMaskinportenSchema(schema.resourceId)
     }
 
     /**
