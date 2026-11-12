@@ -8,6 +8,7 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.Application
 import io.ktor.server.application.log
 import io.ktor.server.response.respond
 import io.ktor.server.routing.get
@@ -43,14 +44,19 @@ class LoggingTest {
         root.detachAppender(appender)
     }
 
-    private fun linesFor(accessLog: Boolean?) = run {
+    private fun linesFor(path: String, setup: Application.() -> Unit) = run {
         testApplication {
             application {
-                if (accessLog == null) module(testResourceRegistryClient(), noFiltering) else module(testResourceRegistryClient(), noFiltering, accessLog)
+                setup()
+                okRoute()
             }
-            client.get("/health/live")
+            client.get(path)
         }
         appender.list.map { it.formattedMessage }
+    }
+
+    private fun Application.okRoute() {
+        routing { get("/ok") { call.respond(HttpStatusCode.OK) } }
     }
 
     // Logs before and after moving to another thread, and fails, as the real routes can
@@ -88,7 +94,45 @@ class LoggingTest {
 
     @Test
     fun `logs one line per request by default`() {
-        val logged = linesFor(null)
+        val logged = linesFor("/ok") { module(testResourceRegistryClient(), noFiltering) }
+
+        assertTrue(
+            logged.any { it.contains("/ok") },
+            "expected an access log line for the request, got: $logged",
+        )
+    }
+
+    @Test
+    fun `the line has its own logger, so logback can route it apart from other logs`() {
+        linesFor("/ok") { module(testResourceRegistryClient(), noFiltering) }
+        val event = appender.list.single { it.formattedMessage.contains("/ok") }
+
+        assertEquals("access", event.loggerName)
+    }
+
+    @Test
+    fun `logs nothing when switched off`() {
+        val logged = linesFor("/ok") { module(testResourceRegistryClient(), noFiltering, accessLog = false) }
+
+        assertFalse(
+            logged.any { it.contains("/ok") },
+            "expected no access log line, got: $logged",
+        )
+    }
+
+    @Test
+    fun `leaves out the health checks by default`() {
+        val logged = linesFor("/health/live") { module(testResourceRegistryClient(), noFiltering) }
+
+        assertFalse(
+            logged.any { it.contains("/health/live") },
+            "expected no access log line, got: $logged",
+        )
+    }
+
+    @Test
+    fun `logs the health checks when they are switched on`() {
+        val logged = linesFor("/health/live") { module(testResourceRegistryClient(), noFiltering, accessLogHealth = true) }
 
         assertTrue(
             logged.any { it.contains("/health/live") },
@@ -97,16 +141,10 @@ class LoggingTest {
     }
 
     @Test
-    fun `the line has its own logger, so logback can route it apart from other logs`() {
-        linesFor(true)
-        val event = appender.list.single { it.formattedMessage.contains("/health/live") }
-
-        assertEquals("access", event.loggerName)
-    }
-
-    @Test
-    fun `logs nothing when switched off`() {
-        val logged = linesFor(false)
+    fun `logs no health checks when the access log is switched off`() {
+        val logged = linesFor("/health/live") {
+            module(testResourceRegistryClient(), noFiltering, accessLog = false, accessLogHealth = true)
+        }
 
         assertFalse(
             logged.any { it.contains("/health/live") },
@@ -204,9 +242,12 @@ class LoggingTest {
     fun `the response has the request id, so the caller can find the call in our logs`() {
         val replied = mutableListOf<String?>()
         testApplication {
-            application { module(testResourceRegistryClient(), noFiltering) }
-            replied += client.get("/health/live") { header(HttpHeaders.XRequestId, "abc-123") }.headers[HttpHeaders.XRequestId]
-            replied += client.get("/health/live").headers[HttpHeaders.XRequestId]
+            application {
+                module(testResourceRegistryClient(), noFiltering)
+                okRoute()
+            }
+            replied += client.get("/ok") { header(HttpHeaders.XRequestId, "abc-123") }.headers[HttpHeaders.XRequestId]
+            replied += client.get("/ok").headers[HttpHeaders.XRequestId]
         }
         val logged = appender.list.filter { it.loggerName == "access" }.map { it.requestId }
 

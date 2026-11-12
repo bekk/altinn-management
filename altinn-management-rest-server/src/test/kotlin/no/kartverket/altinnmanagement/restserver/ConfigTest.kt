@@ -73,6 +73,12 @@ class ConfigTest {
     }
 
     @Test
+    fun `the access log leaves out the health checks unless they are switched on`() {
+        assertEquals(false, AppConfig.load(MapApplicationConfig(*required)).accessLogHealth)
+        assertEquals(true, AppConfig.load(MapApplicationConfig(*required, "accessLog.healthEnabled" to "true")).accessLogHealth)
+    }
+
+    @Test
     fun `a flag must be true or false`() {
         val e = assertFailsWith<IllegalStateException> { MapApplicationConfig("flag" to "yes").boolean("flag", default = true) }
 
