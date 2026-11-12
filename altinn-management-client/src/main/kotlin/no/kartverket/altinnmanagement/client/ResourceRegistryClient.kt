@@ -36,12 +36,18 @@ public class ResourceRegistryClient(
         return if (resource.isMaskinportenSchema) resource.toMaskinportenSchema(id) else null
     }
 
-    public suspend fun listMaskinportenSchemas(): List<MaskinportenSchema> {
+    public suspend fun listMaskinportenSchemas(): List<MaskinportenSchema> =
+        search(MASKINPORTEN_SCHEMA) { id, resource -> resource.toMaskinportenSchema(id) }
+
+    public suspend fun listGenericAccessResources(): List<GenericAccessResource> =
+        search(GENERIC_ACCESS_RESOURCE) { id, resource -> resource.toGenericAccessResource(id) }
+
+    private suspend fun <T> search(resourceType: String, convert: (ResourceId, AltinnResource) -> T): List<T> {
         val request = OutgoingRequest(
             method = HttpMethod.GET,
             url = Http.url(
                 platformBaseUrl,
-                "$RESOURCE_PATH/search?organizationId=$KARTVERKET_ORGANIZATION_NUMBER&resourceType=$MASKINPORTEN_SCHEMA",
+                "$RESOURCE_PATH/search?organizationId=$KARTVERKET_ORGANIZATION_NUMBER&resourceType=$resourceType",
             ),
             headers = mapOf("Accept" to "application/json"),
         )
@@ -50,7 +56,7 @@ public class ResourceRegistryClient(
         return try {
             Http.json.decodeFromString(ListSerializer(AltinnResource.serializer()), body).map { resource ->
                 val id = requireNotNull(resource.identifier) { "A resource has no identifier" }
-                resource.toMaskinportenSchema(ResourceId.of(id))
+                convert(ResourceId.of(id), resource)
             }
         } catch (e: IllegalArgumentException) {
             throw AltinnException("Failed to parse the resources from $TARGET: ${e.message}", response.statusCode, body, e)
