@@ -23,6 +23,7 @@ import io.ktor.server.routing.routing
 import io.ktor.utils.io.ExperimentalKtorApi
 import kotlinx.serialization.json.Json
 import no.kartverket.altinnmanagement.client.ResourceRegistryClient
+import no.kartverket.altinnmanagement.restserver.models.GenericAccessResource
 import no.kartverket.altinnmanagement.restserver.models.MaskinportenSchema
 import org.slf4j.LoggerFactory
 import java.util.UUID
@@ -87,5 +88,12 @@ fun Application.module(
             val schema = client.getMaskinportenSchema(id) ?: throw MaskinportenSchemaNotFoundException()
             call.respond(MaskinportenSchema.from(schema))
         }.describe(maskinportenSchemaGetOperation)
+
+        get("/api/genericaccessresources") {
+            val certificate = clientCertificate(call.request.headers[CLIENT_CERTIFICATE_HEADER], required = externalFiltering.isOn)
+            val filter = externalFiltering.filterFor(certificate)
+            val resources = client.listGenericAccessResources()
+            call.respond(resources.allowedBy(filter).map(GenericAccessResource::from))
+        }.describe(genericAccessResourcesListOperation)
     }
 }
