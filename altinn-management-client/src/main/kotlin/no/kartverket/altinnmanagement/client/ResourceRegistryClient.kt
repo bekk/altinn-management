@@ -88,12 +88,28 @@ public class ResourceRegistryClient(
      * [ResourceId.isFixedRoute]), and [IllegalStateException] when this client has no [AccessTokenProvider].
      */
     public suspend fun createMaskinportenSchema(schema: NewMaskinportenSchema): MaskinportenSchema {
-        // Altinn takes such an id, but the resource could then never be read or changed, and Altinn does not delete it
-        require(!schema.resourceId.isFixedRoute) {
-            "Expected an id that is not one of Altinn's routes, but was \"${schema.resourceId}\""
-        }
-        val tokens = tokens()
         val resource = newAltinnResource(schema)
+        create(resource, schema.resourceId)
+        return resource.toMaskinportenSchema(schema.resourceId)
+    }
+
+    /**
+     * Creates the resource in Altinn, owned by Kartverket, and returns it as it was sent. Altinn answers a create
+     * without the resource, so the result holds the values this client sets, not ones read back from Altinn. Throws
+     * [ResourceAlreadyExistsException] when Altinn has a resource with this id, [AltinnRejectedException] when Altinn
+     * would not take it, [IllegalArgumentException] when the id is one of Altinn's routes (see
+     * [ResourceId.isFixedRoute]), and [IllegalStateException] when this client has no [AccessTokenProvider].
+     */
+    public suspend fun createGenericAccessResource(resource: NewGenericAccessResource): GenericAccessResource {
+        val altinnResource = newAltinnResource(resource)
+        create(altinnResource, resource.resourceId)
+        return altinnResource.toGenericAccessResource(resource.resourceId)
+    }
+
+    private suspend fun create(resource: AltinnResource, id: ResourceId) {
+        // Altinn takes such an id, but the resource could then never be read or changed, and Altinn does not delete it
+        require(!id.isFixedRoute) { "Expected an id that is not one of Altinn's routes, but was \"$id\"" }
+        val tokens = tokens()
         val request = OutgoingRequest(
             method = HttpMethod.POST,
             url = Http.url(platformBaseUrl, RESOURCE_PATH),
@@ -103,10 +119,9 @@ public class ResourceRegistryClient(
         try {
             sendWrite(tokens, request) { it == 201 }
         } catch (e: AltinnException) {
-            if (e.statusCode == 409) throw ResourceAlreadyExistsException(schema.resourceId, e.responseBody.orEmpty())
+            if (e.statusCode == 409) throw ResourceAlreadyExistsException(id, e.responseBody.orEmpty())
             throw e
         }
-        return resource.toMaskinportenSchema(schema.resourceId)
     }
 
     /**
