@@ -690,6 +690,84 @@ internal val maskinportenSchemaWithdrawOperation: Operation.Builder.() -> Unit =
     }
 }
 
+internal val genericAccessResourceWithdrawOperation: Operation.Builder.() -> Unit = {
+    summary = "Withdraw a GenericAccessResource"
+    description = "Altinn does not let a resource be deleted in production, so this makes it neither `delegable` nor " +
+        "`visible` and sets its `status` to `Withdrawn`. The rest is kept as it is. It only works on Kartverket's " +
+        "GenericAccessResources."
+
+    parameters {
+        path("id") {
+            required = true
+            description = "The resource's id: 4 or more of `a-z`, `0-9`, `_` and `-`, for example `kv-grunnbok-innsyn`."
+            schema = JsonSchema(type = JsonType.STRING, pattern = "^[a-z0-9_-]{4,}$")
+        }
+        requestId()
+    }
+
+    responses {
+        HttpStatusCode.OK {
+            description = "The GenericAccessResource as this API sent it to Altinn, since Altinn answers a change without a body."
+            headers { requestId() }
+            ContentType.Application.Json {
+                schema = jsonSchema<GenericAccessResource>()
+                example(
+                    "GenericAccessResource",
+                    exampleGenericAccessResource.copy(status = "Withdrawn", delegable = false, visible = false),
+                )
+            }
+        }
+
+        HttpStatusCode.BadRequest {
+            description = "The id is not valid, or Altinn rejected the resource, which it checks as a whole. Nothing " +
+                "was changed."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example(
+                    "RejectedByAltinn",
+                    ErrorResponse.of(
+                        ProblemType.UPSTREAM_REJECTED,
+                        HttpStatusCode.BadRequest,
+                        "Altinn rejected the resource: Title: Missing title in english en",
+                    ),
+                )
+            }
+        }
+
+        HttpStatusCode.NotFound {
+            description = "Kartverket has no GenericAccessResource with this id in Altinn."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example(
+                    "NotFound",
+                    ErrorResponse.of(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, "There is no GenericAccessResource with this id"),
+                )
+            }
+        }
+
+        HttpStatusCode.BadGateway {
+            description = "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
+                "did not cause it, and the resource may or may not have been withdrawn."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
+            }
+        }
+
+        HttpStatusCode.InternalServerError {
+            description = "An unexpected error in this API."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example("InternalError", ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError))
+            }
+        }
+    }
+}
+
 internal val maskinportenSchemaPolicyPutOperation: Operation.Builder.() -> Unit = {
     summary = "Give a MaskinportenSchema its policy"
     description = "Uploads to Altinn the policy every MaskinportenSchema gets, in place of any policy the resource " +

@@ -39,15 +39,20 @@ public class ResourceRegistryClient(
      * client has no [AccessTokenProvider].
      */
     public suspend fun updateMaskinportenSchema(id: ResourceId, content: MaskinportenSchemaContent): MaskinportenSchema? =
-        change(id) { it.withContent(content) }
+        change(id, MASKINPORTEN_SCHEMA) { it.withContent(content) }?.toMaskinportenSchema(id)
 
     /** Altinn does not let a resource be deleted in production, so it is made neither delegable nor visible instead. */
-    public suspend fun withdrawMaskinportenSchema(id: ResourceId): MaskinportenSchema? = change(id) { it.withdrawn() }
+    public suspend fun withdrawMaskinportenSchema(id: ResourceId): MaskinportenSchema? =
+        change(id, MASKINPORTEN_SCHEMA) { it.withdrawn() }?.toMaskinportenSchema(id)
 
-    private suspend fun change(id: ResourceId, change: (JsonObject) -> JsonObject): MaskinportenSchema? {
+    /** Altinn does not let a resource be deleted in production, so it is made neither delegable nor visible instead. */
+    public suspend fun withdrawGenericAccessResource(id: ResourceId): GenericAccessResource? =
+        change(id, GENERIC_ACCESS_RESOURCE) { it.withdrawn() }?.toGenericAccessResource(id)
+
+    private suspend fun change(id: ResourceId, resourceType: String, change: (JsonObject) -> JsonObject): AltinnResource? {
         val tokens = tokens()
         val (json, resource) = getResource(id) ?: return null
-        if (!resource.isMaskinportenSchema || !resource.isKartverkets) return null
+        if (resource.resourceType != resourceType || !resource.isKartverkets) return null
         val changed = change(json)
         val request = OutgoingRequest(
             method = HttpMethod.PUT,
@@ -56,7 +61,7 @@ public class ResourceRegistryClient(
             body = changed.toString().encodeToByteArray(),
         )
         sendWrite(tokens, request) { it == 200 }
-        return Http.json.decodeFromJsonElement(AltinnResource.serializer(), changed).toMaskinportenSchema(id)
+        return Http.json.decodeFromJsonElement(AltinnResource.serializer(), changed)
     }
 
     public suspend fun listMaskinportenSchemas(): List<MaskinportenSchema> {

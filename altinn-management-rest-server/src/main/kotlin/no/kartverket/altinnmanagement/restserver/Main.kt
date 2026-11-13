@@ -132,5 +132,11 @@ fun Application.module(
             val created = client.createGenericAccessResource(resource)
             call.respond(HttpStatusCode.Created, GenericAccessResource.from(created))
         }.describe(genericAccessResourceCreateOperation)
+
+        put("/api/genericaccessresources/{id}/withdraw") {
+            val id = resourceId("id", call.pathParameters["id"]!!)
+            val resource = client.withdrawGenericAccessResource(id) ?: throw ResourceNotFoundException("GenericAccessResource")
+            call.respond(GenericAccessResource.from(resource))
+        }.describe(genericAccessResourceWithdrawOperation)
     }
 }
