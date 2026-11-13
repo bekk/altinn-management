@@ -437,6 +437,188 @@
                     }
                 }
             }
+        },
+        "/api/genericaccessresources": {
+            "get": {
+                "summary": "List Kartverket's GenericAccessResources",
+                "description": "Gets Kartverket's resources of type `GenericAccessResource` from Altinn. They have no Maskinporten scopes, so this API never filters them by scope. When filtering is on, this API only returns the ones the calling app has access to: the resource must be in the app's `exact` list or start with one of its prefixes. This API reads which app is calling from the `X-Forwarded-Client-Cert` header, which Istio usually sets. Altinn's search returns the newest version of each resource that matches, so if a resource's type or owner has changed, the list can hold an older version of it.",
+                "parameters": [
+                    {
+                        "name": "X-Forwarded-Client-Cert",
+                        "in": "header",
+                        "description": "Says which app is calling. Istio usually sets it on every call, so the app does not. This API requires it when filtering is on.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-Request-ID",
+                        "in": "header",
+                        "description": "An id to find this call by in this API's logs. Up to 128 ASCII letters, digits, `-`, `_`, `.` and `:`. Without it, or with any other value, this API makes a new one. Every response has the id in its `X-Request-Id` header.",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "3f2b8c1e-7d4a-4f0e-9b6a-2c5d8e1f4a7b"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Kartverket's GenericAccessResources, and when filtering is on, only those the calling app has access to. The list is empty if there are none.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/GenericAccessResource"
+                                    }
+                                },
+                                "examples": {
+                                    "GenericAccessResources": {
+                                        "value": [
+                                            {
+                                                "resourceId": "kv-eksempel-tilgang",
+                                                "title": {
+                                                    "en": "Example access",
+                                                    "nb": "Eksempeltilgang",
+                                                    "nn": "Eksempeltilgang"
+                                                },
+                                                "description": {
+                                                    "en": "Access to an example service from Kartverket.",
+                                                    "nb": "Tilgang til en eksempeltjeneste fra Kartverket.",
+                                                    "nn": "Tilgang til ei eksempelteneste frå Kartverket."
+                                                },
+                                                "delegationDescription": {
+                                                    "en": "Allows the organisation to use the example service on behalf of your organisation.",
+                                                    "nb": "Gir virksomheten rett til å bruke eksempeltjenesten på vegne av virksomheten din.",
+                                                    "nn": "Gir verksemda rett til å bruke eksempeltenesta på vegner av verksemda di."
+                                                },
+                                                "contactPoints": [
+                                                    {
+                                                        "category": "Kartverket Kundesenter",
+                                                        "email": "kundesenter@kartverket.no"
+                                                    }
+                                                ],
+                                                "status": "Completed",
+                                                "delegable": true,
+                                                "visible": true
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Filtering is on and the `X-Forwarded-Client-Cert` header is missing, so this API cannot tell which app is calling.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "MissingClientCertificate": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:validation-error",
+                                            "title": "Validation failed",
+                                            "status": 400,
+                                            "errors": [
+                                                {
+                                                    "field": "X-Forwarded-Client-Cert",
+                                                    "code": "MISSING",
+                                                    "message": "X-Forwarded-Client-Cert is required"
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "This API could not get an answer from Altinn, or from the service that says which resources the calling app has access to. Your request did not cause it.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "UpstreamError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:upstream-error",
+                                            "title": "A service this API depends on failed",
+                                            "status": 502,
+                                            "detail": "The call to Altinn failed"
+                                        }
+                                    },
+                                    "FilteringError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:upstream-error",
+                                            "title": "A service this API depends on failed",
+                                            "status": 502,
+                                            "detail": "The call to the filtering service failed"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "An unexpected error in this API.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "InternalError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:internal-error",
+                                            "title": "Internal error",
+                                            "status": 500
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -629,6 +811,59 @@
                         "items": {
                             "$ref": "#/components/schemas/FieldError"
                         }
+                    }
+                }
+            },
+            "GenericAccessResource": {
+                "type": "object",
+                "title": "GenericAccessResource",
+                "description": "A resource of type `GenericAccessResource` in Altinn, with the values Altinn has. A field Altinn has no value for is left out. Unlike a MaskinportenSchema, it has no Maskinporten scopes. `title` is its name, `description` says what it gives access to, and `delegationDescription` explains the rights an organisation gets when the resource is delegated to it.",
+                "required": [
+                    "resourceId"
+                ],
+                "properties": {
+                    "resourceId": {
+                        "type": "string",
+                        "description": "The resource's id in Altinn: 4 or more of `a-z`, `0-9`, `_` and `-`. It cannot be changed."
+                    },
+                    "title": {
+                        "$ref": "#/components/schemas/MultilingualText"
+                    },
+                    "description": {
+                        "$ref": "#/components/schemas/MultilingualText"
+                    },
+                    "delegationDescription": {
+                        "$ref": "#/components/schemas/MultilingualText"
+                    },
+                    "homepage": {
+                        "type": "string",
+                        "description": "A web page about the resource."
+                    },
+                    "contactPoints": {
+                        "type": "array",
+                        "description": "Where to get help with the resource. Can be empty.",
+                        "items": {
+                            "$ref": "#/components/schemas/ContactPoint"
+                        }
+                    },
+                    "keywords": {
+                        "type": "array",
+                        "description": "Words to find the resource by in Altinn. Can be empty.",
+                        "items": {
+                            "$ref": "#/components/schemas/Keyword"
+                        }
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "Altinn's status for the resource, such as `Completed`, `Active`, `UnderDevelopment`, `Deprecated` or `Withdrawn`."
+                    },
+                    "delegable": {
+                        "type": "boolean",
+                        "description": "If `true`, organisations can delegate the resource to others in Altinn."
+                    },
+                    "visible": {
+                        "type": "boolean",
+                        "description": "If `true`, Altinn shows the resource to its users."
                     }
                 }
             }

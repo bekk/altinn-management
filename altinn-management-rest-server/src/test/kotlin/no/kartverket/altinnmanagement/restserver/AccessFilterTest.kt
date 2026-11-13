@@ -1,5 +1,6 @@
 package no.kartverket.altinnmanagement.restserver
 
+import no.kartverket.altinnmanagement.client.GenericAccessResource
 import no.kartverket.altinnmanagement.client.MaskinportenSchema
 import no.kartverket.altinnmanagement.client.MultilingualText
 import no.kartverket.altinnmanagement.client.ResourceId
@@ -58,9 +59,38 @@ class AccessFilterTest {
         assertEquals(listOf("res-exact"), schemas.allowedBy(filter).map { it.resourceId.value })
     }
 
+    @Test
+    fun `allows a GenericAccessResource by its id alone, since it has no scopes`() {
+        assertTrue(filter.allows(genericAccessResource("res-exact")))
+        assertTrue(filter.allows(genericAccessResource("res-prefix-demo")))
+        assertFalse(filter.allows(genericAccessResource("kv-matrikkel-brukernavn")))
+        assertFalse(AccessFilter.NOTHING.allows(genericAccessResource("res-exact")))
+    }
+
+    @Test
+    fun `a list of GenericAccessResources is kept whole when filtering is off, and filtered when it is on`() {
+        val resources = listOf(genericAccessResource("res-exact"), genericAccessResource("kv-matrikkel-brukernavn"))
+
+        assertEquals(resources, resources.allowedBy(null))
+        assertEquals(listOf("res-exact"), resources.allowedBy(filter).map { it.resourceId.value })
+    }
+
     private fun schema(id: String, vararg scopes: String) = MaskinportenSchema(
         resourceId = ResourceId.of(id),
         scopes = scopes.toList(),
+        title = noText,
+        description = noText,
+        delegationDescription = noText,
+        homepage = null,
+        contactPoints = emptyList(),
+        keywords = emptyList(),
+        status = null,
+        delegable = true,
+        visible = true,
+    )
+
+    private fun genericAccessResource(id: String) = GenericAccessResource(
+        resourceId = ResourceId.of(id),
         title = noText,
         description = noText,
         delegationDescription = noText,

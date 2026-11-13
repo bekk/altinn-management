@@ -34,6 +34,21 @@ internal data class AltinnResource(
         delegable = delegable,
         visible = visible,
     )
+
+    fun toGenericAccessResource(id: ResourceId): GenericAccessResource = GenericAccessResource(
+        resourceId = id,
+        title = title?.let(::multilingualText),
+        description = description?.let(::multilingualText),
+        delegationDescription = rightDescription?.let(::multilingualText),
+        homepage = homepage,
+        contactPoints = contactPoints?.map {
+            ContactPoint(category = it.category, email = it.email, telephone = it.telephone, contactPage = it.contactPage)
+        },
+        keywords = keywords?.map { Keyword(word = it.word, language = it.language) },
+        status = status,
+        delegable = delegable,
+        visible = visible,
+    )
 }
 
 @Serializable
@@ -57,6 +72,8 @@ internal data class AltinnResourceReference(
 )
 
 internal const val MASKINPORTEN_SCHEMA = "MaskinportenSchema"
+
+internal const val GENERIC_ACCESS_RESOURCE = "GenericAccessResource"
 
 private const val MASKINPORTEN_SCOPE = "MaskinportenScope"
 
