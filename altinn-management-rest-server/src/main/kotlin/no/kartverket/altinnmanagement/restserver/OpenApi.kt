@@ -332,8 +332,16 @@ internal val genericAccessResourceCreateOperation: Operation.Builder.() -> Unit 
 
     responses {
         HttpStatusCode.Created {
-            description = "Altinn created the resource. The body has the values this API sent to Altinn."
-            headers { requestId() }
+            description = "Altinn created the resource. The body has the values this API sent to Altinn, as a GET " +
+                "would answer them."
+            headers {
+                requestId()
+                header(HttpHeaders.Location) {
+                    description = "Where to get the new resource from this API."
+                    required = true
+                    schema = JsonSchema(type = JsonType.STRING)
+                }
+            }
             ContentType.Application.Json {
                 schema = jsonSchema<GenericAccessResource>()
                 example("GenericAccessResource", exampleGenericAccessResource)
@@ -378,7 +386,8 @@ internal val genericAccessResourceCreateOperation: Operation.Builder.() -> Unit 
         }
 
         HttpStatusCode.Conflict {
-            description = "Altinn already has a resource with this id. It may be of another type or owner."
+            description = "Altinn already has a resource with this id. It may be of another type or owner, so a GET " +
+                "of the id can still give `404`."
             headers { requestId() }
             ContentType.Application.ProblemJson {
                 schema = jsonSchema<ErrorResponse>()
@@ -410,18 +419,81 @@ internal val genericAccessResourceCreateOperation: Operation.Builder.() -> Unit 
     }
 }
 
+internal val genericAccessResourceGetOperation: Operation.Builder.() -> Unit = {
+    summary = "Get a GenericAccessResource"
+    description = "Gets the resource with this id from Altinn. Only Kartverket's resources of type " +
+        "`GenericAccessResource` are found: any other resource gives `404`, as if it did not exist."
+
+    parameters {
+        idPath()
+        requestId()
+    }
+
+    responses {
+        HttpStatusCode.OK {
+            description = "The GenericAccessResource."
+            headers { requestId() }
+            ContentType.Application.Json {
+                schema = jsonSchema<GenericAccessResource>()
+                example("GenericAccessResource", exampleGenericAccessResource)
+            }
+        }
+
+        HttpStatusCode.BadRequest {
+            description = "The id is not valid."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example(
+                    "InvalidId",
+                    ErrorResponse.of(
+                        ProblemType.VALIDATION_ERROR,
+                        HttpStatusCode.BadRequest,
+                        errors = listOf(FieldError("id", ValidationCode.INVALID_FORMAT, "id must be 4 or more of a-z, 0-9, _ and -")),
+                    ),
+                )
+            }
+        }
+
+        HttpStatusCode.NotFound {
+            description = "Kartverket has no GenericAccessResource with this id in Altinn."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example(
+                    "NotFound",
+                    ErrorResponse.of(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, "There is no GenericAccessResource with this id"),
+                )
+            }
+        }
+
+        HttpStatusCode.BadGateway {
+            description = "This API could not get an answer from Altinn. Your request did not cause it."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
+            }
+        }
+
+        HttpStatusCode.InternalServerError {
+            description = "An unexpected error in this API."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example("InternalError", ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError))
+            }
+        }
+    }
+}
+
 internal val maskinportenSchemaGetOperation: Operation.Builder.() -> Unit = {
     summary = "Get a MaskinportenSchema"
     description = "Gets the resource with this id from Altinn. Only resources of type `MaskinportenSchema` are " +
         "found: any other resource gives `404`, as if it did not exist."
 
     parameters {
-        path("id") {
-            required = true
-            description = "The resource's id: 4 or more of `a-z`, `0-9`, `_` and `-`, for example " +
-                "`kv-matrikkel-brukernavn`."
-            schema = JsonSchema(type = JsonType.STRING, pattern = "^[a-z0-9_-]{4,}$")
-        }
+        idPath()
         requestId()
     }
 
@@ -501,12 +573,7 @@ internal val maskinportenSchemaPutOperation: Operation.Builder.() -> Unit = {
         "`MaskinportenSchema` can be changed: any other resource gives `404`, as if it did not exist."
 
     parameters {
-        path("id") {
-            required = true
-            description = "The resource's id: 4 or more of `a-z`, `0-9`, `_` and `-`, for example " +
-                "`kv-matrikkel-brukernavn`."
-            schema = JsonSchema(type = JsonType.STRING, pattern = "^[a-z0-9_-]{4,}$")
-        }
+        idPath()
         requestId()
     }
 
@@ -618,12 +685,7 @@ internal val maskinportenSchemaWithdrawOperation: Operation.Builder.() -> Unit =
         "Kartverket's MaskinportenSchemas."
 
     parameters {
-        path("id") {
-            required = true
-            description = "The resource's id: 4 or more of `a-z`, `0-9`, `_` and `-`, for example " +
-                "`kv-matrikkel-brukernavn`."
-            schema = JsonSchema(type = JsonType.STRING, pattern = "^[a-z0-9_-]{4,}$")
-        }
+        idPath()
         requestId()
     }
 
@@ -699,12 +761,7 @@ internal val maskinportenSchemaPolicyPutOperation: Operation.Builder.() -> Unit 
         "MaskinportenSchemas, and takes no body."
 
     parameters {
-        path("id") {
-            required = true
-            description = "The resource's id: 4 or more of `a-z`, `0-9`, `_` and `-`, for example " +
-                "`kv-matrikkel-brukernavn`."
-            schema = JsonSchema(type = JsonType.STRING, pattern = "^[a-z0-9_-]{4,}$")
-        }
+        idPath()
         requestId()
     }
 
@@ -769,6 +826,15 @@ internal val maskinportenSchemaPolicyPutOperation: Operation.Builder.() -> Unit 
                 example("InternalError", ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError))
             }
         }
+    }
+}
+
+private fun Parameters.Builder.idPath() {
+    path("id") {
+        required = true
+        description = "The resource's id: 4 or more of `a-z`, `0-9`, `_` and `-`, for example " +
+            "`kv-matrikkel-brukernavn`."
+        schema = JsonSchema(type = JsonType.STRING, pattern = "^[a-z0-9_-]{4,}$")
     }
 }
 

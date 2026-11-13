@@ -49,6 +49,10 @@ internal suspend fun HttpResponse.assertProblem(expected: ErrorResponse) {
     assertEquals(expected, errorResponse())
 }
 
-internal val notFound = ErrorResponse.of(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, "There is no MaskinportenSchema with this id")
+internal val maskinportenSchemaNotFound =
+    ErrorResponse.of(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, "There is no MaskinportenSchema with this id")
+
+internal val genericAccessResourceNotFound =
+    ErrorResponse.of(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, "There is no GenericAccessResource with this id")
 
 internal val upstreamError = ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed")

@@ -107,6 +107,7 @@ setting them yourself.
 | `PUT /api/maskinportenschemas/{id}/withdraw` | Withdraws a MaskinportenSchema                                          |
 | `PUT /api/maskinportenschemas/{id}/policy`   | Gives a MaskinportenSchema its policy                                   |
 | `POST /api/genericaccessresources`           | Creates a GenericAccessResource                                         |
+| `GET /api/genericaccessresources/{id}`       | Gets a GenericAccessResource                                            |
 | `GET /openapi`                               | The OpenAPI spec as JSON                                                |
 | `GET /health/live`                           | Liveness probe for the platform, left out of the spec                   |
 

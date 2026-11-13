@@ -27,6 +27,8 @@ internal data class AltinnResource(
 ) {
     val isMaskinportenSchema: Boolean get() = resourceType == MASKINPORTEN_SCHEMA
 
+    val isGenericAccessResource: Boolean get() = resourceType == GENERIC_ACCESS_RESOURCE
+
     val isKartverkets: Boolean get() = hasCompetentAuthority?.organization == KARTVERKET_ORGANIZATION_NUMBER
 
     fun toMaskinportenSchema(id: ResourceId): MaskinportenSchema = MaskinportenSchema(
