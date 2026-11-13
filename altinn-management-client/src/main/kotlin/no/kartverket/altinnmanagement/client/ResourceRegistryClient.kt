@@ -9,6 +9,7 @@ import kotlinx.serialization.json.jsonObject
 import no.kartverket.altinnmanagement.client.auth.AccessTokenProvider
 import no.kartverket.altinnmanagement.client.exception.AltinnException
 import no.kartverket.altinnmanagement.client.exception.AltinnRejectedException
+import no.kartverket.altinnmanagement.client.exception.ResourceAlreadyExistsException
 import no.kartverket.altinnmanagement.client.http.Http
 import no.kartverket.altinnmanagement.client.http.HttpMethod
 import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
@@ -44,24 +45,17 @@ public class ResourceRegistryClient(
     public suspend fun withdrawMaskinportenSchema(id: ResourceId): MaskinportenSchema? = change(id) { it.withdrawn() }
 
     private suspend fun change(id: ResourceId, change: (JsonObject) -> JsonObject): MaskinportenSchema? {
-        val accessTokenProvider = checkNotNull(accessTokenProvider) { "Changing a resource needs an AccessTokenProvider" }
+        val tokens = tokens()
         val (json, resource) = getResource(id) ?: return null
         if (!resource.isMaskinportenSchema || !resource.isKartverkets) return null
         val changed = change(json)
-        val token = accessTokenProvider.accessToken()
         val request = OutgoingRequest(
             method = HttpMethod.PUT,
             url = resourceUrl(id),
-            headers = mapOf("Authorization" to "Bearer ${token.value}", "Content-Type" to "application/json"),
+            headers = mapOf("Content-Type" to "application/json"),
             body = changed.toString().encodeToByteArray(),
         )
-        try {
-            Http.sendExpectingOk(httpClient, request, TARGET, ::AltinnException)
-        } catch (e: AltinnException) {
-            rejection(e)?.let { throw it }
-            if (e.statusCode == 401) accessTokenProvider.refused(token)
-            throw e
-        }
+        sendWrite(tokens, request) { it == 200 }
         return Http.json.decodeFromJsonElement(AltinnResource.serializer(), changed).toMaskinportenSchema(id)
     }
 
@@ -84,6 +78,65 @@ public class ResourceRegistryClient(
         } catch (e: IllegalArgumentException) {
             throw AltinnException("Failed to parse the resources from $TARGET: ${e.message}", response.statusCode, body, e)
         }
+    }
+
+    /**
+     * Creates the resource in Altinn, owned by Kartverket, and returns it as it was sent. Altinn answers a create
+     * without the resource, so the result holds the values this client sets, not ones read back from Altinn. Throws
+     * [ResourceAlreadyExistsException] when Altinn has a resource with this id, [AltinnRejectedException] when Altinn
+     * would not take it, and [IllegalStateException] when this client has no [AccessTokenProvider].
+     */
+    public suspend fun createMaskinportenSchema(schema: NewMaskinportenSchema): MaskinportenSchema {
+        val tokens = tokens()
+        val resource = newAltinnResource(schema)
+        val request = OutgoingRequest(
+            method = HttpMethod.POST,
+            url = Http.url(platformBaseUrl, RESOURCE_PATH),
+            headers = mapOf("Content-Type" to "application/json", "Accept" to "application/json"),
+            body = Http.json.encodeToString(AltinnResource.serializer(), resource).encodeToByteArray(),
+        )
+        try {
+            sendWrite(tokens, request) { it == 201 }
+        } catch (e: AltinnException) {
+            if (e.statusCode == 409) throw ResourceAlreadyExistsException(schema.resourceId, 409, e.responseBody.orEmpty())
+            throw e
+        }
+        return resource.toMaskinportenSchema(schema.resourceId)
+    }
+
+    /**
+     * Gives Kartverket's MaskinportenSchema [id] the policy every MaskinportenSchema gets, in place of any policy it
+     * has. Returns false, and changes nothing, when Altinn has no MaskinportenSchema of Kartverket's with this id.
+     * Throws [AltinnRejectedException] when Altinn would not take the policy, and [IllegalStateException] when this
+     * client has no [AccessTokenProvider].
+     */
+    public suspend fun setMaskinportenSchemaPolicy(id: ResourceId): Boolean {
+        val tokens = tokens()
+        val (_, resource) = getResource(id) ?: return false
+        // Without this check, the policy could replace the one on another kind of Kartverket resource
+        if (!resource.isMaskinportenSchema || !resource.isKartverkets) return false
+        val request = OutgoingRequest(
+            method = HttpMethod.PUT,
+            url = Http.url(platformBaseUrl, "$RESOURCE_PATH/${id.value}/policy"),
+            headers = mapOf("Content-Type" to "multipart/form-data; boundary=$POLICY_BOUNDARY"),
+            body = policyFormData(maskinportenSchemaPolicy(id)),
+        )
+        sendWrite(tokens, request) { it in 200..299 }
+        return true
+    }
+
+    private fun tokens(): AccessTokenProvider = checkNotNull(accessTokenProvider) { "Changing a resource needs an AccessTokenProvider" }
+
+    // A rejection is about what was sent. Any other 401 means Altinn did not take the token, so the next call gets a new one
+    private suspend fun sendWrite(tokens: AccessTokenProvider, request: OutgoingRequest, isSuccess: (Int) -> Boolean) {
+        val token = tokens.accessToken()
+        val headers = request.headers + ("Authorization" to "Bearer ${token.value}")
+        val response = Http.send(httpClient, OutgoingRequest(request.method, request.url, headers, request.body), TARGET, ::AltinnException)
+        if (isSuccess(response.statusCode)) return
+        val e = AltinnException("$TARGET responded ${response.statusCode}", response.statusCode, response.body.decodeToString())
+        rejection(e)?.let { throw it }
+        if (e.statusCode == 401) tokens.refused(token)
+        throw e
     }
 
     // Whole, since a change must send back what this client does not read
@@ -134,3 +187,16 @@ public class ResourceRegistryClient(
             (element as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.content }
     }
 }
+
+// A resource id has no capital letters, so the boundary cannot turn up inside the policy
+private const val POLICY_BOUNDARY = "AltinnManagementPolicyBoundary"
+
+// Altinn takes the policy as a file in the form field policyFile
+private fun policyFormData(policy: String): ByteArray = (
+    "--$POLICY_BOUNDARY\r\n" +
+        "Content-Disposition: form-data; name=\"policyFile\"; filename=\"policy.xml\"\r\n" +
+        "Content-Type: application/xml\r\n" +
+        "\r\n" +
+        policy + "\r\n" +
+        "--$POLICY_BOUNDARY--\r\n"
+    ).encodeToByteArray()

@@ -24,6 +24,27 @@ public data class MaskinportenSchemaContent(
     public val keywords: List<Keyword>,
 )
 
+public data class NewMaskinportenSchema(
+    public val resourceId: ResourceId,
+    public val scopes: List<String>,
+    public val title: MultilingualText,
+    public val description: MultilingualText,
+    public val delegationDescription: MultilingualText,
+    public val homepage: String? = null,
+    public val contactPoints: List<ContactPoint> = emptyList(),
+    public val keywords: List<Keyword> = emptyList(),
+    public val status: ResourceStatus? = null,
+)
+
+/** The statuses in use on resources in Altinn. Altinn itself takes any text. */
+public enum class ResourceStatus(public val value: String) {
+    COMPLETED("Completed"),
+    ACTIVE("Active"),
+    UNDER_DEVELOPMENT("UnderDevelopment"),
+    DEPRECATED("Deprecated"),
+    WITHDRAWN("Withdrawn"),
+}
+
 public data class MultilingualText(
     public val en: String?,
     public val nb: String?,

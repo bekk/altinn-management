@@ -7,6 +7,289 @@
     },
     "paths": {
         "/api/maskinportenschemas": {
+            "post": {
+                "summary": "Create a MaskinportenSchema",
+                "description": "Creates a resource of type `MaskinportenSchema` in Altinn, owned by Kartverket. This API checks the fields first, and Altinn checks them again, so a resource that passes here can still be rejected. The resource has no policy yet, so it cannot be delegated until it gets one with `PUT /api/maskinportenschemas/{id}/policy`.",
+                "parameters": [
+                    {
+                        "name": "X-Request-ID",
+                        "in": "header",
+                        "description": "An id to find this call by in this API's logs. Up to 128 ASCII letters, digits, `-`, `_`, `.` and `:`. Without it, or with any other value, this API makes a new one. Every response has the id in its `X-Request-Id` header.",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "3f2b8c1e-7d4a-4f0e-9b6a-2c5d8e1f4a7b"
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NewMaskinportenSchema"
+                            },
+                            "examples": {
+                                "NewMaskinportenSchema": {
+                                    "value": {
+                                        "resourceId": "kv-matrikkel-brukernavn",
+                                        "scopes": [
+                                            "kartverk:matrikkel:brukernavn"
+                                        ],
+                                        "title": {
+                                            "en": "Cadastre API",
+                                            "nb": "Matrikkel API",
+                                            "nn": "Matrikkel API"
+                                        },
+                                        "description": {
+                                            "en": "Machine-to-machine access to the Cadastre.",
+                                            "nb": "Maskinell tilgang til Matrikkelen.",
+                                            "nn": "Maskinell tilgang til Matrikkelen."
+                                        },
+                                        "delegationDescription": {
+                                            "en": "Allows a system provider to use the Matrikkel API on behalf of your organisation.",
+                                            "nb": "Gir en systemleverandør rett til å bruke Matrikkel API på vegne av virksomheten din.",
+                                            "nn": "Gir ein systemleverandør rett til å bruke Matrikkel API på vegner av verksemda di."
+                                        },
+                                        "homepage": "https://kartverket.github.io/api-dokumentasjon/docs/matrikkelen",
+                                        "contactPoints": [
+                                            {
+                                                "category": "Kartverket Kundesenter",
+                                                "email": "kundesenter@kartverket.no"
+                                            }
+                                        ],
+                                        "keywords": [
+                                            {
+                                                "word": "matrikkel",
+                                                "language": "nb"
+                                            },
+                                            {
+                                                "word": "cadastre",
+                                                "language": "en"
+                                            }
+                                        ],
+                                        "status": "Completed"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "description": "Altinn created the resource. The body has the values this API sent to Altinn, as a GET would answer them.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Location": {
+                                "description": "Where to get the new resource from this API.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MaskinportenSchema"
+                                },
+                                "examples": {
+                                    "MaskinportenSchema": {
+                                        "value": {
+                                            "resourceId": "kv-matrikkel-brukernavn",
+                                            "scopes": [
+                                                "kartverk:matrikkel:brukernavn"
+                                            ],
+                                            "title": {
+                                                "en": "Cadastre API",
+                                                "nb": "Matrikkel API",
+                                                "nn": "Matrikkel API"
+                                            },
+                                            "description": {
+                                                "en": "Machine-to-machine access to the Cadastre.",
+                                                "nb": "Maskinell tilgang til Matrikkelen.",
+                                                "nn": "Maskinell tilgang til Matrikkelen."
+                                            },
+                                            "delegationDescription": {
+                                                "en": "Allows a system provider to use the Matrikkel API on behalf of your organisation.",
+                                                "nb": "Gir en systemleverandør rett til å bruke Matrikkel API på vegne av virksomheten din.",
+                                                "nn": "Gir ein systemleverandør rett til å bruke Matrikkel API på vegner av verksemda di."
+                                            },
+                                            "homepage": "https://kartverket.github.io/api-dokumentasjon/docs/matrikkelen",
+                                            "contactPoints": [
+                                                {
+                                                    "category": "Kartverket Kundesenter",
+                                                    "email": "kundesenter@kartverket.no"
+                                                }
+                                            ],
+                                            "keywords": [
+                                                {
+                                                    "word": "matrikkel",
+                                                    "language": "nb"
+                                                },
+                                                {
+                                                    "word": "cadastre",
+                                                    "language": "en"
+                                                }
+                                            ],
+                                            "status": "Completed",
+                                            "delegable": true,
+                                            "visible": true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "The body cannot be read or has fields that are missing or invalid, or Altinn rejected the resource. When Altinn rejects it, `detail` has Altinn's reasons. The body must be UTF-8 JSON that gives each name once.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "ValidationError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:validation-error",
+                                            "title": "Validation failed",
+                                            "status": 400,
+                                            "errors": [
+                                                {
+                                                    "field": "scopes",
+                                                    "code": "MISSING",
+                                                    "message": "scopes is required"
+                                                },
+                                                {
+                                                    "field": "title.nn",
+                                                    "code": "MISSING",
+                                                    "message": "title.nn is required"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "MalformedBody": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:malformed-request",
+                                            "title": "Malformed request",
+                                            "status": 400,
+                                            "detail": "The body must be one JSON object, with no name given twice"
+                                        }
+                                    },
+                                    "RejectedByAltinn": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:upstream-rejected",
+                                            "title": "A service this API depends on rejected the request",
+                                            "status": 400,
+                                            "detail": "Altinn rejected the resource: InvalidPrefix: skatteetaten:demo"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Altinn already has a resource with this id. It may be of another type or owner, so a GET of the id can still give `404`.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "Conflict": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:conflict",
+                                            "title": "Conflict",
+                                            "status": 409,
+                                            "detail": "Altinn already has a resource with this id"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "This API could not get an answer from Altinn, or a token from Maskinporten. Your request did not cause it. Altinn may or may not have created the resource.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "UpstreamError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:upstream-error",
+                                            "title": "A service this API depends on failed",
+                                            "status": 502,
+                                            "detail": "The call to Altinn failed"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "An unexpected error in this API.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "InternalError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:internal-error",
+                                            "title": "Internal error",
+                                            "status": 500
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
             "get": {
                 "summary": "List Kartverket's MaskinportenSchemas",
                 "description": "Gets Kartverket's resources of type `MaskinportenSchema` from Altinn, or with `scope`, only the ones that give that Maskinporten scope. When filtering is on, this API only returns the ones the calling app has access to: the resource, and every one of its scopes, must be in the app's `exact` list or start with one of its prefixes. This holds with `scope` too, so a resource that also gives a scope the app may not see is left out. This API reads which app is calling from the `X-Forwarded-Client-Cert` header, which Istio usually sets. Altinn's search returns the newest version of each resource that matches, so if a resource's type or owner has changed, the list can hold an older version of it. Get a resource by its id to be sure you have its current version.",
@@ -929,6 +1212,176 @@
                     }
                 }
             }
+        },
+        "/api/maskinportenschemas/{id}/policy": {
+            "put": {
+                "summary": "Give a MaskinportenSchema its policy",
+                "description": "Uploads to Altinn the policy every MaskinportenSchema gets, in place of any policy the resource has. The policy lets anyone with the access package `maskinporten-scopes` use the resource's scopes and delegate them, after logging in at security level 3 or higher. A resource cannot be delegated until it has a policy, so call this after `POST /api/maskinportenschemas`. It only works on Kartverket's MaskinportenSchemas, and takes no body.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "The resource's id: 4 or more of `a-z`, `0-9`, `_` and `-`, for example `kv-matrikkel-brukernavn`.",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[a-z0-9_-]{4,}$"
+                        }
+                    },
+                    {
+                        "name": "X-Request-ID",
+                        "in": "header",
+                        "description": "An id to find this call by in this API's logs. Up to 128 ASCII letters, digits, `-`, `_`, `.` and `:`. Without it, or with any other value, this API makes a new one. Every response has the id in its `X-Request-Id` header.",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "3f2b8c1e-7d4a-4f0e-9b6a-2c5d8e1f4a7b"
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Altinn has the policy.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "The id is not valid, or Altinn rejected the policy. When Altinn rejects it, `detail` has Altinn's reasons.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "InvalidId": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:validation-error",
+                                            "title": "Validation failed",
+                                            "status": 400,
+                                            "errors": [
+                                                {
+                                                    "field": "id",
+                                                    "code": "INVALID_FORMAT",
+                                                    "message": "id must be 4 or more of a-z, 0-9, _ and -"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "RejectedByAltinn": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:upstream-rejected",
+                                            "title": "A service this API depends on rejected the request",
+                                            "status": 400,
+                                            "detail": "Altinn rejected the resource: Unknown resource"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Altinn has no MaskinportenSchema of Kartverket's with this id.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "NotFound": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:not-found",
+                                            "title": "Not found",
+                                            "status": 404,
+                                            "detail": "There is no MaskinportenSchema with this id"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "This API could not get an answer from Altinn, or a token from Maskinporten. Your request did not cause it. Altinn may or may not have the policy.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "UpstreamError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:upstream-error",
+                                            "title": "A service this API depends on failed",
+                                            "status": 502,
+                                            "detail": "The call to Altinn failed"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "An unexpected error in this API.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "InternalError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:internal-error",
+                                            "title": "Internal error",
+                                            "status": 500
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -1089,13 +1542,14 @@
                 "properties": {
                     "type": {
                         "type": "string",
-                        "description": "What went wrong, as a name that does not change, so your code can rely on it.\n\n- `tag:kartverket.no,2026:validation-error` (400): one or more fields are missing or invalid. `errors` lists all of\n  them.\n- `tag:kartverket.no,2026:malformed-request` (400): the request could not be read, for example a body that is not\n  valid JSON, a field with the wrong type, or a `Content-Type` that is not `application/json`.\n- `tag:kartverket.no,2026:upstream-rejected` (400): the values passed this API's checks, but Altinn rejected them.\n- `tag:kartverket.no,2026:not-found` (404): there is nothing at this path: no endpoint, or no MaskinportenSchema\n  with this id.\n- `tag:kartverket.no,2026:method-not-allowed` (405): the endpoint at this path does not accept this HTTP method.\n- `tag:kartverket.no,2026:upstream-error` (502): this API could not get a usable answer from Altinn, or from the\n  service that says which resources and scopes the calling app has access to. Your request did not cause it.\n- `tag:kartverket.no,2026:internal-error` (500): an unexpected error in this API.",
+                        "description": "What went wrong, as a name that does not change, so your code can rely on it.\n\n- `tag:kartverket.no,2026:validation-error` (400): one or more fields are missing or invalid. `errors` lists all of\n  them.\n- `tag:kartverket.no,2026:malformed-request` (400): the request could not be read, for example a body that is not\n  valid JSON, a field with the wrong type, or a `Content-Type` that is not `application/json`.\n- `tag:kartverket.no,2026:upstream-rejected` (400): the values passed this API's checks, but Altinn rejected them.\n- `tag:kartverket.no,2026:not-found` (404): there is nothing at this path: no endpoint, or no MaskinportenSchema\n  with this id.\n- `tag:kartverket.no,2026:method-not-allowed` (405): the endpoint at this path does not accept this HTTP method.\n- `tag:kartverket.no,2026:conflict` (409): the request clashes with what Altinn has, for example a resource id that\n  is taken.\n- `tag:kartverket.no,2026:upstream-error` (502): this API could not get a usable answer from Altinn, or from the\n  service that says which resources and scopes the calling app has access to. Your request did not cause it.\n- `tag:kartverket.no,2026:internal-error` (500): an unexpected error in this API.",
                         "enum": [
                             "tag:kartverket.no,2026:validation-error",
                             "tag:kartverket.no,2026:malformed-request",
                             "tag:kartverket.no,2026:upstream-rejected",
                             "tag:kartverket.no,2026:not-found",
                             "tag:kartverket.no,2026:method-not-allowed",
+                            "tag:kartverket.no,2026:conflict",
                             "tag:kartverket.no,2026:upstream-error",
                             "tag:kartverket.no,2026:internal-error"
                         ]
@@ -1121,6 +1575,69 @@
                         "items": {
                             "$ref": "#/components/schemas/FieldError"
                         }
+                    }
+                }
+            },
+            "NewMaskinportenSchema": {
+                "type": "object",
+                "title": "NewMaskinportenSchema",
+                "description": "A new resource of type `MaskinportenSchema` for Altinn. This API makes Kartverket its owner, and sets `delegable` and `visible` to `true`. `title`, `description` and `delegationDescription` must each have `en`, `nb` and `nn`.",
+                "required": [
+                    "resourceId",
+                    "scopes",
+                    "title",
+                    "description",
+                    "delegationDescription"
+                ],
+                "properties": {
+                    "resourceId": {
+                        "type": "string",
+                        "description": "The resource's id in Altinn: 4 or more of `a-z`, `0-9`, `_` and `-`. It must not be taken by any resource in Altinn, of any owner, and it cannot be changed later."
+                    },
+                    "scopes": {
+                        "type": "array",
+                        "description": "The Maskinporten scopes the resource is for: at least one, each without whitespace. Altinn may refuse scopes that do not start with Kartverket's prefix, `kartverk:`.",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "title": {
+                        "$ref": "#/components/schemas/MultilingualText"
+                    },
+                    "description": {
+                        "$ref": "#/components/schemas/MultilingualText"
+                    },
+                    "delegationDescription": {
+                        "$ref": "#/components/schemas/MultilingualText"
+                    },
+                    "homepage": {
+                        "type": "string",
+                        "description": "A web page about the resource."
+                    },
+                    "contactPoints": {
+                        "type": "array",
+                        "description": "Where to get help with the resource. Left out, it is empty.",
+                        "items": {
+                            "$ref": "#/components/schemas/ContactPoint"
+                        }
+                    },
+                    "keywords": {
+                        "type": "array",
+                        "description": "Words to find the resource by in Altinn. Left out, it is empty.",
+                        "items": {
+                            "$ref": "#/components/schemas/Keyword"
+                        }
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "Altinn's status for the resource. Left out, the resource has no status, as in Altinn.",
+                        "enum": [
+                            "Completed",
+                            "Active",
+                            "UnderDevelopment",
+                            "Deprecated",
+                            "Withdrawn"
+                        ]
                     }
                 }
             },

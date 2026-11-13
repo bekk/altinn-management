@@ -29,6 +29,7 @@ import no.kartverket.altinnmanagement.restserver.models.Keyword
 import no.kartverket.altinnmanagement.restserver.models.MaskinportenSchema
 import no.kartverket.altinnmanagement.restserver.models.MaskinportenSchemaRequest
 import no.kartverket.altinnmanagement.restserver.models.MultilingualText
+import no.kartverket.altinnmanagement.restserver.models.NewMaskinportenSchema
 import no.kartverket.altinnmanagement.restserver.models.ProblemType
 import no.kartverket.altinnmanagement.restserver.models.ValidationCode
 
@@ -141,6 +142,126 @@ internal val maskinportenSchemasListOperation: Operation.Builder.() -> Unit = {
                     "FilteringError",
                     ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to the filtering service failed"),
                 )
+            }
+        }
+
+        HttpStatusCode.InternalServerError {
+            description = "An unexpected error in this API."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example("InternalError", ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError))
+            }
+        }
+    }
+}
+
+private val exampleNewMaskinportenSchema = NewMaskinportenSchema(
+    resourceId = exampleMaskinportenSchema.resourceId,
+    scopes = exampleMaskinportenSchema.scopes,
+    title = exampleMaskinportenSchema.title,
+    description = exampleMaskinportenSchema.description,
+    delegationDescription = exampleMaskinportenSchema.delegationDescription,
+    homepage = exampleMaskinportenSchema.homepage,
+    contactPoints = exampleMaskinportenSchema.contactPoints,
+    keywords = exampleMaskinportenSchema.keywords,
+    status = exampleMaskinportenSchema.status,
+)
+
+internal val maskinportenSchemaCreateOperation: Operation.Builder.() -> Unit = {
+    summary = "Create a MaskinportenSchema"
+    description = "Creates a resource of type `MaskinportenSchema` in Altinn, owned by Kartverket. This API checks " +
+        "the fields first, and Altinn checks them again, so a resource that passes here can still be rejected. The " +
+        "resource has no policy yet, so it cannot be delegated until it gets one with " +
+        "`PUT /api/maskinportenschemas/{id}/policy`."
+
+    parameters {
+        requestId()
+    }
+
+    requestBody {
+        required = true
+        ContentType.Application.Json {
+            schema = jsonSchema<NewMaskinportenSchema>()
+            example("NewMaskinportenSchema", exampleNewMaskinportenSchema)
+        }
+    }
+
+    responses {
+        HttpStatusCode.Created {
+            description = "Altinn created the resource. The body has the values this API sent to Altinn, as a GET " +
+                "would answer them."
+            headers {
+                requestId()
+                header(HttpHeaders.Location) {
+                    description = "Where to get the new resource from this API."
+                    required = true
+                    schema = JsonSchema(type = JsonType.STRING)
+                }
+            }
+            ContentType.Application.Json {
+                schema = jsonSchema<MaskinportenSchema>()
+                example("MaskinportenSchema", exampleMaskinportenSchema)
+            }
+        }
+
+        HttpStatusCode.BadRequest {
+            description = "The body cannot be read or has fields that are missing or invalid, or Altinn rejected the " +
+                "resource. When Altinn rejects it, `detail` has Altinn's reasons. The body must be UTF-8 JSON that " +
+                "gives each name once."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example(
+                    "ValidationError",
+                    ErrorResponse.of(
+                        ProblemType.VALIDATION_ERROR,
+                        HttpStatusCode.BadRequest,
+                        errors = listOf(
+                            FieldError("scopes", ValidationCode.MISSING, "scopes is required"),
+                            FieldError("title.nn", ValidationCode.MISSING, "title.nn is required"),
+                        ),
+                    ),
+                )
+                example(
+                    "MalformedBody",
+                    ErrorResponse.of(
+                        ProblemType.MALFORMED_REQUEST,
+                        HttpStatusCode.BadRequest,
+                        "The body must be one JSON object, with no name given twice",
+                    ),
+                )
+                example(
+                    "RejectedByAltinn",
+                    ErrorResponse.of(
+                        ProblemType.UPSTREAM_REJECTED,
+                        HttpStatusCode.BadRequest,
+                        "Altinn rejected the resource: InvalidPrefix: skatteetaten:demo",
+                    ),
+                )
+            }
+        }
+
+        HttpStatusCode.Conflict {
+            description = "Altinn already has a resource with this id. It may be of another type or owner, so a GET " +
+                "of the id can still give `404`."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example(
+                    "Conflict",
+                    ErrorResponse.of(ProblemType.CONFLICT, HttpStatusCode.Conflict, "Altinn already has a resource with this id"),
+                )
+            }
+        }
+
+        HttpStatusCode.BadGateway {
+            description = "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
+                "did not cause it. Altinn may or may not have created the resource."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
             }
         }
 
@@ -417,6 +538,88 @@ internal val maskinportenSchemaWithdrawOperation: Operation.Builder.() -> Unit =
         HttpStatusCode.BadGateway {
             description = "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
                 "did not cause it, and the resource may or may not have been withdrawn."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
+            }
+        }
+
+        HttpStatusCode.InternalServerError {
+            description = "An unexpected error in this API."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example("InternalError", ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError))
+            }
+        }
+    }
+}
+
+internal val maskinportenSchemaPolicyPutOperation: Operation.Builder.() -> Unit = {
+    summary = "Give a MaskinportenSchema its policy"
+    description = "Uploads to Altinn the policy every MaskinportenSchema gets, in place of any policy the resource " +
+        "has. The policy lets anyone with the access package `maskinporten-scopes` use the resource's scopes and " +
+        "delegate them, after logging in at security level 3 or higher. A resource cannot be delegated until it has " +
+        "a policy, so call this after `POST /api/maskinportenschemas`. It only works on Kartverket's " +
+        "MaskinportenSchemas, and takes no body."
+
+    parameters {
+        path("id") {
+            required = true
+            description = "The resource's id: 4 or more of `a-z`, `0-9`, `_` and `-`, for example " +
+                "`kv-matrikkel-brukernavn`."
+            schema = JsonSchema(type = JsonType.STRING, pattern = "^[a-z0-9_-]{4,}$")
+        }
+        requestId()
+    }
+
+    responses {
+        HttpStatusCode.NoContent {
+            description = "Altinn has the policy."
+            headers { requestId() }
+        }
+
+        HttpStatusCode.BadRequest {
+            description = "The id is not valid, or Altinn rejected the policy. When Altinn rejects it, `detail` has " +
+                "Altinn's reasons."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example(
+                    "InvalidId",
+                    ErrorResponse.of(
+                        ProblemType.VALIDATION_ERROR,
+                        HttpStatusCode.BadRequest,
+                        errors = listOf(FieldError("id", ValidationCode.INVALID_FORMAT, "id must be 4 or more of a-z, 0-9, _ and -")),
+                    ),
+                )
+                example(
+                    "RejectedByAltinn",
+                    ErrorResponse.of(
+                        ProblemType.UPSTREAM_REJECTED,
+                        HttpStatusCode.BadRequest,
+                        "Altinn rejected the resource: Unknown resource",
+                    ),
+                )
+            }
+        }
+
+        HttpStatusCode.NotFound {
+            description = "Altinn has no MaskinportenSchema of Kartverket's with this id."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example(
+                    "NotFound",
+                    ErrorResponse.of(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, "There is no MaskinportenSchema with this id"),
+                )
+            }
+        }
+
+        HttpStatusCode.BadGateway {
+            description = "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
+                "did not cause it. Altinn may or may not have the policy."
             headers { requestId() }
             ContentType.Application.ProblemJson {
                 schema = jsonSchema<ErrorResponse>()
