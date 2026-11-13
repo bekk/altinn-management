@@ -100,10 +100,19 @@ internal fun JsonObject.withContent(content: MaskinportenSchemaContent): JsonObj
     return JsonObject(filterKeys { it !in REPLACED_FIELDS } + changes + ("resourceReferences" to references))
 }
 
+internal fun JsonObject.withdrawn(): JsonObject = JsonObject(
+    filterKeys { it !in VERSION_FIELDS } + mapOf(
+        "delegable" to JsonPrimitive(false),
+        "visible" to JsonPrimitive(false),
+        "status" to JsonPrimitive("Withdrawn"),
+    ),
+)
+
+private val VERSION_FIELDS = setOf("versionId", "createdAt", "updatedAt")
+
 private val REPLACED_FIELDS = setOf(
     "title", "description", "rightDescription", "homepage", "contactPoints", "keywords", "resourceReferences",
-    "versionId", "createdAt", "updatedAt",
-)
+) + VERSION_FIELDS
 
 private fun MultilingualText.toMap() = mapOf("en" to en, "nb" to nb, "nn" to nn).filterValues { it != null }
 
