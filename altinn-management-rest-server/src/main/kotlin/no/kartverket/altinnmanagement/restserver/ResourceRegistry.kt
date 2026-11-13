@@ -7,7 +7,7 @@ import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
 import java.net.http.HttpClient
 import java.time.Duration
 
-internal class MaskinportenSchemaNotFoundException : RuntimeException("There is no MaskinportenSchema with this id")
+internal class ResourceNotFoundException(resourceType: String) : RuntimeException("There is no $resourceType with this id")
 
 internal fun resourceRegistryClient(config: AppConfig): ResourceRegistryClient {
     val httpClient = httpClient()

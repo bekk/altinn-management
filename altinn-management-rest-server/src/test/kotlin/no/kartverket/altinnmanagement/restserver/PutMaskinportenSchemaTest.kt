@@ -343,7 +343,7 @@ class PutMaskinportenSchemaTest {
     @Test
     fun `gives 404 when Altinn has no resource with the id, without changing anything`() =
         testServer(altinn(getStatus = 404, resource = """{"title":"Not Found","status":404}""")) {
-            put(body).assertProblem(notFound)
+            put(body).assertProblem(maskinportenSchemaNotFound)
 
             assertTrue(puts.isEmpty(), "A resource was put: $puts")
         }
@@ -351,7 +351,7 @@ class PutMaskinportenSchemaTest {
     @Test
     fun `gives 404 for resources of other types, without changing anything`() =
         testServer(altinn(resource = resourceJson(resourceType = "GenericAccessResource"))) {
-            put(body).assertProblem(notFound)
+            put(body).assertProblem(maskinportenSchemaNotFound)
 
             assertTrue(puts.isEmpty(), "A resource was put: $puts")
         }
@@ -359,7 +359,7 @@ class PutMaskinportenSchemaTest {
     @Test
     fun `gives 404 for resources another organisation owns, without changing anything`() =
         testServer(altinn(resource = resourceJson().replace("\"971040238\"", "\"981544315\""))) {
-            put(body).assertProblem(notFound)
+            put(body).assertProblem(maskinportenSchemaNotFound)
 
             assertTrue(puts.isEmpty(), "A resource was put: $puts")
         }

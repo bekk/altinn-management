@@ -95,7 +95,7 @@ class WithdrawMaskinportenSchemaTest {
     @Test
     fun `gives 404 when Altinn has no resource with the id, without changing anything`() =
         testServer(altinn(getStatus = 404, resource = """{"title":"Not Found","status":404}""")) {
-            withdraw().assertProblem(notFound)
+            withdraw().assertProblem(maskinportenSchemaNotFound)
 
             assertTrue(puts.isEmpty(), "A resource was put: $puts")
         }
