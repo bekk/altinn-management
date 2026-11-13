@@ -16,7 +16,7 @@ data class ErrorResponse(
   valid JSON, a field with the wrong type, or a `Content-Type` that is not `application/json`.
 - `tag:kartverket.no,2026:upstream-rejected` (400): the values passed this API's checks, but Altinn rejected them.
 - `tag:kartverket.no,2026:not-found` (404): there is nothing at this path: no endpoint, or no MaskinportenSchema
-  with this id.
+  or GenericAccessResource with this id.
 - `tag:kartverket.no,2026:method-not-allowed` (405): the endpoint at this path does not accept this HTTP method.
 - `tag:kartverket.no,2026:conflict` (409): the request clashes with what Altinn has, for example a resource id that
   is taken.

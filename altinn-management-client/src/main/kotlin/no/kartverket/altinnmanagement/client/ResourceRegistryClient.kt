@@ -32,6 +32,12 @@ public class ResourceRegistryClient(
         return if (resource.isMaskinportenSchema) resource.toMaskinportenSchema(id) else null
     }
 
+    /** Returns null when Kartverket has no GenericAccessResource with this id. */
+    public suspend fun getGenericAccessResource(id: ResourceId): GenericAccessResource? {
+        val (_, resource) = getResource(id) ?: return null
+        return if (resource.isGenericAccessResource && resource.isKartverkets) resource.toGenericAccessResource(id) else null
+    }
+
     /**
      * Replaces [content] in the MaskinportenSchema with the id [id], and keeps the rest of it as it is in Altinn. Returns
      * the MaskinportenSchema as it was sent to Altinn, or null when Kartverket has no MaskinportenSchema with this id.

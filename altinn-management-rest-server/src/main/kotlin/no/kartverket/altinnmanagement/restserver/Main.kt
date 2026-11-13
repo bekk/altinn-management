@@ -104,33 +104,40 @@ fun Application.module(
 
         get("/api/maskinportenschemas/{id}") {
             val id = resourceId("id", call.pathParameters["id"]!!)
-            val schema = client.getMaskinportenSchema(id) ?: throw MaskinportenSchemaNotFoundException()
+            val schema = client.getMaskinportenSchema(id) ?: throw ResourceNotFoundException("MaskinportenSchema")
             call.respond(MaskinportenSchema.from(schema))
         }.describe(maskinportenSchemaGetOperation)
 
         put("/api/maskinportenschemas/{id}") {
             val id = resourceId("id", call.pathParameters["id"]!!)
             val content = maskinportenSchemaContent(id, call.maskinportenSchemaRequest())
-            val schema = client.updateMaskinportenSchema(id, content) ?: throw MaskinportenSchemaNotFoundException()
+            val schema = client.updateMaskinportenSchema(id, content) ?: throw ResourceNotFoundException("MaskinportenSchema")
             call.respond(MaskinportenSchema.from(schema))
         }.describe(maskinportenSchemaPutOperation)
 
         put("/api/maskinportenschemas/{id}/withdraw") {
             val id = resourceId("id", call.pathParameters["id"]!!)
-            val schema = client.withdrawMaskinportenSchema(id) ?: throw MaskinportenSchemaNotFoundException()
+            val schema = client.withdrawMaskinportenSchema(id) ?: throw ResourceNotFoundException("MaskinportenSchema")
             call.respond(MaskinportenSchema.from(schema))
         }.describe(maskinportenSchemaWithdrawOperation)
 
         put("/api/maskinportenschemas/{id}/policy") {
             val id = resourceId("id", call.pathParameters["id"]!!)
-            if (!client.setMaskinportenSchemaPolicy(id)) throw MaskinportenSchemaNotFoundException()
+            if (!client.setMaskinportenSchemaPolicy(id)) throw ResourceNotFoundException("MaskinportenSchema")
             call.respond(HttpStatusCode.NoContent)
         }.describe(maskinportenSchemaPolicyPutOperation)
 
         post("/api/genericaccessresources") {
             val resource = newGenericAccessResource(call.newGenericAccessResourceRequest())
             val created = client.createGenericAccessResource(resource)
+            call.response.header(HttpHeaders.Location, "/api/genericaccessresources/${created.resourceId.value}")
             call.respond(HttpStatusCode.Created, GenericAccessResource.from(created))
         }.describe(genericAccessResourceCreateOperation)
+
+        get("/api/genericaccessresources/{id}") {
+            val id = resourceId("id", call.pathParameters["id"]!!)
+            val resource = client.getGenericAccessResource(id) ?: throw ResourceNotFoundException("GenericAccessResource")
+            call.respond(GenericAccessResource.from(resource))
+        }.describe(genericAccessResourceGetOperation)
     }
 }
