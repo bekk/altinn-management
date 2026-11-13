@@ -116,7 +116,7 @@ header, so a caller can tell us which call to look for.
 
 The server's errors follow Problem Details ([RFC 9457](https://www.rfc-editor.org/info/rfc9457/)). They are sent as
 `application/problem+json`. Their `type` is a name that says what went wrong, like `tag:kartverket.no,2026:not-found`,
-and your code can rely on it. A validation error has an `errors` list of every field that failed.
+and your code can rely on it. A validation error has an `errors` list that names the fields that failed.
 
 The OpenAPI spec documents every field and error. The server serves it at `GET /openapi`, and the same spec is checked
 in as [`openapi.json`](altinn-management-rest-server/openapi.json).
