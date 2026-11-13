@@ -22,16 +22,19 @@ import io.ktor.server.routing.getAllRoutes
 import io.ktor.server.routing.openapi.plus
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement
+import no.kartverket.altinnmanagement.restserver.models.AuthenticationLevels
 import no.kartverket.altinnmanagement.restserver.models.ContactPoint
 import no.kartverket.altinnmanagement.restserver.models.ErrorResponse
 import no.kartverket.altinnmanagement.restserver.models.FieldError
 import no.kartverket.altinnmanagement.restserver.models.GenericAccessResource
+import no.kartverket.altinnmanagement.restserver.models.GenericAccessResourcePolicy
 import no.kartverket.altinnmanagement.restserver.models.Keyword
 import no.kartverket.altinnmanagement.restserver.models.MaskinportenSchema
 import no.kartverket.altinnmanagement.restserver.models.MaskinportenSchemaRequest
 import no.kartverket.altinnmanagement.restserver.models.MultilingualText
 import no.kartverket.altinnmanagement.restserver.models.NewGenericAccessResource
 import no.kartverket.altinnmanagement.restserver.models.NewMaskinportenSchema
+import no.kartverket.altinnmanagement.restserver.models.PolicyRule
 import no.kartverket.altinnmanagement.restserver.models.ProblemType
 import no.kartverket.altinnmanagement.restserver.models.ValidationCode
 
@@ -599,6 +602,117 @@ internal val maskinportenSchemaPutOperation: Operation.Builder.() -> Unit = {
 
 // A required field can be null in the request model only so that every missing field is reported at once. Ktor lets an
 // object field be null whenever its Kotlin type is nullable, and no annotation changes that.
+private val exampleGenericAccessResourcePolicy = GenericAccessResourcePolicy(
+    minimumAuthenticationLevel = AuthenticationLevels(endUser = 4, organisation = 3),
+    rules = listOf(
+        PolicyRule(
+            description = "Explicitly granted users may open the service.",
+            subjects = listOf("urn:altinn:accesspackage:eksplisitt"),
+            actions = listOf("access"),
+        ),
+        PolicyRule(
+            description = "Explicitly granted users may download the datasets.",
+            subjects = listOf("urn:altinn:accesspackage:eksplisitt"),
+            actions = listOf("download"),
+            subResources = listOf(mapOf("urn:kv:geonorge" to "dataset")),
+        ),
+    ),
+)
+
+internal val genericAccessResourcePolicyPutOperation: Operation.Builder.() -> Unit = {
+    summary = "Give a GenericAccessResource a policy"
+    description = "Uploads the policy in the body to Altinn, in place of any policy the resource has. A resource " +
+        "cannot be delegated or used until it has a policy, so call this after `POST /api/genericaccessresources`. " +
+        "It only works on Kartverket's GenericAccessResources."
+
+    parameters {
+        path("id") {
+            required = true
+            description = "The resource's id: 4 or more of `a-z`, `0-9`, `_` and `-`, for example `kv-grunnbok-innsyn`."
+            schema = JsonSchema(type = JsonType.STRING, pattern = "^[a-z0-9_-]{4,}$")
+        }
+        requestId()
+    }
+
+    requestBody {
+        required = true
+        ContentType.Application.Json {
+            schema = jsonSchema<GenericAccessResourcePolicy>().withRequiredNotNull()
+            example("Policy", exampleGenericAccessResourcePolicy)
+        }
+    }
+
+    responses {
+        HttpStatusCode.NoContent {
+            description = "Altinn has the policy."
+            headers { requestId() }
+        }
+
+        HttpStatusCode.BadRequest {
+            description = "The id or the body is not valid, or Altinn rejected the policy. When Altinn rejects it, " +
+                "`detail` has Altinn's reasons. Nothing was changed."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example(
+                    "InvalidPolicy",
+                    ErrorResponse.of(
+                        ProblemType.VALIDATION_ERROR,
+                        HttpStatusCode.BadRequest,
+                        errors = listOf(
+                            FieldError(
+                                "rules[0].subjects[0]",
+                                ValidationCode.INVALID_FORMAT,
+                                "rules[0].subjects[0] must be a URN, like urn:altinn:accesspackage:eksplisitt",
+                            ),
+                            FieldError("rules[1].actions", ValidationCode.MISSING, "rules[1].actions is required"),
+                        ),
+                    ),
+                )
+                example(
+                    "RejectedByAltinn",
+                    ErrorResponse.of(
+                        ProblemType.UPSTREAM_REJECTED,
+                        HttpStatusCode.BadRequest,
+                        "Altinn rejected the resource: Policy not accepted: Contains rule without reference to registry resource id",
+                    ),
+                )
+            }
+        }
+
+        HttpStatusCode.NotFound {
+            description = "Altinn has no GenericAccessResource of Kartverket's with this id."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example(
+                    "NotFound",
+                    ErrorResponse.of(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, "There is no GenericAccessResource with this id"),
+                )
+            }
+        }
+
+        HttpStatusCode.BadGateway {
+            description = "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
+                "did not cause it. Altinn may or may not have the policy."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
+            }
+        }
+
+        HttpStatusCode.InternalServerError {
+            description = "An unexpected error in this API."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example("InternalError", ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError))
+            }
+        }
+    }
+}
+
 private fun JsonSchema.withRequiredNotNull(): JsonSchema = copy(
     properties = properties?.mapValues { (name, property) ->
         if (name in required.orEmpty() && property is ReferenceOr.Value) ReferenceOr.Value(property.value.notNull()) else property

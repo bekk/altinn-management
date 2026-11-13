@@ -28,7 +28,7 @@ internal fun StatusPagesConfig.errorResponses() {
     exception<MalformedRequestException> { call, cause ->
         call.respondProblem(ProblemType.MALFORMED_REQUEST, HttpStatusCode.BadRequest, cause.message)
     }
-    exception<MaskinportenSchemaNotFoundException> { call, cause ->
+    exception<ResourceNotFoundException> { call, cause ->
         call.respondProblem(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, cause.message)
     }
     exception<ResourceAlreadyExistsException> { call, _ ->

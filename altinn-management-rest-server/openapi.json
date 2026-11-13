@@ -1655,6 +1655,226 @@
                     }
                 }
             }
+        },
+        "/api/genericaccessresources/{id}/policy": {
+            "put": {
+                "summary": "Give a GenericAccessResource a policy",
+                "description": "Uploads the policy in the body to Altinn, in place of any policy the resource has. A resource cannot be delegated or used until it has a policy, so call this after `POST /api/genericaccessresources`. It only works on Kartverket's GenericAccessResources.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "The resource's id: 4 or more of `a-z`, `0-9`, `_` and `-`, for example `kv-grunnbok-innsyn`.",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[a-z0-9_-]{4,}$"
+                        }
+                    },
+                    {
+                        "name": "X-Request-ID",
+                        "in": "header",
+                        "description": "An id to find this call by in this API's logs. Up to 128 ASCII letters, digits, `-`, `_`, `.` and `:`. Without it, or with any other value, this API makes a new one. Every response has the id in its `X-Request-Id` header.",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "3f2b8c1e-7d4a-4f0e-9b6a-2c5d8e1f4a7b"
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GenericAccessResourcePolicy"
+                            },
+                            "examples": {
+                                "Policy": {
+                                    "value": {
+                                        "minimumAuthenticationLevel": {
+                                            "endUser": 4,
+                                            "organisation": 3
+                                        },
+                                        "rules": [
+                                            {
+                                                "description": "Explicitly granted users may open the service.",
+                                                "subjects": [
+                                                    "urn:altinn:accesspackage:eksplisitt"
+                                                ],
+                                                "actions": [
+                                                    "access"
+                                                ]
+                                            },
+                                            {
+                                                "description": "Explicitly granted users may download the datasets.",
+                                                "subjects": [
+                                                    "urn:altinn:accesspackage:eksplisitt"
+                                                ],
+                                                "actions": [
+                                                    "download"
+                                                ],
+                                                "subResources": [
+                                                    {
+                                                        "urn:kv:geonorge": "dataset"
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "204": {
+                        "description": "Altinn has the policy.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "The id or the body is not valid, or Altinn rejected the policy. When Altinn rejects it, `detail` has Altinn's reasons. Nothing was changed.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "InvalidPolicy": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:validation-error",
+                                            "title": "Validation failed",
+                                            "status": 400,
+                                            "errors": [
+                                                {
+                                                    "field": "rules[0].subjects[0]",
+                                                    "code": "INVALID_FORMAT",
+                                                    "message": "rules[0].subjects[0] must be a URN, like urn:altinn:accesspackage:eksplisitt"
+                                                },
+                                                {
+                                                    "field": "rules[1].actions",
+                                                    "code": "MISSING",
+                                                    "message": "rules[1].actions is required"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "RejectedByAltinn": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:upstream-rejected",
+                                            "title": "A service this API depends on rejected the request",
+                                            "status": 400,
+                                            "detail": "Altinn rejected the resource: Policy not accepted: Contains rule without reference to registry resource id"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Altinn has no GenericAccessResource of Kartverket's with this id.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "NotFound": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:not-found",
+                                            "title": "Not found",
+                                            "status": 404,
+                                            "detail": "There is no GenericAccessResource with this id"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "This API could not get an answer from Altinn, or a token from Maskinporten. Your request did not cause it. Altinn may or may not have the policy.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "UpstreamError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:upstream-error",
+                                            "title": "A service this API depends on failed",
+                                            "status": 502,
+                                            "detail": "The call to Altinn failed"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "An unexpected error in this API.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "InternalError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:internal-error",
+                                            "title": "Internal error",
+                                            "status": 500
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -2142,6 +2362,90 @@
                     "visible": {
                         "type": "boolean",
                         "description": "If `true`, Altinn shows the resource to its users."
+                    }
+                }
+            },
+            "AuthenticationLevels": {
+                "type": [
+                    "object",
+                    "null"
+                ],
+                "title": "AuthenticationLevels",
+                "description": "The lowest security level a user must have logged in with, for each kind of user, such as `3` or `4`. A level that is left out is not required.",
+                "properties": {
+                    "endUser": {
+                        "type": "integer",
+                        "description": "For a person."
+                    },
+                    "organisation": {
+                        "type": "integer",
+                        "description": "For an organisation, such as one using Maskinporten."
+                    },
+                    "systemUser": {
+                        "type": "integer",
+                        "description": "For a system user."
+                    }
+                }
+            },
+            "PolicyRule": {
+                "type": "object",
+                "title": "PolicyRule",
+                "description": "Lets the subjects do the actions on the resource, or on the parts in `subResources`.",
+                "required": [
+                    "subjects",
+                    "actions"
+                ],
+                "properties": {
+                    "description": {
+                        "type": "string",
+                        "description": "What the rule is for, for people to read."
+                    },
+                    "subjects": {
+                        "type": "array",
+                        "description": "At least one. Who the rule is for, as URNs: an access package like `urn:altinn:accesspackage:eksplisitt`, a role like `urn:altinn:rolecode:dagl`, or any other subject Altinn knows.",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 1
+                    },
+                    "actions": {
+                        "type": "array",
+                        "description": "At least one. What the subjects may do, such as `read`, `write` or `access`.",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 1
+                    },
+                    "subResources": {
+                        "type": "array",
+                        "description": "The parts of the resource the rule covers, each as attribute ids and values, like `{\"urn:kv:geonorge\": \"dataset\"}`. Left out, the rule covers the whole resource.",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "GenericAccessResourcePolicy": {
+                "type": "object",
+                "title": "GenericAccessResourcePolicy",
+                "description": "A whole policy for a GenericAccessResource, to replace the one in Altinn. It says who may do what with the resource, and how securely they must have logged in.",
+                "required": [
+                    "rules"
+                ],
+                "properties": {
+                    "minimumAuthenticationLevel": {
+                        "$ref": "#/components/schemas/AuthenticationLevels"
+                    },
+                    "rules": {
+                        "type": "array",
+                        "description": "At least one. A user may do an action when any rule allows it.",
+                        "items": {
+                            "$ref": "#/components/schemas/PolicyRule"
+                        },
+                        "minItems": 1
                     }
                 }
             }
