@@ -27,6 +27,7 @@ import io.ktor.server.routing.routing
 import io.ktor.utils.io.ExperimentalKtorApi
 import kotlinx.serialization.json.Json
 import no.kartverket.altinnmanagement.client.ResourceRegistryClient
+import no.kartverket.altinnmanagement.restserver.models.GenericAccessResource
 import no.kartverket.altinnmanagement.restserver.models.MaskinportenSchema
 import org.slf4j.LoggerFactory
 import java.util.UUID
@@ -125,5 +126,11 @@ fun Application.module(
             if (!client.setMaskinportenSchemaPolicy(id)) throw MaskinportenSchemaNotFoundException()
             call.respond(HttpStatusCode.NoContent)
         }.describe(maskinportenSchemaPolicyPutOperation)
+
+        post("/api/genericaccessresources") {
+            val resource = newGenericAccessResource(call.newGenericAccessResourceRequest())
+            val created = client.createGenericAccessResource(resource)
+            call.respond(HttpStatusCode.Created, GenericAccessResource.from(created))
+        }.describe(genericAccessResourceCreateOperation)
     }
 }
