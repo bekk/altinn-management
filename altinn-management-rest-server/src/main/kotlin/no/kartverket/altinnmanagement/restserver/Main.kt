@@ -132,5 +132,12 @@ fun Application.module(
             val created = client.createGenericAccessResource(resource)
             call.respond(HttpStatusCode.Created, GenericAccessResource.from(created))
         }.describe(genericAccessResourceCreateOperation)
+
+        put("/api/genericaccessresources/{id}/policy") {
+            val id = resourceId("id", call.pathParameters["id"]!!)
+            val policy = genericAccessResourcePolicy(call.genericAccessResourcePolicyRequest())
+            if (!client.setGenericAccessResourcePolicy(id, policy)) throw ResourceNotFoundException("GenericAccessResource")
+            call.respond(HttpStatusCode.NoContent)
+        }.describe(genericAccessResourcePolicyPutOperation)
     }
 }

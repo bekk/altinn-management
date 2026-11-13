@@ -11,6 +11,7 @@ import no.kartverket.altinnmanagement.client.MaskinportenSchemaContent
 import no.kartverket.altinnmanagement.client.ResourceId
 import no.kartverket.altinnmanagement.client.ResourceStatus
 import no.kartverket.altinnmanagement.restserver.models.FieldError
+import no.kartverket.altinnmanagement.restserver.models.GenericAccessResourcePolicy
 import no.kartverket.altinnmanagement.restserver.models.MaskinportenSchemaRequest
 import no.kartverket.altinnmanagement.restserver.models.MultilingualText
 import no.kartverket.altinnmanagement.restserver.models.NewGenericAccessResource
@@ -22,8 +23,11 @@ import tools.jackson.databind.DeserializationFeature
 import tools.jackson.databind.json.JsonMapper
 import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
+import no.kartverket.altinnmanagement.client.AuthenticationLevels as ClientAuthenticationLevels
+import no.kartverket.altinnmanagement.client.GenericAccessResourcePolicy as ClientGenericAccessResourcePolicy
 import no.kartverket.altinnmanagement.client.NewGenericAccessResource as ClientNewGenericAccessResource
 import no.kartverket.altinnmanagement.client.NewMaskinportenSchema as ClientNewMaskinportenSchema
+import no.kartverket.altinnmanagement.client.PolicyRule as ClientPolicyRule
 
 internal class InvalidRequestException(val errors: List<FieldError>) : RuntimeException(errors.joinToString("; ") { it.message })
 
@@ -107,6 +111,9 @@ internal suspend fun ApplicationCall.newMaskinportenSchemaRequest(): NewMaskinpo
 
 internal suspend fun ApplicationCall.newGenericAccessResourceRequest(): NewGenericAccessResource =
     strictBody(NewGenericAccessResource.serializer())
+
+internal suspend fun ApplicationCall.genericAccessResourcePolicyRequest(): GenericAccessResourcePolicy =
+    strictBody(GenericAccessResourcePolicy.serializer())
 
 private suspend fun <T> ApplicationCall.strictBody(serializer: KSerializer<T>): T {
     val body = strictJson(jsonBody())
@@ -221,3 +228,38 @@ private fun statusErrors(value: String?, status: ResourceStatus?): List<FieldErr
     val values = ResourceStatus.entries.joinToString { it.value }
     return listOf(FieldError("status", ValidationCode.INVALID_FORMAT, "status must be one of $values"))
 }
+
+// A rule without subjects or actions would let everyone do anything, and Altinn cannot list its rules
+internal fun genericAccessResourcePolicy(body: GenericAccessResourcePolicy): ClientGenericAccessResourcePolicy {
+    val errors = buildList {
+        if (body.rules.isNullOrEmpty()) add(missing("rules"))
+        body.rules.orEmpty().forEachIndexed { index, rule ->
+            val field = "rules[$index]"
+            if (rule.subjects.isNullOrEmpty()) add(missing("$field.subjects"))
+            rule.subjects.orEmpty().withIndex().filterNot { (_, subject) -> isUrn(subject) }.forEach { (i, _) ->
+                val message = "$field.subjects[$i] must be a URN, like urn:altinn:accesspackage:eksplisitt"
+                add(FieldError("$field.subjects[$i]", ValidationCode.INVALID_FORMAT, message))
+            }
+            if (rule.actions.isNullOrEmpty()) add(missing("$field.actions"))
+            rule.actions.orEmpty().withIndex().filter { (_, action) -> action.isBlank() }.forEach { (i, _) ->
+                add(FieldError("$field.actions[$i]", ValidationCode.INVALID_FORMAT, "$field.actions[$i] must not be blank"))
+            }
+        }
+    }
+    if (errors.isNotEmpty()) throw InvalidRequestException(errors)
+
+    val levels = body.minimumAuthenticationLevel
+    return ClientGenericAccessResourcePolicy(
+        minimumAuthenticationLevel = ClientAuthenticationLevels(levels?.endUser, levels?.organisation, levels?.systemUser),
+        rules = body.rules!!.map {
+            ClientPolicyRule(
+                subjects = it.subjects!!,
+                actions = it.actions!!,
+                subResources = it.subResources.orEmpty(),
+                description = it.description,
+            )
+        },
+    )
+}
+
+private fun isUrn(subject: String) = subject.substringBeforeLast(':', "").isNotBlank() && subject.substringAfterLast(':', "").isNotBlank()
