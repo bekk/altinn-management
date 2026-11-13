@@ -126,16 +126,29 @@ public class ResourceRegistryClient(
      * Throws [AltinnRejectedException] when Altinn would not take the policy, and [IllegalStateException] when this
      * client has no [AccessTokenProvider].
      */
-    public suspend fun setMaskinportenSchemaPolicy(id: ResourceId): Boolean {
+    public suspend fun setMaskinportenSchemaPolicy(id: ResourceId): Boolean =
+        setPolicy(id, MASKINPORTEN_SCHEMA, maskinportenSchemaPolicy(id))
+
+    /**
+     * Gives Kartverket's GenericAccessResource [id] the policy [policy], in place of any policy it has. Returns false,
+     * and changes nothing, when Altinn has no GenericAccessResource of Kartverket's with this id. Throws
+     * [AltinnRejectedException] when Altinn would not take the policy, and [IllegalStateException] when this client has
+     * no [AccessTokenProvider].
+     */
+    public suspend fun setGenericAccessResourcePolicy(id: ResourceId, policy: GenericAccessResourcePolicy): Boolean =
+        setPolicy(id, GENERIC_ACCESS_RESOURCE, genericAccessResourcePolicy(id, policy))
+
+    private suspend fun setPolicy(id: ResourceId, resourceType: String, policy: String): Boolean {
         val tokens = tokens()
         val (_, resource) = getResource(id) ?: return false
         // Without this check, the policy could replace the one on another kind of Kartverket resource
-        if (!resource.isMaskinportenSchema || !resource.isKartverkets) return false
+        if (resource.resourceType != resourceType || !resource.isKartverkets) return false
+        val boundary = generateSequence(POLICY_BOUNDARY) { "$it-" }.first { it !in policy }
         val request = OutgoingRequest(
             method = HttpMethod.PUT,
             url = Http.url(platformBaseUrl, "$RESOURCE_PATH/${id.value}/policy"),
-            headers = mapOf("Content-Type" to "multipart/form-data; boundary=$POLICY_BOUNDARY"),
-            body = policyFormData(maskinportenSchemaPolicy(id)),
+            headers = mapOf("Content-Type" to "multipart/form-data; boundary=$boundary"),
+            body = policyFormData(policy, boundary),
         )
         sendWrite(tokens, request) { it in 200..299 }
         return true
@@ -204,15 +217,15 @@ public class ResourceRegistryClient(
     }
 }
 
-// A resource id has no capital letters, so the boundary cannot turn up inside the policy
+// A policy can hold any text, so a boundary it contains is made longer until it does not
 private const val POLICY_BOUNDARY = "AltinnManagementPolicyBoundary"
 
 // Altinn takes the policy as a file in the form field policyFile
-private fun policyFormData(policy: String): ByteArray = (
-    "--$POLICY_BOUNDARY\r\n" +
+private fun policyFormData(policy: String, boundary: String): ByteArray = (
+    "--$boundary\r\n" +
         "Content-Disposition: form-data; name=\"policyFile\"; filename=\"policy.xml\"\r\n" +
         "Content-Type: application/xml\r\n" +
         "\r\n" +
         policy + "\r\n" +
-        "--$POLICY_BOUNDARY--\r\n"
+        "--$boundary--\r\n"
     ).encodeToByteArray()
