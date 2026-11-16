@@ -22,6 +22,9 @@ enum class ProblemType(val title: String) {
     @SerialName("$PROBLEM_TYPE_PREFIX:method-not-allowed")
     METHOD_NOT_ALLOWED("Method not allowed"),
 
+    @SerialName("$PROBLEM_TYPE_PREFIX:conflict")
+    CONFLICT("Conflict"),
+
     @SerialName("$PROBLEM_TYPE_PREFIX:upstream-error")
     UPSTREAM_ERROR("A service this API depends on failed"),
 

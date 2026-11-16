@@ -23,6 +23,7 @@ internal data class AltinnResource(
     val visible: Boolean? = null,
     val hasCompetentAuthority: AltinnCompetentAuthority? = null,
     val resourceType: String? = null,
+    val accessListMode: String? = null,
 ) {
     val isMaskinportenSchema: Boolean get() = resourceType == MASKINPORTEN_SCHEMA
 
@@ -69,11 +70,35 @@ internal data class AltinnResourceReference(
 @Serializable
 internal data class AltinnCompetentAuthority(
     val organization: String? = null,
+    val orgcode: String? = null,
+)
+
+internal fun newAltinnResource(schema: NewMaskinportenSchema) = AltinnResource(
+    identifier = schema.resourceId.value,
+    title = schema.title.toMap(),
+    description = schema.description.toMap(),
+    rightDescription = schema.delegationDescription.toMap(),
+    homepage = schema.homepage,
+    status = schema.status?.value,
+    contactPoints = schema.contactPoints.map {
+        AltinnContactPoint(category = it.category, email = it.email, telephone = it.telephone, contactPage = it.contactPage)
+    },
+    keywords = schema.keywords.map { AltinnKeyword(word = it.word, language = it.language) },
+    resourceReferences = schema.scopes.map {
+        AltinnResourceReference(referenceSource = "Default", reference = it, referenceType = MASKINPORTEN_SCOPE)
+    },
+    delegable = true,
+    visible = true,
+    resourceType = MASKINPORTEN_SCHEMA,
+    hasCompetentAuthority = AltinnCompetentAuthority(organization = KARTVERKET_ORGANIZATION_NUMBER, orgcode = KARTVERKET_ORG_CODE),
+    accessListMode = "Disabled",
 )
 
 internal const val MASKINPORTEN_SCHEMA = "MaskinportenSchema"
 
 internal const val KARTVERKET_ORGANIZATION_NUMBER = "971040238"
+
+private const val KARTVERKET_ORG_CODE = "kv"
 
 private const val MASKINPORTEN_SCOPE = "MaskinportenScope"
 

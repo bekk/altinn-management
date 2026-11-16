@@ -11,17 +11,24 @@ internal object Http {
 
     fun url(baseUrl: String, path: String): URI = URI.create(baseUrl.trimEnd('/') + path)
 
+    suspend fun send(
+        httpClient: OutgoingHttpClient,
+        request: OutgoingRequest,
+        target: String,
+        exception: (message: String, statusCode: Int?, responseBody: String?, cause: Throwable?) -> AltinnManagementException,
+    ): OutgoingResponse = try {
+        httpClient.send(request)
+    } catch (e: IOException) {
+        throw exception("Call to $target failed: ${e.message}", null, null, e)
+    }
+
     suspend fun sendExpectingOk(
         httpClient: OutgoingHttpClient,
         request: OutgoingRequest,
         target: String,
         exception: (message: String, statusCode: Int?, responseBody: String?, cause: Throwable?) -> AltinnManagementException,
     ): OutgoingResponse {
-        val response = try {
-            httpClient.send(request)
-        } catch (e: IOException) {
-            throw exception("Call to $target failed: ${e.message}", null, null, e)
-        }
+        val response = send(httpClient, request, target, exception)
         if (response.statusCode != 200) {
             throw exception("$target responded ${response.statusCode}", response.statusCode, response.body.decodeToString(), null)
         }

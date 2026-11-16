@@ -10,6 +10,7 @@ import io.ktor.server.response.respondText
 import kotlinx.serialization.json.Json
 import no.kartverket.altinnmanagement.client.exception.AltinnManagementException
 import no.kartverket.altinnmanagement.client.exception.AltinnRejectedException
+import no.kartverket.altinnmanagement.client.exception.ResourceAlreadyExistsException
 import no.kartverket.altinnmanagement.restserver.models.ErrorResponse
 import no.kartverket.altinnmanagement.restserver.models.FieldError
 import no.kartverket.altinnmanagement.restserver.models.ProblemType
@@ -28,6 +29,9 @@ internal fun StatusPagesConfig.errorResponses() {
     }
     exception<MaskinportenSchemaNotFoundException> { call, cause ->
         call.respondProblem(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, cause.message)
+    }
+    exception<ResourceAlreadyExistsException> { call, _ ->
+        call.respondProblem(ProblemType.CONFLICT, HttpStatusCode.Conflict, "Altinn already has a resource with this id")
     }
     exception<AltinnRejectedException> { call, cause ->
         call.application.log.warn("Altinn rejected the resource: statusCode=${cause.statusCode}")
