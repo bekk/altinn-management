@@ -81,11 +81,16 @@ internal fun maskinportenSchemaContent(id: ResourceId, request: MaskinportenSche
     )
 }
 
-// Altinn does not check a scope for whitespace, so neither does this API
+// Altinn takes a scope with whitespace, but no OAuth scope can hold any (RFC 6749, section 3.3)
 private fun scopeErrors(scopes: List<String>?): List<FieldError> {
     if (scopes.isNullOrEmpty()) return listOf(missing("scopes"))
-    return scopes.withIndex().filter { (_, scope) -> scope.isBlank() }.map { (index, _) ->
-        FieldError("scopes[$index]", ValidationCode.INVALID_FORMAT, "scopes[$index] must not be blank")
+    return scopes.withIndex().mapNotNull { (index, scope) ->
+        val field = "scopes[$index]"
+        when {
+            scope.isBlank() -> FieldError(field, ValidationCode.INVALID_FORMAT, "$field must not be blank")
+            scope.any(Char::isWhitespace) -> FieldError(field, ValidationCode.INVALID_FORMAT, "$field must not contain whitespace")
+            else -> null
+        }
     }
 }
 

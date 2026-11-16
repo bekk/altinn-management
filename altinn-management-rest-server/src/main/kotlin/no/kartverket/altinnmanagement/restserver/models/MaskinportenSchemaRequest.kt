@@ -19,7 +19,8 @@ data class MaskinportenSchemaRequest(
     @JsonSchema.Type(JsonType.ARRAY)
     @JsonSchema.MinItems(1)
     @JsonSchema.Description(
-        "Required. The Maskinporten scopes the resource is for, at least one. Altinn only accepts Kartverket's scopes.",
+        "Required. The Maskinporten scopes the resource is for, at least one. A scope must not be blank or contain " +
+            "whitespace. Altinn only accepts Kartverket's scopes.",
     )
     val scopes: List<String>? = null,
 

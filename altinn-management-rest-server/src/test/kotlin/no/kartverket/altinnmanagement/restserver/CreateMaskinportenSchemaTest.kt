@@ -225,11 +225,15 @@ class CreateMaskinportenSchemaTest {
     }
 
     @Test
-    fun `leaves it to Altinn to judge a scope with whitespace, since Altinn does not check for it`() = testServer(altinn()) {
-        val response = create(minimalBody.replace("""["kartverk:eksempel.read"]""", """["kartverk:a b"]"""))
+    fun `gives 400 for a scope with whitespace, which no OAuth scope can hold, without asking Altinn`() = testServer(altinn()) {
+        create(minimalBody.replace("""["kartverk:eksempel.read"]""", """["kartverk:ok", "kartverk:a b", "kartverk:a\tb"]""")).assertProblem(
+            validationError(
+                FieldError("scopes[1]", ValidationCode.INVALID_FORMAT, "scopes[1] must not contain whitespace"),
+                FieldError("scopes[2]", ValidationCode.INVALID_FORMAT, "scopes[2] must not contain whitespace"),
+            ),
+        )
 
-        assertEquals(HttpStatusCode.Created, response.status)
-        assertTrue("kartverk:a b" in sent.single().body!!.decodeToString())
+        assertTrue(sent.isEmpty(), "Altinn was called: $sent")
     }
 
     @Test

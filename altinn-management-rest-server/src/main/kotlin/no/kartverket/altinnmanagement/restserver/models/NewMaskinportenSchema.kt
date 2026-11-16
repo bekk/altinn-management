@@ -24,7 +24,7 @@ data class NewMaskinportenSchema(
     @JsonSchema.Type(JsonType.ARRAY)
     @JsonSchema.MinItems(1)
     @JsonSchema.Description(
-        "The Maskinporten scopes the resource is for, at least one. A scope must not be blank. Altinn may refuse " +
+        "The Maskinporten scopes the resource is for, at least one. A scope must not be blank or contain whitespace. Altinn may refuse " +
             "scopes that do not start with Kartverket's prefix, `kartverk:`.",
     )
     val scopes: List<String>? = null,
