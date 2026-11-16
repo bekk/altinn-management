@@ -16,7 +16,8 @@ data class NewMaskinportenSchema(
     @JsonSchema.Type(JsonType.STRING)
     @JsonSchema.Description(
         "The resource's id in Altinn: 4 or more of `a-z`, `0-9`, `_` and `-`. It must not be taken by any resource in " +
-            "Altinn, of any owner, and it cannot be changed later.",
+            "Altinn, of any owner, and it cannot be changed later. It cannot be `resourcelist`, `export`, `search`, " +
+            "`updated`, `changes` or `orgs`, which Altinn uses as routes.",
     )
     val resourceId: String? = null,
 

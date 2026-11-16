@@ -156,7 +156,12 @@ internal fun newMaskinportenSchema(body: NewMaskinportenSchema): ClientNewMaskin
     val errors = buildList {
         when {
             body.resourceId.isNullOrBlank() -> add(missing("resourceId"))
+
             resourceId == null -> add(invalidResourceId("resourceId"))
+
+            resourceId.isFixedRoute -> add(
+                FieldError("resourceId", ValidationCode.INVALID_FORMAT, "resourceId must not be $resourceId, which Altinn uses as a route"),
+            )
         }
         addAll(scopeErrors(body.scopes))
         addAll(textErrors("title", body.title))

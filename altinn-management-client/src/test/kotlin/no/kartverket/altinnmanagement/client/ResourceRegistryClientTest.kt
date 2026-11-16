@@ -37,4 +37,13 @@ class ResourceRegistryClientTest {
         assertFailsWith<IllegalStateException> { client.updateMaskinportenSchema(id, content) }
         assertTrue(sent.isEmpty(), "Altinn was called: $sent")
     }
+
+    @Test
+    fun `refuses to create a resource with an id that Altinn uses as a route, before asking Altinn`() = runBlocking {
+        val text = MultilingualText(en = "Text", nb = "Tekst", nn = "Tekst")
+        val schema = NewMaskinportenSchema(ResourceId.of("search"), listOf("kartverk:a"), text, text, text)
+
+        assertFailsWith<IllegalArgumentException> { client.createMaskinportenSchema(schema) }
+        assertTrue(sent.isEmpty(), "Altinn was called: $sent")
+    }
 }

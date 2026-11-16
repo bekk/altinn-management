@@ -84,9 +84,14 @@ public class ResourceRegistryClient(
      * Creates the resource in Altinn, owned by Kartverket, and returns it as it was sent. Altinn answers a create
      * without the resource, so the result holds the values this client sets, not ones read back from Altinn. Throws
      * [ResourceAlreadyExistsException] when Altinn has a resource with this id, [AltinnRejectedException] when Altinn
-     * would not take it, and [IllegalStateException] when this client has no [AccessTokenProvider].
+     * would not take it, [IllegalArgumentException] when the id is one of Altinn's routes (see
+     * [ResourceId.isFixedRoute]), and [IllegalStateException] when this client has no [AccessTokenProvider].
      */
     public suspend fun createMaskinportenSchema(schema: NewMaskinportenSchema): MaskinportenSchema {
+        // Altinn takes such an id, but the resource could then never be read or changed, and Altinn does not delete it
+        require(!schema.resourceId.isFixedRoute) {
+            "Expected an id that is not one of Altinn's routes, but was \"${schema.resourceId}\""
+        }
         val tokens = tokens()
         val resource = newAltinnResource(schema)
         val request = OutgoingRequest(
@@ -141,7 +146,7 @@ public class ResourceRegistryClient(
 
     // Whole, since a change must send back what this client does not read
     private suspend fun getResource(id: ResourceId): Pair<JsonObject, AltinnResource>? {
-        if (id.value in FIXED_ROUTES) return null
+        if (id.isFixedRoute) return null
         val request = OutgoingRequest(HttpMethod.GET, resourceUrl(id), mapOf("Accept" to "application/json"))
         val response = try {
             Http.sendExpectingOk(httpClient, request, TARGET, ::AltinnException)
@@ -162,8 +167,6 @@ public class ResourceRegistryClient(
 
     internal companion object {
         const val RESOURCE_PATH = "/resourceregistry/api/v1/resource"
-
-        private val FIXED_ROUTES = setOf("resourcelist", "export", "search", "updated", "changes", "orgs")
 
         private const val TARGET = "Altinn Resource Registry"
 

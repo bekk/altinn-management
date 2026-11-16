@@ -205,6 +205,19 @@ class CreateMaskinportenSchemaTest {
     }
 
     @Test
+    fun `gives 400 for a resourceId that Altinn uses as a route, without asking Altinn`() = testServer(altinn()) {
+        for (id in listOf("resourcelist", "export", "search", "updated", "changes", "orgs")) {
+            create(minimalBody.replace("kv-eksempel", id)).assertProblem(
+                validationError(
+                    FieldError("resourceId", ValidationCode.INVALID_FORMAT, "resourceId must not be $id, which Altinn uses as a route"),
+                ),
+            )
+        }
+
+        assertTrue(sent.isEmpty(), "Altinn was called: $sent")
+    }
+
+    @Test
     fun `gives 400 when the list of scopes is empty`() = testServer(altinn()) {
         create(minimalBody.replace("""["kartverk:eksempel.read"]""", "[]")).assertProblem(
             validationError(FieldError("scopes", ValidationCode.MISSING, "scopes is required")),
