@@ -15,9 +15,7 @@ import io.ktor.http.contentType
 import io.ktor.server.testing.ApplicationTestBuilder
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import no.kartverket.altinnmanagement.client.auth.AccessToken
 import no.kartverket.altinnmanagement.client.auth.AccessTokenProvider
 import no.kartverket.altinnmanagement.client.http.HttpMethod
@@ -215,11 +213,15 @@ class PutMaskinportenSchemaTest {
     }
 
     @Test
-    fun `leaves it to Altinn to judge a scope with whitespace, since Altinn does not check for it`() = testServer(altinn()) {
-        val response = put(requiredOnly.replace("""["kartverk:matrikkel:ny"]""", """["kartverk:a b"]"""))
+    fun `gives 400 for a scope with whitespace, which no OAuth scope can hold, without asking Altinn`() = testServer(altinn()) {
+        put(requiredOnly.replace("""["kartverk:matrikkel:ny"]""", """["kartverk:ok", "kartverk:a b", "kartverk:a\tb"]""")).assertProblem(
+            validationError(
+                FieldError("scopes[1]", ValidationCode.INVALID_FORMAT, "scopes[1] must not contain whitespace"),
+                FieldError("scopes[2]", ValidationCode.INVALID_FORMAT, "scopes[2] must not contain whitespace"),
+            ),
+        )
 
-        assertEquals(HttpStatusCode.OK, response.status)
-        assertEquals("kartverk:a b", sentResource["resourceReferences"]!!.jsonArray[0].jsonObject["reference"]!!.jsonPrimitive.content)
+        assertTrue(sent.isEmpty(), "Altinn was called: $sent")
     }
 
     @Test
