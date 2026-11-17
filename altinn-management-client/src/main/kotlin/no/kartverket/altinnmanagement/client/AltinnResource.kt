@@ -36,10 +36,21 @@ internal data class AltinnResource(
         description = description?.let(::multilingualText),
         delegationDescription = rightDescription?.let(::multilingualText),
         homepage = homepage,
-        contactPoints = contactPoints?.map {
-            ContactPoint(category = it.category, email = it.email, telephone = it.telephone, contactPage = it.contactPage)
-        },
-        keywords = keywords?.map { Keyword(word = it.word, language = it.language) },
+        contactPoints = contactPoints?.map { it.toContactPoint() },
+        keywords = keywords?.map { it.toKeyword() },
+        status = status,
+        delegable = delegable,
+        visible = visible,
+    )
+
+    fun toGenericAccessResource(id: ResourceId): GenericAccessResource = GenericAccessResource(
+        resourceId = id,
+        title = title?.let(::multilingualText),
+        description = description?.let(::multilingualText),
+        delegationDescription = rightDescription?.let(::multilingualText),
+        homepage = homepage,
+        contactPoints = contactPoints?.map { it.toContactPoint() },
+        keywords = keywords?.map { it.toKeyword() },
         status = status,
         delegable = delegable,
         visible = visible,
@@ -52,13 +63,17 @@ internal data class AltinnContactPoint(
     val email: String? = null,
     val telephone: String? = null,
     val contactPage: String? = null,
-)
+) {
+    fun toContactPoint() = ContactPoint(category = category, email = email, telephone = telephone, contactPage = contactPage)
+}
 
 @Serializable
 internal data class AltinnKeyword(
     val word: String? = null,
     val language: String? = null,
-)
+) {
+    fun toKeyword() = Keyword(word = word, language = language)
+}
 
 @Serializable
 internal data class AltinnResourceReference(
@@ -80,25 +95,43 @@ internal fun newAltinnResource(schema: NewMaskinportenSchema) = AltinnResource(
     rightDescription = schema.delegationDescription.toMap(),
     homepage = schema.homepage,
     status = schema.status?.value,
-    contactPoints = schema.contactPoints.map {
-        AltinnContactPoint(category = it.category, email = it.email, telephone = it.telephone, contactPage = it.contactPage)
-    },
-    keywords = schema.keywords.map { AltinnKeyword(word = it.word, language = it.language) },
+    contactPoints = schema.contactPoints.map { it.toAltinn() },
+    keywords = schema.keywords.map { it.toAltinn() },
     resourceReferences = schema.scopes.map {
         AltinnResourceReference(referenceSource = "Default", reference = it, referenceType = MASKINPORTEN_SCOPE)
     },
     delegable = true,
     visible = true,
     resourceType = MASKINPORTEN_SCHEMA,
-    hasCompetentAuthority = AltinnCompetentAuthority(organization = KARTVERKET_ORGANIZATION_NUMBER, orgcode = KARTVERKET_ORG_CODE),
-    accessListMode = "Disabled",
+    hasCompetentAuthority = KARTVERKET_AUTHORITY,
+    accessListMode = ACCESS_LIST_MODE_DISABLED,
+)
+
+internal fun newAltinnResource(resource: NewGenericAccessResource) = AltinnResource(
+    identifier = resource.resourceId.value,
+    title = resource.title.toMap(),
+    description = resource.description.toMap(),
+    rightDescription = resource.delegationDescription?.toMap(),
+    homepage = resource.homepage,
+    status = resource.status?.value,
+    contactPoints = resource.contactPoints.map { it.toAltinn() },
+    keywords = resource.keywords.map { it.toAltinn() },
+    delegable = resource.delegable,
+    visible = true,
+    resourceType = GENERIC_ACCESS_RESOURCE,
+    hasCompetentAuthority = KARTVERKET_AUTHORITY,
+    accessListMode = ACCESS_LIST_MODE_DISABLED,
 )
 
 internal const val MASKINPORTEN_SCHEMA = "MaskinportenSchema"
 
+internal const val GENERIC_ACCESS_RESOURCE = "GenericAccessResource"
+
 internal const val KARTVERKET_ORGANIZATION_NUMBER = "971040238"
 
-private const val KARTVERKET_ORG_CODE = "kv"
+private val KARTVERKET_AUTHORITY = AltinnCompetentAuthority(organization = KARTVERKET_ORGANIZATION_NUMBER, orgcode = "kv")
+
+private const val ACCESS_LIST_MODE_DISABLED = "Disabled"
 
 private const val MASKINPORTEN_SCOPE = "MaskinportenScope"
 
@@ -114,8 +147,8 @@ internal fun JsonObject.withContent(content: MaskinportenSchemaContent): JsonObj
             description = content.description.toMap(),
             rightDescription = content.delegationDescription?.toMap(),
             homepage = content.homepage,
-            contactPoints = content.contactPoints.map { AltinnContactPoint(it.category, it.email, it.telephone, it.contactPage) },
-            keywords = content.keywords.map { AltinnKeyword(it.word, it.language) },
+            contactPoints = content.contactPoints.map { it.toAltinn() },
+            keywords = content.keywords.map { it.toAltinn() },
             resourceReferences = content.scopes.map { AltinnResourceReference("Default", it, MASKINPORTEN_SCOPE) },
         ),
     ).jsonObject
@@ -138,6 +171,11 @@ private val VERSION_FIELDS = setOf("versionId", "createdAt", "updatedAt")
 private val REPLACED_FIELDS = setOf(
     "title", "description", "rightDescription", "homepage", "contactPoints", "keywords", "resourceReferences",
 ) + VERSION_FIELDS
+
+private fun ContactPoint.toAltinn() =
+    AltinnContactPoint(category = category, email = email, telephone = telephone, contactPage = contactPage)
+
+private fun Keyword.toAltinn() = AltinnKeyword(word = word, language = language)
 
 private fun MultilingualText.toMap() = mapOf("en" to en, "nb" to nb, "nn" to nn).filterValues { it != null }
 

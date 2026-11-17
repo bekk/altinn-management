@@ -103,8 +103,10 @@ setting them yourself.
 | `GET /api/maskinportenschemas`               | Lists Kartverket's MaskinportenSchemas, or with `?scope=` those for one |
 | `POST /api/maskinportenschemas`              | Creates a MaskinportenSchema                                            |
 | `GET /api/maskinportenschemas/{id}`          | Gets a MaskinportenSchema                                               |
-| `PUT /api/maskinportenschemas/{id}/policy`   | Gives a MaskinportenSchema the policy every MaskinportenSchema gets     |
+| `PUT /api/maskinportenschemas/{id}`          | Changes a MaskinportenSchema                                            |
 | `PUT /api/maskinportenschemas/{id}/withdraw` | Withdraws a MaskinportenSchema                                          |
+| `PUT /api/maskinportenschemas/{id}/policy`   | Gives a MaskinportenSchema the policy every MaskinportenSchema gets     |
+| `POST /api/genericaccessresources`           | Creates a GenericAccessResource                                         |
 | `GET /openapi`                               | The OpenAPI spec as JSON                                                |
 | `GET /health/live`                           | Liveness probe for the platform, left out of the spec                   |
 
