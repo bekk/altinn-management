@@ -687,7 +687,8 @@ private val exampleGenericAccessResourcePolicy = GenericAccessResourcePolicy(
 internal val genericAccessResourcePolicyPutOperation: Operation.Builder.() -> Unit = {
     summary = "Set or replace the policy of a GenericAccessResource"
     description = "Uploads the policy in the body to Altinn, in place of any policy the resource has, so it both sets " +
-        "and changes a policy. Send the whole policy, since rules left out are removed. A resource " +
+        "and changes a policy. To change one, get it with `GET /api/genericaccessresources/{id}/policy`, change it and " +
+        "put all of it back, since rules left out are removed. A resource " +
         "cannot be delegated or used until it has a policy, so call this after `POST /api/genericaccessresources`. " +
         "It only works on Kartverket's GenericAccessResources."
 
@@ -774,6 +775,89 @@ internal val genericAccessResourcePolicyPutOperation: Operation.Builder.() -> Un
             ContentType.Application.ProblemJson {
                 schema = jsonSchema<ErrorResponse>()
                 example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
+            }
+        }
+
+        HttpStatusCode.InternalServerError {
+            description = "An unexpected error in this API."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example("InternalError", ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError))
+            }
+        }
+    }
+}
+
+internal val genericAccessResourcePolicyGetOperation: Operation.Builder.() -> Unit = {
+    summary = "Get the policy of a GenericAccessResource"
+    description = "Gets the resource's policy from Altinn, in the same form as `PUT /api/genericaccessresources/{id}/policy` " +
+        "takes it. It only works on Kartverket's GenericAccessResources."
+
+    parameters {
+        path("id") {
+            required = true
+            description = "The resource's id: 4 or more of `a-z`, `0-9`, `_` and `-`, for example `kv-grunnbok-innsyn`."
+            schema = JsonSchema(type = JsonType.STRING, pattern = "^[a-z0-9_-]{4,}$")
+        }
+        requestId()
+    }
+
+    responses {
+        HttpStatusCode.OK {
+            description = "The policy."
+            headers { requestId() }
+            ContentType.Application.Json {
+                schema = jsonSchema<GenericAccessResourcePolicy>().withRequiredNotNull()
+                example("Policy", exampleGenericAccessResourcePolicy)
+            }
+        }
+
+        HttpStatusCode.BadRequest {
+            description = "The id is not valid."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example(
+                    "InvalidId",
+                    ErrorResponse.of(
+                        ProblemType.VALIDATION_ERROR,
+                        HttpStatusCode.BadRequest,
+                        errors = listOf(FieldError("id", ValidationCode.INVALID_FORMAT, "id must be 4 or more of a-z, 0-9, _ and -")),
+                    ),
+                )
+            }
+        }
+
+        HttpStatusCode.NotFound {
+            description = "Altinn has no GenericAccessResource of Kartverket's with this id, or the resource has no " +
+                "policy yet. A new resource has none until it is given one."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example(
+                    "NotFound",
+                    ErrorResponse.of(
+                        ProblemType.NOT_FOUND,
+                        HttpStatusCode.NotFound,
+                        "There is no GenericAccessResource with this id, or it has no policy yet",
+                    ),
+                )
+            }
+        }
+
+        HttpStatusCode.BadGateway {
+            description = "This API could not get an answer from Altinn, or the policy in Altinn has parts this API " +
+                "cannot show, such as a rule with a condition. Altinn Studio cannot make such a policy either, so it " +
+                "was written by hand. Your request did not cause it."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
+                example(
+                    "UnsupportedPolicy",
+                    ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The policy in Altinn has parts this API cannot show"),
+                )
             }
         }
 

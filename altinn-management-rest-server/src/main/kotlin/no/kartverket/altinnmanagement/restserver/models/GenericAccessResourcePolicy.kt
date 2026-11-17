@@ -3,13 +3,14 @@ package no.kartverket.altinnmanagement.restserver.models
 import io.ktor.openapi.JsonSchema
 import io.ktor.openapi.JsonType
 import kotlinx.serialization.Serializable
+import no.kartverket.altinnmanagement.client.GenericAccessResourcePolicy as ClientGenericAccessResourcePolicy
 
 // The fields are nullable so a missing one is a validation error that names it, not a body that cannot be read
 @Serializable
 @JsonSchema.Required("rules")
 @JsonSchema.Description(
-    "A whole policy for a GenericAccessResource, to replace the one in Altinn. It says who may do what with the " +
-        "resource, and how securely they must have logged in.",
+    "A whole policy for a GenericAccessResource. It says who may do what with the resource, and how securely they " +
+        "must have logged in.",
 )
 data class GenericAccessResourcePolicy(
     val minimumAuthenticationLevel: AuthenticationLevels? = null,
@@ -18,7 +19,14 @@ data class GenericAccessResourcePolicy(
     @JsonSchema.MinItems(1)
     @JsonSchema.Description("At least one. A user may do an action when a rule permits it and no rule denies it.")
     val rules: List<PolicyRule>? = null,
-)
+) {
+    companion object {
+        fun from(policy: ClientGenericAccessResourcePolicy) = GenericAccessResourcePolicy(
+            minimumAuthenticationLevel = policy.minimumAuthenticationLevel.run { AuthenticationLevels(endUser, organisation, systemUser) },
+            rules = policy.rules.map { PolicyRule(it.description, it.subjects, it.actions, it.subResources.ifEmpty { null }, it.effect.value) },
+        )
+    }
+}
 
 @Serializable
 @JsonSchema.Description(
