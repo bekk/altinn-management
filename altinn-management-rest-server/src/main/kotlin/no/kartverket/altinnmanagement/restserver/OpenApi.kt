@@ -28,6 +28,7 @@ import no.kartverket.altinnmanagement.restserver.models.ErrorResponse
 import no.kartverket.altinnmanagement.restserver.models.FieldError
 import no.kartverket.altinnmanagement.restserver.models.GenericAccessResource
 import no.kartverket.altinnmanagement.restserver.models.GenericAccessResourcePolicy
+import no.kartverket.altinnmanagement.restserver.models.GenericAccessResourceRequest
 import no.kartverket.altinnmanagement.restserver.models.Keyword
 import no.kartverket.altinnmanagement.restserver.models.MaskinportenSchema
 import no.kartverket.altinnmanagement.restserver.models.MaskinportenSchemaRequest
@@ -866,6 +867,125 @@ internal val maskinportenSchemaWithdrawOperation: Operation.Builder.() -> Unit =
         HttpStatusCode.BadGateway {
             description = "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
                 "did not cause it, and the resource may or may not have been withdrawn."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
+            }
+        }
+
+        HttpStatusCode.InternalServerError {
+            description = "An unexpected error in this API."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example("InternalError", ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError))
+            }
+        }
+    }
+}
+
+private val exampleGenericAccessResourceRequest = GenericAccessResourceRequest(
+    title = exampleGenericAccessResource.title,
+    description = exampleGenericAccessResource.description,
+    delegationDescription = exampleGenericAccessResource.delegationDescription,
+    homepage = exampleGenericAccessResource.homepage,
+    contactPoints = exampleGenericAccessResource.contactPoints,
+    keywords = exampleGenericAccessResource.keywords,
+)
+
+internal val genericAccessResourcePutOperation: Operation.Builder.() -> Unit = {
+    summary = "Change a GenericAccessResource"
+    description = "Replaces the GenericAccessResource with this id in Altinn with the one in the body. Send it whole: " +
+        "a field that is left out is removed. What Altinn has that this API does not show, such as the owner and the " +
+        "access lists, is kept as it is, and so are `status`, `delegable` and `visible`. Only Kartverket's resources of " +
+        "type `GenericAccessResource` can be changed: any other resource gives `404`, as if it did not exist."
+
+    parameters {
+        idPath()
+        requestId()
+    }
+
+    requestBody {
+        required = true
+        ContentType.Application.Json {
+            schema = jsonSchema<GenericAccessResourceRequest>().withRequiredNotNull()
+            example("GenericAccessResource", exampleGenericAccessResourceRequest)
+        }
+    }
+
+    responses {
+        HttpStatusCode.OK {
+            description = "The GenericAccessResource as this API sent it to Altinn, since Altinn answers a change without a body."
+            headers { requestId() }
+            ContentType.Application.Json {
+                schema = jsonSchema<GenericAccessResource>()
+                example("GenericAccessResource", exampleGenericAccessResource)
+            }
+        }
+
+        HttpStatusCode.BadRequest {
+            description = "The id or the body is not valid, the body could not be read, or Altinn rejected the " +
+                "resource. When Altinn rejects it, `detail` has Altinn's reasons. Nothing was changed. The body must " +
+                "be UTF-8 JSON that gives each name once. `delegationDescription` is checked only when the rest of the " +
+                "body is valid, since this API has to ask Altinn whether the resource is `delegable`."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example(
+                    "InvalidId",
+                    ErrorResponse.of(
+                        ProblemType.VALIDATION_ERROR,
+                        HttpStatusCode.BadRequest,
+                        errors = listOf(FieldError("id", ValidationCode.INVALID_FORMAT, "id must be 4 or more of a-z, 0-9, _ and -")),
+                    ),
+                )
+                example(
+                    "MissingFields",
+                    ErrorResponse.of(
+                        ProblemType.VALIDATION_ERROR,
+                        HttpStatusCode.BadRequest,
+                        errors = listOf(
+                            FieldError("title.nn", ValidationCode.MISSING, "title.nn is required"),
+                            FieldError("description", ValidationCode.MISSING, "description is required"),
+                        ),
+                    ),
+                )
+                example(
+                    "MalformedBody",
+                    ErrorResponse.of(
+                        ProblemType.MALFORMED_REQUEST,
+                        HttpStatusCode.BadRequest,
+                        "The body must be a JSON object with only this API's fields, each of the right type",
+                    ),
+                )
+                example(
+                    "RejectedByAltinn",
+                    ErrorResponse.of(
+                        ProblemType.UPSTREAM_REJECTED,
+                        HttpStatusCode.BadRequest,
+                        "Altinn rejected the resource: HasCompetentAuthority.Organization: HasCompetentAuthority needs " +
+                            "to be set with valid organization number and orgcode",
+                    ),
+                )
+            }
+        }
+
+        HttpStatusCode.NotFound {
+            description = "Kartverket has no GenericAccessResource with this id in Altinn."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example(
+                    "NotFound",
+                    ErrorResponse.of(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, "There is no GenericAccessResource with this id"),
+                )
+            }
+        }
+
+        HttpStatusCode.BadGateway {
+            description = "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
+                "did not cause it, and the resource may or may not have been changed."
             headers { requestId() }
             ContentType.Application.ProblemJson {
                 schema = jsonSchema<ErrorResponse>()
