@@ -158,8 +158,8 @@ val schema = client.getMaskinportenSchema(ResourceId.of("kv-matrikkel-brukernavn
 ```
 
 `listMaskinportenSchemas` gives Kartverket's resources of type `MaskinportenSchema`. `getMaskinportenSchema` gives
-`null` when Altinn has no resource with the id, or one of another type. `ResourceId.of` takes 4 or more of `a-z`,
-`0-9`, `_` and `-`, like Altinn.
+`null` when Altinn has no resource with the id, or one of another type or owned by another organisation.
+`ResourceId.of` takes 4 or more of `a-z`, `0-9`, `_` and `-`, like Altinn.
 
 A call throws an `AltinnException` when Altinn cannot be called, answers with an error, or gives an answer the client
 cannot read. When Altinn answered, it has Altinn's status and body.

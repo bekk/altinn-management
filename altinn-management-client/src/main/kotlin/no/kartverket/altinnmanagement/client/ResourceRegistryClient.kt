@@ -29,7 +29,7 @@ public class ResourceRegistryClient(
 
     public suspend fun getMaskinportenSchema(id: ResourceId): MaskinportenSchema? {
         val (_, resource) = getResource(id) ?: return null
-        return if (resource.isMaskinportenSchema) resource.toMaskinportenSchema(id) else null
+        return if (resource.isMaskinportenSchema && resource.isKartverkets) resource.toMaskinportenSchema(id) else null
     }
 
     public suspend fun getGenericAccessResource(id: ResourceId): GenericAccessResource? {

@@ -109,7 +109,14 @@ class GetMaskinportenSchemaTest {
 
     @Test
     fun `leaves out the fields the resource does not have`() =
-        testServer(altinn(body = """{"identifier":"kv-matrikkel-brukernavn","title":{"nb":"Matrikkel API"},"resourceType":"MaskinportenSchema"}""")) {
+        testServer(
+            altinn(
+                body = """
+                    {"identifier":"kv-matrikkel-brukernavn","title":{"nb":"Matrikkel API"},"resourceType":"MaskinportenSchema",
+                     "hasCompetentAuthority":{"organization":"971040238"}}
+                """,
+            ),
+        ) {
             val body = Json.parseToJsonElement(client.get("/api/maskinportenschemas/kv-matrikkel-brukernavn").bodyAsText()).jsonObject
 
             assertEquals(
@@ -128,6 +135,18 @@ class GetMaskinportenSchemaTest {
     fun `gives 404 for resources of other types, as if they did not exist`() = testServer(altinn(body = resourceJson(resourceType = "GenericAccessResource"))) {
         client.get("/api/maskinportenschemas/kv-matrikkel-brukernavn").assertProblem(maskinportenSchemaNotFound)
     }
+
+    @Test
+    fun `gives 404 for resources another organisation owns`() =
+        testServer(altinn(body = resourceJson().replace("\"971040238\"", "\"981544315\""))) {
+            client.get("/api/maskinportenschemas/kv-matrikkel-brukernavn").assertProblem(maskinportenSchemaNotFound)
+        }
+
+    @Test
+    fun `gives 404 for a resource with no owner`() =
+        testServer(altinn(body = """{"identifier":"kv-matrikkel-brukernavn","resourceType":"MaskinportenSchema"}""")) {
+            client.get("/api/maskinportenschemas/kv-matrikkel-brukernavn").assertProblem(maskinportenSchemaNotFound)
+        }
 
     @Test
     fun `gives 404 for an id that is one of Altinn's fixed routes, without asking Altinn`() = testServer(altinn(body = "[]")) {
