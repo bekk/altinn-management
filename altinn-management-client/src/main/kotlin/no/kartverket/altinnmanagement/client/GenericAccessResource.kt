@@ -13,6 +13,15 @@ public data class GenericAccessResource(
     public val visible: Boolean?,
 )
 
+public data class GenericAccessResourceContent(
+    public val title: MultilingualText,
+    public val description: MultilingualText,
+    public val delegationDescription: MultilingualText?,
+    public val homepage: String?,
+    public val contactPoints: List<ContactPoint>,
+    public val keywords: List<Keyword>,
+)
+
 public data class NewGenericAccessResource(
     public val resourceId: ResourceId,
     public val title: MultilingualText,

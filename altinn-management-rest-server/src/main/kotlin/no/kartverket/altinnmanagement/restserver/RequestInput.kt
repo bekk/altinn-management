@@ -7,10 +7,12 @@ import io.ktor.server.request.contentType
 import io.ktor.server.request.receive
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
+import no.kartverket.altinnmanagement.client.GenericAccessResourceContent
 import no.kartverket.altinnmanagement.client.MaskinportenSchemaContent
 import no.kartverket.altinnmanagement.client.ResourceId
 import no.kartverket.altinnmanagement.client.ResourceStatus
 import no.kartverket.altinnmanagement.restserver.models.FieldError
+import no.kartverket.altinnmanagement.restserver.models.GenericAccessResourceRequest
 import no.kartverket.altinnmanagement.restserver.models.MaskinportenSchemaRequest
 import no.kartverket.altinnmanagement.restserver.models.MultilingualText
 import no.kartverket.altinnmanagement.restserver.models.NewGenericAccessResource
@@ -64,9 +66,7 @@ private fun invalidResourceId(name: String) = FieldError(name, ValidationCode.IN
 // Checks what Altinn would refuse, so that a caller gets every error at once, by this API's field names
 internal fun maskinportenSchemaContent(id: ResourceId, request: MaskinportenSchemaRequest): MaskinportenSchemaContent {
     val errors = buildList {
-        if (request.resourceId != null && request.resourceId != id.value) {
-            add(FieldError("resourceId", ValidationCode.INVALID_FORMAT, "resourceId must be the id in the path"))
-        }
+        addAll(pathIdErrors(id, request.resourceId))
         addAll(scopeErrors(request.scopes))
         addAll(textErrors("title", request.title))
         addAll(textErrors("description", request.description))
@@ -82,6 +82,42 @@ internal fun maskinportenSchemaContent(id: ResourceId, request: MaskinportenSche
         keywords = request.keywords.orEmpty().map { it.toClient() },
     )
 }
+
+// Checks what Altinn would refuse, by this API's field names. What does not depend on the resource is checked before
+// Altinn is asked, so that a body with errors gives 400 and not 404 or 502
+internal fun genericAccessResourceContent(
+    id: ResourceId,
+    request: GenericAccessResourceRequest,
+): (delegable: Boolean?) -> GenericAccessResourceContent {
+    val errors = buildList {
+        addAll(pathIdErrors(id, request.resourceId))
+        addAll(textErrors("title", request.title))
+        addAll(textErrors("description", request.description))
+    }
+    if (errors.isNotEmpty()) throw InvalidRequestException(errors)
+    return { delegable ->
+        // Altinn requires it only for a resource that can be delegated, and takes a resource without delegable as one
+        if (delegable != false) {
+            val delegationErrors = textErrors("delegationDescription", request.delegationDescription)
+            if (delegationErrors.isNotEmpty()) throw InvalidRequestException(delegationErrors)
+        }
+        GenericAccessResourceContent(
+            title = request.title!!.toClient(),
+            description = request.description!!.toClient(),
+            delegationDescription = request.delegationDescription?.toClient(),
+            homepage = request.homepage,
+            contactPoints = request.contactPoints.orEmpty().map { it.toClient() },
+            keywords = request.keywords.orEmpty().map { it.toClient() },
+        )
+    }
+}
+
+private fun pathIdErrors(id: ResourceId, resourceId: String?): List<FieldError> =
+    if (resourceId == null || resourceId == id.value) {
+        emptyList()
+    } else {
+        listOf(FieldError("resourceId", ValidationCode.INVALID_FORMAT, "resourceId must be the id in the path"))
+    }
 
 // Altinn takes a scope with whitespace, but no OAuth scope can hold any (RFC 6749, section 3.3)
 private fun scopeErrors(scopes: List<String>?): List<FieldError> {
@@ -112,6 +148,9 @@ internal suspend fun ApplicationCall.newMaskinportenSchemaRequest(): NewMaskinpo
 
 internal suspend fun ApplicationCall.newGenericAccessResourceRequest(): NewGenericAccessResource =
     strictBody(NewGenericAccessResource.serializer())
+
+internal suspend fun ApplicationCall.genericAccessResourceRequest(): GenericAccessResourceRequest =
+    strictBody(GenericAccessResourceRequest.serializer())
 
 private suspend fun <T> ApplicationCall.strictBody(serializer: KSerializer<T>): T {
     val body = strictJson(jsonBody())
