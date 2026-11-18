@@ -489,8 +489,8 @@ internal val genericAccessResourceGetOperation: Operation.Builder.() -> Unit = {
 
 internal val maskinportenSchemaGetOperation: Operation.Builder.() -> Unit = {
     summary = "Get a MaskinportenSchema"
-    description = "Gets the resource with this id from Altinn. Only resources of type `MaskinportenSchema` are " +
-        "found: any other resource gives `404`, as if it did not exist."
+    description = "Gets the resource with this id from Altinn. Only Kartverket's resources of type " +
+        "`MaskinportenSchema` are found: any other resource gives `404`, as if it did not exist."
 
     parameters {
         idPath()
