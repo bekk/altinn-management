@@ -106,6 +106,7 @@ setting them yourself.
 | `PUT /api/maskinportenschemas/{id}`          | Changes a MaskinportenSchema                                            |
 | `PUT /api/maskinportenschemas/{id}/withdraw` | Withdraws a MaskinportenSchema                                          |
 | `PUT /api/maskinportenschemas/{id}/policy`   | Gives a MaskinportenSchema the policy every MaskinportenSchema gets     |
+| `GET /api/genericaccessresources`            | Lists Kartverket's GenericAccessResources                               |
 | `POST /api/genericaccessresources`           | Creates a GenericAccessResource                                         |
 | `GET /api/genericaccessresources/{id}`       | Gets a GenericAccessResource                                            |
 | `GET /openapi`                               | The OpenAPI spec as JSON                                                |

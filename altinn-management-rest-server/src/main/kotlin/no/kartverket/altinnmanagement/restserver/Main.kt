@@ -92,7 +92,7 @@ fun Application.module(
             val filter = externalFiltering.filterFor(certificate)
             val schemas = client.listMaskinportenSchemas()
             val matching = if (scope == null) schemas else schemas.filter { scope in it.scopes.orEmpty() }
-            call.respond(matching.allowedBy(filter).map(MaskinportenSchema::from))
+            call.respond(matching.allowedBy(filter) { allows(it) }.map(MaskinportenSchema::from))
         }.describe(maskinportenSchemasListOperation)
 
         post("/api/maskinportenschemas") {
@@ -126,6 +126,13 @@ fun Application.module(
             if (!client.setMaskinportenSchemaPolicy(id)) throw ResourceNotFoundException("MaskinportenSchema")
             call.respond(HttpStatusCode.NoContent)
         }.describe(maskinportenSchemaPolicyPutOperation)
+
+        get("/api/genericaccessresources") {
+            val certificate = clientCertificate(call.request.headers[CLIENT_CERTIFICATE_HEADER], required = externalFiltering.isOn)
+            val filter = externalFiltering.filterFor(certificate)
+            val resources = client.listGenericAccessResources()
+            call.respond(resources.allowedBy(filter) { allows(it) }.map(GenericAccessResource::from))
+        }.describe(genericAccessResourcesListOperation)
 
         post("/api/genericaccessresources") {
             val resource = newGenericAccessResource(call.newGenericAccessResourceRequest())
