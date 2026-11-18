@@ -37,8 +37,6 @@ class PutMaskinportenSchemaPolicyTest {
         }
     }
 
-    private val notFound = ErrorResponse.of(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, "There is no MaskinportenSchema with this id")
-
     private val upstreamError = ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed")
 
     private suspend fun HttpResponse.assertProblem(expected: ErrorResponse) {
@@ -104,7 +102,7 @@ class PutMaskinportenSchemaPolicyTest {
 
     @Test
     fun `gives 404 when Altinn has no resource with the id, without writing to Altinn`() = testServer(altinn(resource = null)) {
-        client.put(path).assertProblem(notFound)
+        client.put(path).assertProblem(maskinportenSchemaNotFound)
 
         assertNothingWritten()
     }
@@ -112,7 +110,7 @@ class PutMaskinportenSchemaPolicyTest {
     @Test
     fun `gives 404 when the resource is not a MaskinportenSchema, without writing to Altinn`() =
         testServer(altinn(resource = resourceJson(resourceType = "GenericAccessResource"))) {
-            client.put(path).assertProblem(notFound)
+            client.put(path).assertProblem(maskinportenSchemaNotFound)
 
             assertNothingWritten()
         }
@@ -120,7 +118,7 @@ class PutMaskinportenSchemaPolicyTest {
     @Test
     fun `gives 404 when the resource is not Kartverket's, without writing to Altinn`() =
         testServer(altinn(resource = resourceJson().replace("971040238", "974760673"))) {
-            client.put(path).assertProblem(notFound)
+            client.put(path).assertProblem(maskinportenSchemaNotFound)
 
             assertNothingWritten()
         }

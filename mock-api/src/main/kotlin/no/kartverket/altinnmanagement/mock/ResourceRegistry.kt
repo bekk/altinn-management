@@ -101,15 +101,19 @@ class SearchFilter(
     fun matches(resource: JsonObject): Boolean {
         val authority = resource["hasCompetentAuthority"]?.jsonObject
         return contains(resource.stringOrNull("identifier"), id) &&
-            equals(resource.stringOrNull("resourceType"), resourceType) &&
-            equals(authority?.stringOrNull("orgcode"), orgCode) &&
-            equals(authority?.stringOrNull("organization"), organizationId) &&
-            anyContains(resource["description"]?.jsonObject?.values?.map { it.jsonPrimitive.contentOrNull }, description) &&
-            anyContains(resource.objects("keywords")?.map { it.stringOrNull("word") }, keyword) &&
-            anyContains(resource.objects("resourceReferences")?.map { it.stringOrNull("reference") }, reference)
+                equals(resource.stringOrNull("resourceType"), resourceType) &&
+                equals(authority?.stringOrNull("orgcode"), orgCode) &&
+                equals(authority?.stringOrNull("organization"), organizationId) &&
+                anyContains(
+                    resource["description"]?.jsonObject?.values?.map { it.jsonPrimitive.contentOrNull },
+                    description
+                ) &&
+                anyContains(resource.objects("keywords")?.map { it.stringOrNull("word") }, keyword) &&
+                anyContains(resource.objects("resourceReferences")?.map { it.stringOrNull("reference") }, reference)
     }
 
-    private fun contains(value: String?, filter: String?) = filter == null || value?.contains(filter, ignoreCase = true) == true
+    private fun contains(value: String?, filter: String?) =
+        filter == null || value?.contains(filter, ignoreCase = true) == true
 
     private fun equals(value: String?, filter: String?) = filter == null || value.equals(filter, ignoreCase = true)
 
@@ -124,7 +128,8 @@ internal val RESOURCE_TYPES = listOf(
 ).mapIndexed { index, name -> name to if (index == 0) 0 else 1 shl (index - 1) }
 
 // Like Altinn's: microseconds, and an offset of +00:00
-private fun now(): String = OffsetDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSSxxx"))
+private fun now(): String =
+    OffsetDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSSxxx"))
 
 private fun authorizationReference(id: String) = buildJsonArray {
     add(buildJsonObject { put("id", "urn:altinn:resource"); put("value", id) })

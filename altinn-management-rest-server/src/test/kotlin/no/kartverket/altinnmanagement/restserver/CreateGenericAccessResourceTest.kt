@@ -24,7 +24,6 @@ import no.kartverket.altinnmanagement.restserver.models.ValidationCode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class CreateGenericAccessResourceTest {
@@ -115,11 +114,11 @@ class CreateGenericAccessResourceTest {
     }
 
     @Test
-    fun `answers 201 with the resource in this API's model and no Location`() = testServer(altinn()) {
+    fun `answers 201 with the resource in this API's model and where to get it`() = testServer(altinn()) {
         val response = create(fullBody)
 
         assertEquals(HttpStatusCode.Created, response.status)
-        assertNull(response.headers[HttpHeaders.Location])
+        assertEquals("/api/genericaccessresources/kv-eksempel", response.headers[HttpHeaders.Location])
         assertEquals(ContentType.Application.Json, response.contentType()?.withoutParameters())
         val text = MultilingualText(en = "Example", nb = "Eksempel", nn = "Døme")
         assertEquals(
