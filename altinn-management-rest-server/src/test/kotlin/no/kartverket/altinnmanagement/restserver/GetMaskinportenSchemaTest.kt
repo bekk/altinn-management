@@ -121,18 +121,18 @@ class GetMaskinportenSchemaTest {
 
     @Test
     fun `gives 404 when Altinn has no resource with the id`() = testServer(altinn(status = 404, body = """{"title":"Not Found","status":404}""")) {
-        client.get("/api/maskinportenschemas/kv-matrikkel-brukernavn").assertProblem(notFound)
+        client.get("/api/maskinportenschemas/kv-matrikkel-brukernavn").assertProblem(maskinportenSchemaNotFound)
     }
 
     @Test
     fun `gives 404 for resources of other types, as if they did not exist`() = testServer(altinn(body = resourceJson(resourceType = "GenericAccessResource"))) {
-        client.get("/api/maskinportenschemas/kv-matrikkel-brukernavn").assertProblem(notFound)
+        client.get("/api/maskinportenschemas/kv-matrikkel-brukernavn").assertProblem(maskinportenSchemaNotFound)
     }
 
     @Test
     fun `gives 404 for an id that is one of Altinn's fixed routes, without asking Altinn`() = testServer(altinn(body = "[]")) {
         for (id in listOf("resourcelist", "export", "search", "updated", "changes", "orgs")) {
-            client.get("/api/maskinportenschemas/$id").assertProblem(notFound)
+            client.get("/api/maskinportenschemas/$id").assertProblem(maskinportenSchemaNotFound)
         }
 
         assertTrue(sent.isEmpty(), "Altinn was called: $sent")
