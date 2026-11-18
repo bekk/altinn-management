@@ -1,6 +1,7 @@
 package no.kartverket.altinnmanagement.restserver
 
 import kotlinx.serialization.Serializable
+import no.kartverket.altinnmanagement.client.GenericAccessResource
 import no.kartverket.altinnmanagement.client.MaskinportenSchema
 
 @Serializable
@@ -11,6 +12,8 @@ data class AccessFilter(
     // All, not any: otherwise a caller would see a resource that gives a scope the caller may not see
     fun allows(schema: MaskinportenSchema): Boolean =
         resources.allows(schema.resourceId.value) && schema.scopes.orEmpty().all(scopes::allows)
+
+    fun allows(resource: GenericAccessResource): Boolean = resources.allows(resource.resourceId.value)
 
     companion object {
         val NOTHING = AccessFilter(Filter(emptyList(), emptyList()), Filter(emptyList(), emptyList()))
@@ -29,5 +32,7 @@ data class Filter(
     fun allows(name: String): Boolean = name in exact || prefix.any { name.startsWith(it) }
 }
 
-internal fun List<MaskinportenSchema>.allowedBy(filter: AccessFilter?): List<MaskinportenSchema> =
-    if (filter == null) this else filter(filter::allows)
+internal fun <T> List<T>.allowedBy(
+    accessFilter: AccessFilter?,
+    isAllowed: AccessFilter.(T) -> Boolean,
+): List<T> = if (accessFilter == null) this else filter { accessFilter.isAllowed(it) }

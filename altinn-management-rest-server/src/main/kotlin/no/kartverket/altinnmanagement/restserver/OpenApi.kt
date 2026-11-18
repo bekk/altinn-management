@@ -772,6 +772,75 @@ internal val maskinportenSchemaPolicyPutOperation: Operation.Builder.() -> Unit 
     }
 }
 
+internal val genericAccessResourcesListOperation: Operation.Builder.() -> Unit = {
+    summary = "List Kartverket's GenericAccessResources"
+    description = "Gets Kartverket's resources of type `GenericAccessResource` from Altinn. They have no Maskinporten " +
+        "scopes, so this API never filters them by scope. When filtering is on, this API only returns the ones the " +
+        "calling app has access to: the resource must be in the app's `exact` list or start with one of its " +
+        "prefixes. This API reads which app is calling from the `X-Forwarded-Client-Cert` header, which Istio " +
+        "usually sets. Altinn's search returns the newest version of each resource that matches, so if a resource's " +
+        "type or owner has changed, the list can hold an older version of it."
+
+    parameters {
+        clientCertificate()
+        requestId()
+    }
+
+    responses {
+        HttpStatusCode.OK {
+            description = "Kartverket's GenericAccessResources, and when filtering is on, only those the calling app " +
+                "has access to. The list is empty if there are none."
+            headers { requestId() }
+            ContentType.Application.Json {
+                schema = JsonSchema(type = JsonType.ARRAY, items = ReferenceOr.Value(jsonSchema<GenericAccessResource>()))
+                example("GenericAccessResources", listOf(exampleGenericAccessResource))
+            }
+        }
+
+        HttpStatusCode.BadRequest {
+            description = "Filtering is on and the `X-Forwarded-Client-Cert` header is missing, so this API cannot tell " +
+                "which app is calling."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example(
+                    "MissingClientCertificate",
+                    ErrorResponse.of(
+                        ProblemType.VALIDATION_ERROR,
+                        HttpStatusCode.BadRequest,
+                        errors = listOf(
+                            FieldError(CLIENT_CERTIFICATE_HEADER, ValidationCode.MISSING, "$CLIENT_CERTIFICATE_HEADER is required"),
+                        ),
+                    ),
+                )
+            }
+        }
+
+        HttpStatusCode.BadGateway {
+            description = "This API could not get an answer from Altinn, or from the service that says which " +
+                "resources the calling app has access to. Your request did not cause it."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
+                example(
+                    "FilteringError",
+                    ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to the filtering service failed"),
+                )
+            }
+        }
+
+        HttpStatusCode.InternalServerError {
+            description = "An unexpected error in this API."
+            headers { requestId() }
+            ContentType.Application.ProblemJson {
+                schema = jsonSchema<ErrorResponse>()
+                example("InternalError", ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError))
+            }
+        }
+    }
+}
+
 private fun Parameters.Builder.clientCertificate() {
     header(CLIENT_CERTIFICATE_HEADER) {
         description = "Says which app is calling. Istio usually sets it on every call, so the app does not. This " +
