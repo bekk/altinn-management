@@ -22,6 +22,8 @@ data class ErrorResponse(
   is taken.
 - `tag:kartverket.no,2026:upstream-error` (502): this API could not get a usable answer from Altinn, or from the
   service that says which resources and scopes the calling app has access to. Your request did not cause it.
+- `tag:kartverket.no,2026:unsupported-policy` (502): the policy in Altinn has parts this API cannot show, such as a
+  rule with a condition. Asking again gives the same answer until the policy in Altinn is replaced.
 - `tag:kartverket.no,2026:internal-error` (500): an unexpected error in this API.""",
     )
     val type: ProblemType,

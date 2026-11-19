@@ -48,7 +48,7 @@ internal fun StatusPagesConfig.errorResponses() {
     }
     exception<UnsupportedPolicyException> { call, cause ->
         call.application.log.warn(cause.message)
-        call.respondProblem(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The policy in Altinn has parts this API cannot show")
+        call.respondProblem(ProblemType.UNSUPPORTED_POLICY, HttpStatusCode.BadGateway)
     }
     exception<AltinnManagementException> { call, cause ->
         call.application.log.error("Call to Maskinporten or Altinn failed: statusCode=${cause.statusCode}", cause)

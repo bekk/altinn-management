@@ -141,7 +141,7 @@ class GetGenericAccessResourcePolicyTest {
     @Test
     fun `gives 502 when the policy has a part this API cannot show`() = testServer(altinn(policy = policyXml(effect = "NotApplicable"))) {
         client.get("/api/genericaccessresources/kv-matrikkel-brukernavn/policy").assertProblem(
-            ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The policy in Altinn has parts this API cannot show"),
+            ErrorResponse.of(ProblemType.UNSUPPORTED_POLICY, HttpStatusCode.BadGateway),
         )
     }
 

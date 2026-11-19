@@ -855,7 +855,7 @@ internal val genericAccessResourcePolicyGetOperation: Operation.Builder.() -> Un
                 example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
                 example(
                     "UnsupportedPolicy",
-                    ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The policy in Altinn has parts this API cannot show"),
+                    ErrorResponse.of(ProblemType.UNSUPPORTED_POLICY, HttpStatusCode.BadGateway),
                 )
             }
         }
