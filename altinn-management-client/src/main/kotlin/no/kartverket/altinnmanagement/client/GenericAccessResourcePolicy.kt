@@ -158,10 +158,15 @@ internal fun parseGenericAccessResourcePolicy(id: ResourceId, xml: ByteArray): G
     val levels = parts.filter { it.localName == "ObligationExpressions" }.flatMap { it.children("ObligationExpression") }.map(::level)
     if (levels.map { it.first }.toSet().size != levels.size) unsupported("it has an authentication level twice")
     val level = levels.toMap()
-    return GenericAccessResourcePolicy(
-        minimumAuthenticationLevel = AuthenticationLevels(level[END_USER_LEVEL], level[ORGANISATION_LEVEL], level[SYSTEM_USER_LEVEL]),
-        rules = parts.filter { it.localName == "Rule" }.map { parseRule(id, it) },
-    )
+    // Altinn takes policies that the checks in init refuse, like one with an access list without its owner
+    return try {
+        GenericAccessResourcePolicy(
+            minimumAuthenticationLevel = AuthenticationLevels(level[END_USER_LEVEL], level[ORGANISATION_LEVEL], level[SYSTEM_USER_LEVEL]),
+            rules = parts.filter { it.localName == "Rule" }.map { parseRule(id, it) },
+        )
+    } catch (e: IllegalArgumentException) {
+        throw UnsupportedPolicyException(e.message.orEmpty().replaceFirstChar(Char::lowercaseChar), e)
+    }
 }
 
 private fun parseXml(xml: ByteArray): Document = try {

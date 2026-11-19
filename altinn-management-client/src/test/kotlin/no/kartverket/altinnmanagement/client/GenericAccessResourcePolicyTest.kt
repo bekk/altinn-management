@@ -249,6 +249,7 @@ class GenericAccessResourcePolicyTest {
             "an obligation that is not a level" to ("urn:altinn:minimum-authenticationlevel\"" to "urn:altinn:other\""),
             "two AnyOfs for the subjects" to ("<xacml:Target>\n<xacml:AnyOf>" to "<xacml:Target>\n${subjectAnyOf("dagl")}\n<xacml:AnyOf>"),
             "a document type" to ("<?xml version=\"1.0\" encoding=\"utf-8\"?>" to "<?xml version=\"1.0\" encoding=\"utf-8\"?><!DOCTYPE p [<!ENTITY e \"e\">]>"),
+            "an access list without its owner" to ("AttributeId=\"urn:altinn:accesspackage\"" to "AttributeId=\"urn:altinn:access-list\""),
         )
 
         for ((name, change) in changes) {
