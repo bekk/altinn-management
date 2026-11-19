@@ -848,8 +848,7 @@ internal val genericAccessResourcePolicyGetOperation: Operation.Builder.() -> Un
 
         HttpStatusCode.BadGateway {
             description = "This API could not get an answer from Altinn, or the policy in Altinn has parts this API " +
-                "cannot show, such as a rule with a condition. Altinn Studio cannot make such a policy either, so it " +
-                "was written by hand. Your request did not cause it."
+                "cannot show, such as a rule with a condition. Your request did not cause it."
             headers { requestId() }
             ContentType.Application.ProblemJson {
                 schema = jsonSchema<ErrorResponse>()

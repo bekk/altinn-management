@@ -2677,7 +2677,7 @@
                         }
                     },
                     "502": {
-                        "description": "This API could not get an answer from Altinn, or the policy in Altinn has parts this API cannot show, such as a rule with a condition. Altinn Studio cannot make such a policy either, so it was written by hand. Your request did not cause it.",
+                        "description": "This API could not get an answer from Altinn, or the policy in Altinn has parts this API cannot show, such as a rule with a condition. Your request did not cause it.",
                         "headers": {
                             "X-Request-ID": {
                                 "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
