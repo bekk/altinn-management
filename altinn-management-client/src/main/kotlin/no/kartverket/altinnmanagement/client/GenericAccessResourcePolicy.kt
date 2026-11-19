@@ -73,7 +73,7 @@ internal fun genericAccessResourcePolicy(id: ResourceId, policy: GenericAccessRe
         appendLine("""<?xml version="1.0" encoding="utf-8"?>""")
         appendLine(
             """<xacml:Policy xmlns:xacml="urn:oasis:names:tc:xacml:3.0:core:schema:wd-17" PolicyId="urn:altinn:policyid:1" """ +
-                """Version="1.0" RuleCombiningAlgId="urn:oasis:names:tc:xacml:3.0:rule-combining-algorithm:deny-overrides">""",
+                """Version="1.0" RuleCombiningAlgId="$DENY_OVERRIDES">""",
         )
         appendLine("<xacml:Target />")
         appendLine(rules)
@@ -152,6 +152,7 @@ private val ACCESS_LIST = Regex("""urn:altinn:access-list:[^:\s]+:[^:\s]+""")
 internal fun parseGenericAccessResourcePolicy(id: ResourceId, xml: ByteArray): GenericAccessResourcePolicy {
     val policy = parseXml(xml).documentElement
     if (policy.namespaceURI != XACML || policy.localName != "Policy") unsupported("its root is ${policy.tagName}, not a Policy")
+    if (policy.getAttribute("RuleCombiningAlgId") != DENY_OVERRIDES) unsupported("its rules are not combined with deny-overrides")
     val parts = policy.xacmlChildren()
     parts.firstOrNull { it.localName !in POLICY_PARTS }?.let { unsupported("it has a ${it.localName}") }
     if (parts.any { it.localName == "Target" && it.xacmlChildren().isNotEmpty() }) unsupported("the policy has a target")
@@ -247,6 +248,9 @@ private fun unsupported(reason: String): Nothing = throw UnsupportedPolicyExcept
 private const val XACML = "urn:oasis:names:tc:xacml:3.0:core:schema:wd-17"
 
 private val POLICY_PARTS = setOf("Target", "Rule", "ObligationExpressions")
+
+// A Deny rule stops what other rules permit only with this algorithm, and Studio writes it in every policy
+private const val DENY_OVERRIDES = "urn:oasis:names:tc:xacml:3.0:rule-combining-algorithm:deny-overrides"
 
 private const val END_USER_LEVEL = "urn:altinn:minimum-authenticationlevel"
 
