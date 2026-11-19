@@ -50,6 +50,7 @@ public data class PolicyRule(
         require(subResources.none { it.any { (attributeId, value) -> attributeId.isBlank() || value.isBlank() } }) {
             "A sub-resource must not have a blank attribute id or value"
         }
+        require(subResources.none { RESOURCE_ID in it }) { "A sub-resource must not have $RESOURCE_ID, which the rule already has" }
     }
 }
 

@@ -75,7 +75,8 @@ data class PolicyRule(
     @JsonSchema.Type(JsonType.ARRAY)
     @JsonSchema.Description(
         "The parts of the resource the rule covers, each as attribute ids and values, like " +
-            "`{\"urn:kv:geonorge\": \"dataset\"}`. Left out, the rule covers the whole resource.",
+            "`{\"urn:kv:geonorge\": \"dataset\"}`, but not `urn:altinn:resource`, which the rule has already. Left out, " +
+            "the rule covers the whole resource.",
     )
     val subResources: List<Map<String, String>>? = null,
 

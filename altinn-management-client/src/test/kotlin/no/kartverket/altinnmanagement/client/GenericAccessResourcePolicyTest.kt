@@ -145,8 +145,8 @@ class GenericAccessResourcePolicyTest {
     }
 
     @Test
-    fun `refuses a sub-resource that is empty or has a blank attribute id or value`() {
-        for (subResource in listOf(emptyMap(), mapOf(" " to "dataset"), mapOf("urn:kv:geonorge" to ""))) {
+    fun `refuses a sub-resource that is empty, has a blank attribute id or value, or names the resource again`() {
+        for (subResource in listOf(emptyMap(), mapOf(" " to "dataset"), mapOf("urn:kv:geonorge" to ""), mapOf("urn:altinn:resource" to "kv-annen"))) {
             assertFailsWith<IllegalArgumentException>(subResource.toString()) {
                 PolicyRule(listOf(listOf(eksplisitt)), listOf("read"), listOf(subResource, mapOf("urn:kv:geonorge" to "dataset")))
             }

@@ -3290,7 +3290,7 @@
                     },
                     "subResources": {
                         "type": "array",
-                        "description": "The parts of the resource the rule covers, each as attribute ids and values, like `{\"urn:kv:geonorge\": \"dataset\"}`. Left out, the rule covers the whole resource.",
+                        "description": "The parts of the resource the rule covers, each as attribute ids and values, like `{\"urn:kv:geonorge\": \"dataset\"}`, but not `urn:altinn:resource`, which the rule has already. Left out, the rule covers the whole resource.",
                         "items": {
                             "type": "object",
                             "additionalProperties": {
