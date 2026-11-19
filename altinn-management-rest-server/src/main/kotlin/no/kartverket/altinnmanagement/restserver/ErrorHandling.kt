@@ -47,7 +47,7 @@ internal fun StatusPagesConfig.errorResponses() {
         )
     }
     exception<UnsupportedPolicyException> { call, cause ->
-        call.application.log.warn(cause.message)
+        call.application.log.warn(cause.message, cause)
         call.respondProblem(ProblemType.UNSUPPORTED_POLICY, HttpStatusCode.BadGateway)
     }
     exception<AltinnManagementException> { call, cause ->
