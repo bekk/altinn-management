@@ -224,7 +224,7 @@ class GenericAccessResourcePolicyTest {
                 PolicyRule(
                     subjects = listOf(listOf(eksplisitt, "urn:altinn:rolecode:dagl"), listOf("urn:altinn:access-list:kv:testliste")),
                     actions = listOf("read", "write"),
-                    subResources = listOf(mapOf("urn:kv:geonorge" to "dataset", "urn:kv:format" to "a<b"), emptyMap()),
+                    subResources = listOf(mapOf("urn:kv:geonorge" to "dataset", "urn:kv:format" to "a<b"), mapOf("urn:kv:geonorge" to "service")),
                     description = """Only <dataset> & "service"""",
                 ),
                 PolicyRule(subjects = listOf(listOf("urn:altinn:rolecode:revi")), actions = listOf("access"), effect = PolicyEffect.DENY),
@@ -232,6 +232,13 @@ class GenericAccessResourcePolicyTest {
         )
 
         assertEquals(policy, read(genericAccessResourcePolicy(id, policy)))
+    }
+
+    @Test
+    fun `reads a rule that also covers the whole resource as covering it`() {
+        val rule = PolicyRule(listOf(listOf(eksplisitt)), listOf("read"), listOf(emptyMap(), mapOf("urn:kv:geonorge" to "dataset")))
+
+        assertEquals(emptyList(), read(xacml(rule)).rules.single().subResources)
     }
 
     @Test

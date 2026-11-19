@@ -221,7 +221,8 @@ private fun parseRule(id: ResourceId, rule: Element): PolicyRule {
     return PolicyRule(
         subjects = subjects,
         actions = actions,
-        subResources = subResources.takeUnless { it == listOf(emptyMap<String, String>()) }.orEmpty(),
+        // The whole resource covers its sub-resources too, and the API takes it only as no sub-resources
+        subResources = subResources.takeUnless { emptyMap<String, String>() in it }.orEmpty(),
         description = parts.firstOrNull { it.localName == "Description" }?.textContent?.ifEmpty { null },
         effect = effect,
     )
