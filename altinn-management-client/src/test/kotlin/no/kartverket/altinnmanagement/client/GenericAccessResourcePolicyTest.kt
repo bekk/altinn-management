@@ -236,9 +236,15 @@ class GenericAccessResourcePolicyTest {
 
     @Test
     fun `reads a rule that also covers the whole resource as covering it`() {
-        val rule = PolicyRule(listOf(listOf(eksplisitt)), listOf("read"), listOf(emptyMap(), mapOf("urn:kv:geonorge" to "dataset")))
+        val whole = xacml(PolicyRule(listOf(listOf(eksplisitt)), listOf("read")))
+        val resourceOnly = Regex("""<xacml:AllOf>\n<xacml:Match MatchId="$EQUAL">.*?</xacml:AllOf>\n""", RegexOption.DOT_MATCHES_ALL).find(whole)!!.value
+        val dataset = xacml(PolicyRule(listOf(listOf(eksplisitt)), listOf("read"), listOf(mapOf("urn:kv:geonorge" to "dataset"))))
+        val resources = "<xacml:AnyOf>\n<xacml:AllOf>\n<xacml:Match MatchId=\"$EQUAL\">"
+        assertTrue(resources in dataset, dataset)
 
-        assertEquals(emptyList(), read(xacml(rule)).rules.single().subResources)
+        val policy = read(dataset.replaceFirst(resources, "<xacml:AnyOf>\n$resourceOnly<xacml:AllOf>\n<xacml:Match MatchId=\"$EQUAL\">"))
+
+        assertEquals(emptyList(), policy.rules.single().subResources)
     }
 
     @Test
@@ -258,6 +264,10 @@ class GenericAccessResourcePolicyTest {
             "a document type" to ("<?xml version=\"1.0\" encoding=\"utf-8\"?>" to "<?xml version=\"1.0\" encoding=\"utf-8\"?><!DOCTYPE p [<!ENTITY e \"e\">]>"),
             "rules combined with permit-overrides" to (":deny-overrides\"" to ":permit-overrides\""),
             "an access list without its owner" to ("AttributeId=\"urn:altinn:accesspackage\"" to "AttributeId=\"urn:altinn:access-list\""),
+            "an access list in another case" to (
+                "eksplisitt</xacml:AttributeValue>\n<xacml:AttributeDesignator AttributeId=\"urn:altinn:accesspackage\"" to
+                    "kv:testliste</xacml:AttributeValue>\n<xacml:AttributeDesignator AttributeId=\"urn:altinn:ACCESS-LIST\""
+                ),
         )
 
         for ((name, change) in changes) {
