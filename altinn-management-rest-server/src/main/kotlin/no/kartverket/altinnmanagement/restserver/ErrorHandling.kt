@@ -11,6 +11,7 @@ import kotlinx.serialization.json.Json
 import no.kartverket.altinnmanagement.client.exception.AltinnManagementException
 import no.kartverket.altinnmanagement.client.exception.AltinnRejectedException
 import no.kartverket.altinnmanagement.client.exception.ResourceAlreadyExistsException
+import no.kartverket.altinnmanagement.client.exception.UnsupportedPolicyException
 import no.kartverket.altinnmanagement.restserver.models.ErrorResponse
 import no.kartverket.altinnmanagement.restserver.models.FieldError
 import no.kartverket.altinnmanagement.restserver.models.ProblemType
@@ -30,6 +31,9 @@ internal fun StatusPagesConfig.errorResponses() {
     exception<ResourceNotFoundException> { call, cause ->
         call.respondProblem(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, cause.message)
     }
+    exception<PolicyNotFoundException> { call, cause ->
+        call.respondProblem(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, cause.message)
+    }
     exception<ResourceAlreadyExistsException> { call, _ ->
         call.respondProblem(ProblemType.CONFLICT, HttpStatusCode.Conflict, "Altinn already has a resource with this id")
     }
@@ -41,6 +45,10 @@ internal fun StatusPagesConfig.errorResponses() {
             HttpStatusCode.BadRequest,
             if (reasons.isEmpty()) "Altinn rejected the resource" else "Altinn rejected the resource: $reasons",
         )
+    }
+    exception<UnsupportedPolicyException> { call, cause ->
+        call.application.log.warn(cause.message, cause)
+        call.respondProblem(ProblemType.UNSUPPORTED_POLICY, HttpStatusCode.BadGateway)
     }
     exception<AltinnManagementException> { call, cause ->
         call.application.log.error("Call to Maskinporten or Altinn failed: statusCode=${cause.statusCode}", cause)

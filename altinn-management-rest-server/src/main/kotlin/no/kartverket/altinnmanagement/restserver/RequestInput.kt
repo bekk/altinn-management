@@ -265,6 +265,10 @@ internal fun genericAccessResourcePolicy(body: GenericAccessResourcePolicy): Cli
                 if (subResource.any { (attributeId, value) -> attributeId.isBlank() || value.isBlank() }) {
                     add(FieldError(subField, ValidationCode.INVALID_FORMAT, "$subField must not have a blank attribute id or value"))
                 }
+                // The rule names its resource with this attribute already, so a second one would match nothing
+                if ("urn:altinn:resource" in subResource) {
+                    add(FieldError(subField, ValidationCode.INVALID_FORMAT, "$subField must not have urn:altinn:resource, which the rule already has"))
+                }
             }
             if (rule.effect != null && effect(rule.effect) == null) {
                 val values = PolicyEffect.entries.joinToString { it.value }

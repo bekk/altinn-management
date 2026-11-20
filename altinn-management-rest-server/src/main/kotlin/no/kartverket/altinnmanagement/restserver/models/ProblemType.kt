@@ -28,6 +28,9 @@ enum class ProblemType(val title: String) {
     @SerialName("$PROBLEM_TYPE_PREFIX:upstream-error")
     UPSTREAM_ERROR("A service this API depends on failed"),
 
+    @SerialName("$PROBLEM_TYPE_PREFIX:unsupported-policy")
+    UNSUPPORTED_POLICY("The policy in Altinn has parts this API cannot show"),
+
     @SerialName("$PROBLEM_TYPE_PREFIX:internal-error")
     INTERNAL_ERROR("Internal error"),
 }
