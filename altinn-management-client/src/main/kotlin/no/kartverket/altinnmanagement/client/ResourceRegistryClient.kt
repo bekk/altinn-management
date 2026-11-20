@@ -44,25 +44,39 @@ public class ResourceRegistryClient(
      * client has no [AccessTokenProvider].
      */
     public suspend fun updateMaskinportenSchema(id: ResourceId, content: MaskinportenSchemaContent): MaskinportenSchema? =
-        change(id, AltinnResource::isMaskinportenSchema) { it.withContent(content) }?.toMaskinportenSchema(id)
+        change(id, AltinnResource::isMaskinportenSchema) { json, _ -> json.withContent(content) }?.toMaskinportenSchema(id)
 
     /** Altinn does not let a resource be deleted in production, so it is made neither delegable nor visible instead. */
     public suspend fun withdrawMaskinportenSchema(id: ResourceId): MaskinportenSchema? =
-        change(id, AltinnResource::isMaskinportenSchema) { it.withdrawn() }?.toMaskinportenSchema(id)
+        change(id, AltinnResource::isMaskinportenSchema) { json, _ -> json.withdrawn() }?.toMaskinportenSchema(id)
+
+    /**
+     * Replaces the content of the GenericAccessResource with the id [id] by what [content] gives for the resource as
+     * Altinn has it, and keeps the rest of it as it is in Altinn, such as its resource references and access list mode.
+     * When [content] throws, nothing is changed. Returns the GenericAccessResource as it was sent to Altinn, or null when
+     * Kartverket has no GenericAccessResource with this id. Throws [AltinnRejectedException] when Altinn would not take
+     * the change, and [IllegalStateException] when this client has no [AccessTokenProvider].
+     */
+    public suspend fun updateGenericAccessResource(
+        id: ResourceId,
+        content: (GenericAccessResource) -> GenericAccessResourceContent,
+    ): GenericAccessResource? = change(id, AltinnResource::isGenericAccessResource) { json, resource ->
+        json.withContent(content(resource.toGenericAccessResource(id)))
+    }?.toGenericAccessResource(id)
 
     /** Altinn does not let a resource be deleted in production, so it is made neither delegable nor visible instead. */
     public suspend fun withdrawGenericAccessResource(id: ResourceId): GenericAccessResource? =
-        change(id, AltinnResource::isGenericAccessResource) { it.withdrawn() }?.toGenericAccessResource(id)
+        change(id, AltinnResource::isGenericAccessResource) { json, _ -> json.withdrawn() }?.toGenericAccessResource(id)
 
     private suspend fun change(
         id: ResourceId,
         isType: (AltinnResource) -> Boolean,
-        change: (JsonObject) -> JsonObject,
+        change: (JsonObject, AltinnResource) -> JsonObject,
     ): AltinnResource? {
         val tokens = tokens()
         val (json, resource) = getResource(id) ?: return null
         if (!isType(resource) || !resource.isKartverkets) return null
-        val changed = change(json)
+        val changed = change(json, resource)
         val request = OutgoingRequest(
             method = HttpMethod.PUT,
             url = resourceUrl(id),

@@ -4,7 +4,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import no.kartverket.altinnmanagement.client.http.Http
 
@@ -142,22 +141,56 @@ private const val MASKINPORTEN_SCOPE = "MaskinportenScope"
  * change, so every other field, and every reference that is not a Maskinporten scope, is kept as it is.
  */
 internal fun JsonObject.withContent(content: MaskinportenSchemaContent): JsonObject {
+    val scopes = content.scopes.map {
+        Http.json.encodeToJsonElement(AltinnResourceReference.serializer(), AltinnResourceReference("Default", it, MASKINPORTEN_SCOPE))
+    }
+    val otherReferences = (this["resourceReferences"] as? JsonArray).orEmpty()
+        .filter { (it as? JsonObject)?.get("referenceType") != JsonPrimitive(MASKINPORTEN_SCOPE) }
+    val changed = withFields(
+        title = content.title,
+        description = content.description,
+        delegationDescription = content.delegationDescription,
+        homepage = content.homepage,
+        contactPoints = content.contactPoints,
+        keywords = content.keywords,
+    )
+    return JsonObject(changed + ("resourceReferences" to JsonArray(scopes + otherReferences)))
+}
+
+/**
+ * The resource as Altinn has it, with [content] in place of this API's fields. Altinn replaces the whole resource on a
+ * change, so every other field is kept as it is, the resource references and access list mode too.
+ */
+internal fun JsonObject.withContent(content: GenericAccessResourceContent): JsonObject = withFields(
+    title = content.title,
+    description = content.description,
+    delegationDescription = content.delegationDescription,
+    homepage = content.homepage,
+    contactPoints = content.contactPoints,
+    keywords = content.keywords,
+)
+
+// A null value is not encoded, so that field is removed from the resource
+private fun JsonObject.withFields(
+    title: MultilingualText,
+    description: MultilingualText,
+    delegationDescription: MultilingualText?,
+    homepage: String?,
+    contactPoints: List<ContactPoint>,
+    keywords: List<Keyword>,
+): JsonObject {
     val changes = Http.json.encodeToJsonElement(
         AltinnResource.serializer(),
         AltinnResource(
-            title = content.title.toMap(),
-            description = content.description.toMap(),
-            rightDescription = content.delegationDescription?.toMap(),
-            homepage = content.homepage,
-            contactPoints = content.contactPoints.map { it.toAltinn() },
-            keywords = content.keywords.map { it.toAltinn() },
-            resourceReferences = content.scopes.map { AltinnResourceReference("Default", it, MASKINPORTEN_SCOPE) },
+            title = title.toMap(),
+            description = description.toMap(),
+            rightDescription = delegationDescription?.toMap(),
+            homepage = homepage,
+            contactPoints = contactPoints.map { it.toAltinn() },
+            keywords = keywords.map { it.toAltinn() },
         ),
     ).jsonObject
-    val otherReferences = (this["resourceReferences"] as? JsonArray).orEmpty()
-        .filter { (it as? JsonObject)?.get("referenceType") != JsonPrimitive(MASKINPORTEN_SCOPE) }
-    val references = JsonArray(changes.getValue("resourceReferences").jsonArray + otherReferences)
-    return JsonObject(filterKeys { it !in REPLACED_FIELDS } + changes + ("resourceReferences" to references))
+    return JsonObject(filterKeys { it !in REPLACED_FIELDS } + changes)
 }
 
 internal fun JsonObject.withdrawn(): JsonObject = JsonObject(
@@ -171,7 +204,7 @@ internal fun JsonObject.withdrawn(): JsonObject = JsonObject(
 private val VERSION_FIELDS = setOf("versionId", "createdAt", "updatedAt")
 
 private val REPLACED_FIELDS = setOf(
-    "title", "description", "rightDescription", "homepage", "contactPoints", "keywords", "resourceReferences",
+    "title", "description", "rightDescription", "homepage", "contactPoints", "keywords",
 ) + VERSION_FIELDS
 
 private fun ContactPoint.toAltinn() =
