@@ -130,8 +130,10 @@ private fun obligation(number: Int, category: String, level: Int): String = """
     |</xacml:ObligationExpression>
 """.trimMargin()
 
+// An XML parser turns a line break it reads into \n, and line breaks and tabs in an attribute into spaces
 private fun xml(text: String): String =
     text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&apos;")
+        .replace("\t", "&#9;").replace("\n", "&#10;").replace("\r", "&#13;")
 
 // An access list's owner and list are written together as the value, so a subject without both would match no one. So
 // would a prefix in another case, since Altinn's PDP matches attribute ids by case

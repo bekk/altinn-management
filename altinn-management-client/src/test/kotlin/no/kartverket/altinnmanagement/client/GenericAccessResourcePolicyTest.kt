@@ -96,6 +96,18 @@ class GenericAccessResourcePolicyTest {
     }
 
     @Test
+    fun `keeps line breaks and tabs as they were given`() {
+        val description = "First line\r\nSecond\tline"
+        val rule = PolicyRule(listOf(listOf(eksplisitt)), listOf("read"), listOf(mapOf("urn:kv:geo\tnorge\r\n" to "a\rb\nc\td")), description)
+
+        val document = parse(xacml(rule))
+
+        assertEquals(description, elements(document, "Description").single().textContent)
+        assertEquals(listOf("urn:altinn:resource", "urn:kv:geo\tnorge\r\n"), attributeIds(elements(document, "AnyOf")[1]))
+        assertEquals(listOf("kv-geonorge", "a\rb\nc\td"), values(elements(document, "AnyOf")[1]))
+    }
+
+    @Test
     fun `puts a group of subjects in one alternative, so a user must match all of them`() {
         val rule = PolicyRule(subjects = listOf(listOf(eksplisitt, "urn:altinn:rolecode:dagl"), listOf("urn:altinn:rolecode:lede")), actions = listOf("read"))
 
