@@ -177,7 +177,7 @@ class GenericAccessResourcePolicyTest {
     }
 
     @Test
-    fun `sends the policy with a boundary it does not contain`(): Unit = runBlocking {
+    fun `sends the policy with a boundary it does not contain, within MIME's 70 characters`(): Unit = runBlocking {
         val sent = mutableListOf<OutgoingRequest>()
         val client = ResourceRegistryClient(
             AltinnEnvironment.TT02.platformBaseUrl,
@@ -186,13 +186,14 @@ class GenericAccessResourcePolicyTest {
                 if (request.method == HttpMethod.GET) response(200, "application/json", resourceJson("GenericAccessResource")) else response(201, "", "")
             },
         ) { AccessToken.of("token") }
-        val rule = PolicyRule(listOf(listOf(eksplisitt)), listOf("read"), description = "--AltinnManagementPolicyBoundary--")
+        val description = "--AltinnManagementPolicyBoundary" + "-".repeat(100)
+        val rule = PolicyRule(listOf(listOf(eksplisitt)), listOf("read"), description = description)
 
         assertTrue(client.setGenericAccessResourcePolicy(ResourceId.of("kv-matrikkel-brukernavn"), GenericAccessResourcePolicy(rules = listOf(rule))))
 
         val put = sent.single { it.method == HttpMethod.PUT }
-        val boundary = "AltinnManagementPolicyBoundary---"
-        assertEquals("multipart/form-data; boundary=$boundary", put.headers["Content-Type"])
+        val boundary = put.headers.getValue("Content-Type").removePrefix("multipart/form-data; boundary=")
+        assertTrue(boundary.length <= 70 && boundary !in description, boundary)
         val body = put.body!!.decodeToString()
         assertTrue(body.startsWith("--$boundary\r\n") && body.endsWith("\r\n--$boundary--\r\n"), body)
     }

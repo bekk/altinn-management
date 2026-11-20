@@ -15,6 +15,7 @@ import no.kartverket.altinnmanagement.client.http.HttpMethod
 import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
 import no.kartverket.altinnmanagement.client.http.OutgoingRequest
 import java.net.URI
+import java.util.UUID
 
 /**
  * Reads Altinn's resources without a token, and changes them with a token from [accessTokenProvider], such as a
@@ -167,7 +168,7 @@ public class ResourceRegistryClient(
         val (_, resource) = getResource(id) ?: return false
         // Without this check, the policy could replace the one on another kind of Kartverket resource
         if (resource.resourceType != resourceType || !resource.isKartverkets) return false
-        val boundary = generateSequence(POLICY_BOUNDARY) { "$it-" }.first { it !in policy }
+        val boundary = generateSequence(POLICY_BOUNDARY) { "$POLICY_BOUNDARY${UUID.randomUUID()}" }.first { it !in policy }
         val request = OutgoingRequest(
             method = HttpMethod.PUT,
             url = Http.url(platformBaseUrl, "$RESOURCE_PATH/${id.value}/policy"),
@@ -239,7 +240,7 @@ public class ResourceRegistryClient(
     }
 }
 
-// A policy can hold any text, so a boundary it contains is made longer until it does not
+// A policy can hold any text, so a boundary it contains is swapped for one with a random end, short enough for MIME
 private const val POLICY_BOUNDARY = "AltinnManagementPolicyBoundary"
 
 // Altinn takes the policy as a file in the form field policyFile
