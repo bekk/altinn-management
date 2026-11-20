@@ -126,7 +126,7 @@ class PutGenericAccessResourcePolicyTest {
         val body = """
             {
               "rules": [
-                { "subjects": [["urn:altinn:rolecode:dagl", "eksplisitt", "urn:altinn:access-list:sperreliste"], []], "actions": [], "effect": "Allow" },
+                { "subjects": [["urn:altinn:rolecode:dagl", "eksplisitt", "urn:altinn:access-list:sperreliste", "URN:Altinn:Access-List:kv:testliste"], []], "actions": [], "effect": "Allow" },
                 { "actions": ["read", " "], "subResources": [{}, { "urn:kv:geonorge": " " }] }
               ]
             }
@@ -143,6 +143,12 @@ class PutGenericAccessResourcePolicyTest {
                     "rules[0].subjects[0][2]",
                     ValidationCode.INVALID_FORMAT,
                     "rules[0].subjects[0][2] must be an access list as urn:altinn:access-list:{owner}:{list}, like " +
+                        "urn:altinn:access-list:kv:testliste",
+                ),
+                FieldError(
+                    "rules[0].subjects[0][3]",
+                    ValidationCode.INVALID_FORMAT,
+                    "rules[0].subjects[0][3] must be an access list as urn:altinn:access-list:{owner}:{list}, like " +
                         "urn:altinn:access-list:kv:testliste",
                 ),
                 FieldError("rules[0].subjects[1]", ValidationCode.MISSING, "rules[0].subjects[1] is required"),

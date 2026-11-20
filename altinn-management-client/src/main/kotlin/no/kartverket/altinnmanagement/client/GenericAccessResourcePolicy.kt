@@ -104,7 +104,7 @@ private fun rule(id: ResourceId, number: Int, rule: PolicyRule): String {
 }
 
 private fun subjectAttribute(subject: String): Pair<String, String> {
-    val split = if (subject.startsWith(ACCESS_LIST_PREFIX, ignoreCase = true)) {
+    val split = if (subject.startsWith(ACCESS_LIST_PREFIX)) {
         subject.substringBeforeLast(':').lastIndexOf(':')
     } else {
         subject.lastIndexOf(':')
@@ -133,10 +133,11 @@ private fun obligation(number: Int, category: String, level: Int): String = """
 private fun xml(text: String): String =
     text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&apos;")
 
-// An access list's owner and list are written together as the value, so a subject without both would match no one
+// An access list's owner and list are written together as the value, so a subject without both would match no one. So
+// would a prefix in another case, since Altinn's PDP matches attribute ids by case
 private const val ACCESS_LIST_PREFIX = "urn:altinn:access-list"
 
-private val ACCESS_LIST = Regex("""urn:altinn:access-list:[^:\s]+:[^:\s]+""", RegexOption.IGNORE_CASE)
+private val ACCESS_LIST = Regex("""urn:altinn:access-list:[^:\s]+:[^:\s]+""")
 
 private const val STRING = "http://www.w3.org/2001/XMLSchema#string"
 

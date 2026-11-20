@@ -148,6 +148,11 @@ class GenericAccessResourcePolicyTest {
     }
 
     @Test
+    fun `refuses an access list whose prefix is not in lower case`() {
+        assertFailsWith<IllegalArgumentException> { PolicyRule(listOf(listOf("URN:Altinn:Access-List:kv:testliste")), listOf("read")) }
+    }
+
+    @Test
     fun `refuses a policy without rules`() {
         assertFailsWith<IllegalArgumentException> { GenericAccessResourcePolicy(rules = emptyList()) }
     }

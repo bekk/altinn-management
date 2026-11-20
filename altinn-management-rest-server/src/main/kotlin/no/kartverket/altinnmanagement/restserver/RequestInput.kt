@@ -302,4 +302,4 @@ private fun subjectError(subject: String): String? = when {
     else -> null
 }
 
-private val ACCESS_LIST = Regex("""urn:altinn:access-list:[^:\s]+:[^:\s]+""", RegexOption.IGNORE_CASE)
+private val ACCESS_LIST = Regex("""urn:altinn:access-list:[^:\s]+:[^:\s]+""")
