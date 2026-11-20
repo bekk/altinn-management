@@ -31,11 +31,18 @@ public data class PolicyRule(
     init {
         require(subjects.isNotEmpty()) { "A rule must have at least one group of subjects" }
         require(subjects.none { it.isEmpty() }) { "A group of subjects must not be empty" }
-        require(subjects.flatten().all { ':' in it }) { "A subject must be a URN, like urn:altinn:accesspackage:eksplisitt" }
+        require(subjects.flatten().all { it.substringBeforeLast(':', "").isNotBlank() && it.substringAfterLast(':', "").isNotBlank() }) {
+            "A subject must be a URN, like urn:altinn:accesspackage:eksplisitt"
+        }
         require(subjects.flatten().none { it.startsWith(ACCESS_LIST_PREFIX, ignoreCase = true) && !ACCESS_LIST.matches(it) }) {
             "An access list must be given as urn:altinn:access-list:{owner}:{list}, like urn:altinn:access-list:kv:testliste"
         }
         require(actions.isNotEmpty()) { "A rule must have at least one action" }
+        require(actions.none { it.isBlank() }) { "An action must not be blank" }
+        require(subResources.none { it.isEmpty() }) { "A sub-resource must have at least one attribute" }
+        require(subResources.none { it.any { (attributeId, value) -> attributeId.isBlank() || value.isBlank() } }) {
+            "A sub-resource must not have a blank attribute id or value"
+        }
     }
 }
 

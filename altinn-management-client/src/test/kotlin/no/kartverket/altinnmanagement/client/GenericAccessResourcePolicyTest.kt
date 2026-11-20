@@ -121,7 +121,23 @@ class GenericAccessResourcePolicyTest {
 
     @Test
     fun `refuses a subject that is not a URN`() {
-        assertFailsWith<IllegalArgumentException> { PolicyRule(listOf(listOf("eksplisitt")), listOf("read")) }
+        for (subject in listOf("eksplisitt", "urn:altinn:rolecode:", ":dagl")) {
+            assertFailsWith<IllegalArgumentException>(subject) { PolicyRule(listOf(listOf(subject)), listOf("read")) }
+        }
+    }
+
+    @Test
+    fun `refuses a blank action`() {
+        assertFailsWith<IllegalArgumentException> { PolicyRule(listOf(listOf(eksplisitt)), listOf(" ")) }
+    }
+
+    @Test
+    fun `refuses a sub-resource that is empty or has a blank attribute id or value`() {
+        for (subResource in listOf(emptyMap(), mapOf(" " to "dataset"), mapOf("urn:kv:geonorge" to ""))) {
+            assertFailsWith<IllegalArgumentException>(subResource.toString()) {
+                PolicyRule(listOf(listOf(eksplisitt)), listOf("read"), listOf(subResource, mapOf("urn:kv:geonorge" to "dataset")))
+            }
+        }
     }
 
     @Test
