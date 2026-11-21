@@ -1,4 +1,11 @@
 version: 2
+registries:
+  dhi:
+    type: docker-registry
+    url: dhi.io
+    username: ${{ secrets.DOCKERHUB_USERNAME }}
+    password: ${{ secrets.DOCKERHUB_TOKEN }}
+
 updates:
   - package-ecosystem: "gradle"
     directory: "/"
@@ -23,3 +30,14 @@ updates:
         update-types:
           - "minor"
           - "patch"
+
+  - package-ecosystem: "docker"
+    directory: "/altinn-management-rest-server"
+    registries:
+      - dhi
+    schedule:
+      interval: "weekly"
+    ignore:
+      - dependency-name: "dhi.io/eclipse-temurin"
+        update-types:
+          - "version-update:semver-major"
