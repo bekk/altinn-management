@@ -10,7 +10,7 @@ jib = "3.5.4"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.13.0"
 nimbus-jose-jwt = "10.10"
-zstd-jni = "1.5.7-26"
+zstd-jni = "1.5.7-28"
 
 [libraries]
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
