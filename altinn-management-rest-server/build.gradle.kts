@@ -22,6 +22,13 @@ val dockerTags = providers.gradleProperty("dockerTags").orNull
     ?.filter(String::isNotEmpty)
     ?.toSet()
     ?: emptySet()
+// The base image lives in the Dockerfile so that Dependabot can update it. Jib does not build from the Dockerfile.
+val baseImage =
+    file("Dockerfile")
+        .readLines()
+        .first { it.startsWith("FROM ") }
+        .removePrefix("FROM ")
+        .trim()
 
 kotlin {
     jvmToolchain(25)
@@ -81,7 +88,7 @@ dependencies {
 
 jib {
     from {
-        image = "dhi.io/eclipse-temurin:25-alpine3.24@sha256:8da329a70f7794dd59467841e7476fd96a22fa5d3146c36811d3589b5205a5d0"
+        image = baseImage
     }
     to {
         image = dockerImage.get()
