@@ -9,6 +9,8 @@ import java.time.Duration
 
 internal class ResourceNotFoundException(resourceType: String) : RuntimeException("There is no $resourceType with this id")
 
+internal class PolicyNotFoundException : RuntimeException("There is no GenericAccessResource with this id, or it has no policy yet")
+
 internal fun resourceRegistryClient(config: AppConfig): ResourceRegistryClient {
     val httpClient = httpClient()
     val tokenProvider = MaskinportenAltinnTokenProvider(

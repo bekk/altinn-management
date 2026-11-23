@@ -111,6 +111,7 @@ setting them yourself.
 | `GET /api/genericaccessresources/{id}`          | Gets a GenericAccessResource                                            |
 | `PUT /api/genericaccessresources/{id}/withdraw` | Withdraws a GenericAccessResource                                       |
 | `PUT /api/genericaccessresources/{id}/policy`   | Sets or replaces the policy of a GenericAccessResource                  |
+| `GET /api/genericaccessresources/{id}/policy`   | Gets the policy of a GenericAccessResource                              |
 | `GET /openapi`                                  | The OpenAPI spec as JSON                                                |
 | `GET /health/live`                              | Liveness probe for the platform, left out of the spec                   |
 

@@ -2,6 +2,7 @@ package no.kartverket.altinnmanagement.client
 
 import kotlinx.coroutines.runBlocking
 import no.kartverket.altinnmanagement.client.auth.AccessToken
+import no.kartverket.altinnmanagement.client.exception.UnsupportedPolicyException
 import no.kartverket.altinnmanagement.client.http.HttpMethod
 import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
 import no.kartverket.altinnmanagement.client.http.OutgoingRequest
@@ -144,8 +145,8 @@ class GenericAccessResourcePolicyTest {
     }
 
     @Test
-    fun `refuses a sub-resource that is empty or has a blank attribute id or value`() {
-        for (subResource in listOf(emptyMap(), mapOf(" " to "dataset"), mapOf("urn:kv:geonorge" to ""))) {
+    fun `refuses a sub-resource that is empty, has a blank attribute id or value, or names the resource again`() {
+        for (subResource in listOf(emptyMap(), mapOf(" " to "dataset"), mapOf("urn:kv:geonorge" to ""), mapOf("urn:altinn:resource" to "kv-annen"))) {
             assertFailsWith<IllegalArgumentException>(subResource.toString()) {
                 PolicyRule(listOf(listOf(eksplisitt)), listOf("read"), listOf(subResource, mapOf("urn:kv:geonorge" to "dataset")))
             }
@@ -198,6 +199,94 @@ class GenericAccessResourcePolicyTest {
         assertTrue(body.startsWith("--$boundary\r\n") && body.endsWith("\r\n--$boundary--\r\n"), body)
     }
 
+    @Test
+    fun `reads kv-geonorge's policy as Altinn Studio wrote it in TT02`() {
+        val expected = GenericAccessResourcePolicy(
+            minimumAuthenticationLevel = AuthenticationLevels(endUser = 4, organisation = 3),
+            rules = listOf(
+                PolicyRule(subjects = listOf(listOf(eksplisitt)), actions = listOf("access")),
+                PolicyRule(
+                    subjects = listOf(listOf(eksplisitt)),
+                    actions = listOf("download"),
+                    subResources = listOf(mapOf("urn:kv:geonorge" to "dataset")),
+                ),
+            ),
+        )
+
+        assertEquals(expected, parseGenericAccessResourcePolicy(id, javaClass.getResource("/kv-geonorge-policy.xml")!!.readBytes()))
+    }
+
+    @Test
+    fun `reads back every part of a policy it wrote`() {
+        val policy = GenericAccessResourcePolicy(
+            minimumAuthenticationLevel = AuthenticationLevels(endUser = 3, systemUser = 2),
+            rules = listOf(
+                PolicyRule(
+                    subjects = listOf(listOf(eksplisitt, "urn:altinn:rolecode:dagl"), listOf("urn:altinn:access-list:kv:testliste")),
+                    actions = listOf("read", "write"),
+                    subResources = listOf(mapOf("urn:kv:geonorge" to "dataset", "urn:kv:format" to "a<b"), mapOf("urn:kv:geonorge" to "service")),
+                    description = """Only <dataset> & "service"""",
+                ),
+                PolicyRule(subjects = listOf(listOf("urn:altinn:rolecode:revi")), actions = listOf("access"), effect = PolicyEffect.DENY),
+            ),
+        )
+
+        assertEquals(policy, read(genericAccessResourcePolicy(id, policy)))
+    }
+
+    @Test
+    fun `reads a rule that also covers the whole resource as covering it`() {
+        val whole = xacml(PolicyRule(listOf(listOf(eksplisitt)), listOf("read")))
+        val resourceOnly = Regex("""<xacml:AllOf>\n<xacml:Match MatchId="$EQUAL">.*?</xacml:AllOf>\n""", RegexOption.DOT_MATCHES_ALL).find(whole)!!.value
+        val dataset = xacml(PolicyRule(listOf(listOf(eksplisitt)), listOf("read"), listOf(mapOf("urn:kv:geonorge" to "dataset"))))
+        val resources = "<xacml:AnyOf>\n<xacml:AllOf>\n<xacml:Match MatchId=\"$EQUAL\">"
+        assertTrue(resources in dataset, dataset)
+
+        val policy = read(dataset.replaceFirst(resources, "<xacml:AnyOf>\n$resourceOnly<xacml:AllOf>\n<xacml:Match MatchId=\"$EQUAL\">"))
+
+        assertEquals(emptyList(), policy.rules.single().subResources)
+    }
+
+    @Test
+    fun `refuses a policy with a part it cannot show`() {
+        val written = genericAccessResourcePolicy(id, GenericAccessResourcePolicy(AuthenticationLevels(endUser = 3), listOf(PolicyRule(listOf(listOf(eksplisitt)), listOf("read")))))
+        val changes = mapOf(
+            "a rule with another effect" to ("Effect=\"Permit\"" to "Effect=\"NotApplicable\""),
+            "a match on case for a subject" to ("$IGNORE_CASE\">\n<xacml:AttributeValue DataType=\"$STRING\">eksplisitt" to "$EQUAL\">\n<xacml:AttributeValue DataType=\"$STRING\">eksplisitt"),
+            "a rule with a condition" to ("</xacml:Target>\n</xacml:Rule>" to "</xacml:Target>\n<xacml:Condition />\n</xacml:Rule>"),
+            "a match on case for an action" to ("$IGNORE_CASE\">\n<xacml:AttributeValue DataType=\"$STRING\">read" to "$EQUAL\">\n<xacml:AttributeValue DataType=\"$STRING\">read"),
+            "an organisation number as an integer" to ("DataType=\"$STRING\">eksplisitt" to "DataType=\"http://www.w3.org/2001/XMLSchema#integer\">eksplisitt"),
+            "a rule for another resource" to (">kv-geonorge<" to ">kv-annen<"),
+            "a policy-wide target" to ("<xacml:Target />" to "<xacml:Target><xacml:AnyOf /></xacml:Target>"),
+            "a policy description" to ("<xacml:Target />" to "<xacml:Description>Policy</xacml:Description>\n<xacml:Target />"),
+            "an obligation that is not a level" to ("urn:altinn:minimum-authenticationlevel\"" to "urn:altinn:other\""),
+            "two AnyOfs for the subjects" to ("<xacml:Target>\n<xacml:AnyOf>" to "<xacml:Target>\n${subjectAnyOf("dagl")}\n<xacml:AnyOf>"),
+            "a document type" to ("<?xml version=\"1.0\" encoding=\"utf-8\"?>" to "<?xml version=\"1.0\" encoding=\"utf-8\"?><!DOCTYPE p [<!ENTITY e \"e\">]>"),
+            "rules combined with permit-overrides" to (":deny-overrides\"" to ":permit-overrides\""),
+            "an access list without its owner" to ("AttributeId=\"urn:altinn:accesspackage\"" to "AttributeId=\"urn:altinn:access-list\""),
+            "an access list in another case" to (
+                "eksplisitt</xacml:AttributeValue>\n<xacml:AttributeDesignator AttributeId=\"urn:altinn:accesspackage\"" to
+                    "kv:testliste</xacml:AttributeValue>\n<xacml:AttributeDesignator AttributeId=\"urn:altinn:ACCESS-LIST\""
+                ),
+        )
+
+        for ((name, change) in changes) {
+            val (old, new) = change
+            assertTrue(old in written, "$name: the policy has no $old")
+            assertFailsWith<UnsupportedPolicyException>(name) { read(written.replace(old, new)) }
+        }
+        assertFailsWith<UnsupportedPolicyException> { read("Unable to find requested policy") }
+    }
+
+    private fun subjectAnyOf(role: String) = """
+        <xacml:AnyOf><xacml:AllOf><xacml:Match MatchId="$IGNORE_CASE">
+        <xacml:AttributeValue DataType="$STRING">$role</xacml:AttributeValue>
+        <xacml:AttributeDesignator AttributeId="urn:altinn:rolecode" Category="urn:oasis:names:tc:xacml:1.0:subject-category:access-subject" DataType="$STRING" MustBePresent="false" />
+        </xacml:Match></xacml:AllOf></xacml:AnyOf>
+    """.trimIndent()
+
+    private fun read(xml: String) = parseGenericAccessResourcePolicy(id, xml.encodeToByteArray())
+
     private fun xacml(rule: PolicyRule) = genericAccessResourcePolicy(id, GenericAccessResourcePolicy(rules = listOf(rule)))
 
     private fun parse(xml: String): Document {
@@ -225,5 +314,8 @@ class GenericAccessResourcePolicyTest {
 
     private companion object {
         const val XACML = "urn:oasis:names:tc:xacml:3.0:core:schema:wd-17"
+        const val STRING = "http://www.w3.org/2001/XMLSchema#string"
+        const val EQUAL = "urn:oasis:names:tc:xacml:1.0:function:string-equal"
+        const val IGNORE_CASE = "urn:oasis:names:tc:xacml:3.0:function:string-equal-ignore-case"
     }
 }

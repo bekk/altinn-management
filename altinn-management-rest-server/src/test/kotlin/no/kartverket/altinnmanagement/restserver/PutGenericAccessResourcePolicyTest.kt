@@ -127,7 +127,7 @@ class PutGenericAccessResourcePolicyTest {
             {
               "rules": [
                 { "subjects": [["urn:altinn:rolecode:dagl", "eksplisitt", "urn:altinn:access-list:sperreliste", "URN:Altinn:Access-List:kv:testliste"], []], "actions": [], "effect": "Allow" },
-                { "actions": ["read", " "], "subResources": [{}, { "urn:kv:geonorge": " " }] }
+                { "actions": ["read", " "], "subResources": [{}, { "urn:kv:geonorge": " " }, { "urn:altinn:resource": "kv-annen" }] }
               ]
             }
         """.trimIndent()
@@ -161,6 +161,11 @@ class PutGenericAccessResourcePolicyTest {
                     "rules[1].subResources[1]",
                     ValidationCode.INVALID_FORMAT,
                     "rules[1].subResources[1] must not have a blank attribute id or value",
+                ),
+                FieldError(
+                    "rules[1].subResources[2]",
+                    ValidationCode.INVALID_FORMAT,
+                    "rules[1].subResources[2] must not have urn:altinn:resource, which the rule already has",
                 ),
             ),
         )
