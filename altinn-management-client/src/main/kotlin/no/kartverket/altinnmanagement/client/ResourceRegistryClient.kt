@@ -39,13 +39,18 @@ public class ResourceRegistryClient(
     }
 
     /**
-     * Replaces [content] in the MaskinportenSchema with the id [id], and keeps the rest of it as it is in Altinn. Returns
+     * Replaces the content of the MaskinportenSchema with the id [id] by what [content] gives for the MaskinportenSchema
+     * as Altinn has it, and keeps the rest of it as it is in Altinn. When [content] throws, nothing is changed. Returns
      * the MaskinportenSchema as it was sent to Altinn, or null when Kartverket has no MaskinportenSchema with this id.
      * Throws [AltinnRejectedException] when Altinn would not take the change, and [IllegalStateException] when this
      * client has no [AccessTokenProvider].
      */
-    public suspend fun updateMaskinportenSchema(id: ResourceId, content: MaskinportenSchemaContent): MaskinportenSchema? =
-        change(id, AltinnResource::isMaskinportenSchema) { json, _ -> json.withContent(content) }?.toMaskinportenSchema(id)
+    public suspend fun updateMaskinportenSchema(
+        id: ResourceId,
+        content: (MaskinportenSchema) -> MaskinportenSchemaContent,
+    ): MaskinportenSchema? = change(id, AltinnResource::isMaskinportenSchema) { json, resource ->
+        json.withContent(content(resource.toMaskinportenSchema(id)))
+    }?.toMaskinportenSchema(id)
 
     /** Altinn does not let a resource be deleted in production, so it is made neither delegable nor visible instead. */
     public suspend fun withdrawMaskinportenSchema(id: ResourceId): MaskinportenSchema? =

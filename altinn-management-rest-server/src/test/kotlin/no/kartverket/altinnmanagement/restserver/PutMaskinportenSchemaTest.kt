@@ -79,6 +79,8 @@ class PutMaskinportenSchemaTest {
         }
     """.trimIndent()
 
+    private val withoutDelegationDescription = requiredOnly.replace(Regex(""",\s*"delegationDescription": \{[^}]*\}"""), "")
+
     private suspend fun ApplicationTestBuilder.put(body: String, contentType: ContentType = ContentType.Application.Json, path: String = this@PutMaskinportenSchemaTest.path) =
         client.put(path) {
             contentType(contentType)
@@ -237,17 +239,38 @@ class PutMaskinportenSchemaTest {
         }
 
     @Test
-    fun `leaves it to Altinn to require the delegation description, since Altinn only does so for a delegable resource`() =
+    fun `gives 400 for a delegation description that is missing or missing in a language when the resource is delegable`() =
         testServer(altinn()) {
+            put(withoutDelegationDescription).assertProblem(
+                validationError(FieldError("delegationDescription", ValidationCode.MISSING, "delegationDescription is required")),
+            )
+            put(requiredOnly.replace(""""en": "New rights.", """, "")).assertProblem(
+                validationError(FieldError("delegationDescription.en", ValidationCode.MISSING, "delegationDescription.en is required")),
+            )
+
+            assertTrue(puts.isEmpty(), "A resource was put: $puts")
+        }
+
+    @Test
+    fun `takes a resource without delegable as delegable, as Altinn does`() =
+        testServer(altinn(resource = resourceJson().replace(""""delegable": true,""", ""))) {
+            put(withoutDelegationDescription).assertProblem(
+                validationError(FieldError("delegationDescription", ValidationCode.MISSING, "delegationDescription is required")),
+            )
+        }
+
+    @Test
+    fun `lets the delegation description be left out, in a language or whole, when the resource is not delegable`() =
+        testServer(altinn(resource = resourceJson().replace(""""delegable": true""", """"delegable": false"""))) {
             val withoutEnglish = put(requiredOnly.replace(""""en": "New rights.", """, ""))
 
             assertEquals(HttpStatusCode.OK, withoutEnglish.status)
             assertEquals("""{"nb":"Nye rettigheter.","nn":"Nye rettar."}""", sentResource["rightDescription"].toString())
 
             sent.clear()
-            val withoutDelegationDescription = put(requiredOnly.replace(Regex(""",\s*"delegationDescription": \{[^}]*\}"""), ""))
+            val response = put(withoutDelegationDescription)
 
-            assertEquals(HttpStatusCode.OK, withoutDelegationDescription.status)
+            assertEquals(HttpStatusCode.OK, response.status)
             assertFalse("rightDescription" in sentResource)
         }
 

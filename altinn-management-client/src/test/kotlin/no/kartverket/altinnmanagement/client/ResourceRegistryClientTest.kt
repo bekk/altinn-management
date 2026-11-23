@@ -34,7 +34,7 @@ class ResourceRegistryClientTest {
         val text = MultilingualText(en = "Text", nb = "Tekst", nn = "Tekst")
         val content = MaskinportenSchemaContent(listOf("kartverk:a"), text, text, text, null, emptyList(), emptyList())
 
-        assertFailsWith<IllegalStateException> { client.updateMaskinportenSchema(id, content) }
+        assertFailsWith<IllegalStateException> { client.updateMaskinportenSchema(id) { content } }
         assertTrue(sent.isEmpty(), "Altinn was called: $sent")
     }
 
