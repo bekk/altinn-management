@@ -14,6 +14,7 @@ import io.ktor.openapi.OpenApiInfo
 import io.ktor.openapi.Operation
 import io.ktor.openapi.Parameters
 import io.ktor.openapi.ReferenceOr
+import io.ktor.openapi.Responses
 import io.ktor.openapi.jsonSchema
 import io.ktor.server.application.Application
 import io.ktor.server.application.plugin
@@ -111,55 +112,22 @@ internal val maskinportenSchemasListOperation: Operation.Builder.() -> Unit = {
             }
         }
 
-        HttpStatusCode.BadRequest {
-            description = "`scope` is blank, holds whitespace or is sent more than once, or filtering is on and the " +
-                "`X-Forwarded-Client-Cert` header is missing, so this API cannot tell which app is calling."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example(
-                    "InvalidScope",
-                    ErrorResponse.of(
-                        ProblemType.VALIDATION_ERROR,
-                        HttpStatusCode.BadRequest,
-                        errors = listOf(FieldError("scope", ValidationCode.INVALID_FORMAT, "scope must not be blank")),
-                    ),
-                )
-                example(
-                    "MissingClientCertificate",
-                    ErrorResponse.of(
-                        ProblemType.VALIDATION_ERROR,
-                        HttpStatusCode.BadRequest,
-                        errors = listOf(
-                            FieldError(CLIENT_CERTIFICATE_HEADER, ValidationCode.MISSING, "$CLIENT_CERTIFICATE_HEADER is required"),
-                        ),
-                    ),
-                )
-            }
-        }
+        badRequest(
+            "`scope` is blank, holds whitespace or is sent more than once, or filtering is on and the " +
+                "`X-Forwarded-Client-Cert` header is missing, so this API cannot tell which app is calling.",
+            "InvalidScope" to validationError(
+                FieldError("scope", ValidationCode.INVALID_FORMAT, "scope must not be blank"),
+            ),
+            missingClientCertificateExample,
+        )
 
-        HttpStatusCode.BadGateway {
-            description = "This API could not get an answer from Altinn, or from the service that says which " +
-                "resources and scopes the calling app has access to. Your request did not cause it."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
-                example(
-                    "FilteringError",
-                    ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to the filtering service failed"),
-                )
-            }
-        }
+        badGateway(
+            "This API could not get an answer from Altinn, or from the service that says which " +
+                "resources and scopes the calling app has access to. Your request did not cause it.",
+            filteringErrorExample,
+        )
 
-        HttpStatusCode.InternalServerError {
-            description = "An unexpected error in this API."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("InternalError", ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError))
-            }
-        }
+        internalError()
     }
 }
 
@@ -212,74 +180,26 @@ internal val maskinportenSchemaCreateOperation: Operation.Builder.() -> Unit = {
             }
         }
 
-        HttpStatusCode.BadRequest {
-            description = "The body cannot be read or has fields that are missing or invalid, or Altinn rejected the " +
+        badRequest(
+            "The body cannot be read or has fields that are missing or invalid, or Altinn rejected the " +
                 "resource. When Altinn rejects it, `detail` has Altinn's reasons. The body must be UTF-8 JSON that " +
-                "gives each name once."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example(
-                    "ValidationError",
-                    ErrorResponse.of(
-                        ProblemType.VALIDATION_ERROR,
-                        HttpStatusCode.BadRequest,
-                        errors = listOf(
-                            FieldError("scopes", ValidationCode.MISSING, "scopes is required"),
-                            FieldError("title.nn", ValidationCode.MISSING, "title.nn is required"),
-                        ),
-                    ),
-                )
-                example(
-                    "MalformedBody",
-                    ErrorResponse.of(
-                        ProblemType.MALFORMED_REQUEST,
-                        HttpStatusCode.BadRequest,
-                        "The body must be one JSON object, with no name given twice",
-                    ),
-                )
-                example(
-                    "RejectedByAltinn",
-                    ErrorResponse.of(
-                        ProblemType.UPSTREAM_REJECTED,
-                        HttpStatusCode.BadRequest,
-                        "Altinn rejected the resource: InvalidPrefix: skatteetaten:demo",
-                    ),
-                )
-            }
-        }
+                "gives each name once.",
+            "ValidationError" to validationError(
+                FieldError("scopes", ValidationCode.MISSING, "scopes is required"),
+                FieldError("title.nn", ValidationCode.MISSING, "title.nn is required"),
+            ),
+            malformedBodyExample("The body must be one JSON object, with no name given twice"),
+            rejectedByAltinnExample("Altinn rejected the resource: InvalidPrefix: skatteetaten:demo"),
+        )
 
-        HttpStatusCode.Conflict {
-            description = "Altinn already has a resource with this id. It may be of another type or owner, so a GET " +
-                "of the id can still give `404`."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example(
-                    "Conflict",
-                    ErrorResponse.of(ProblemType.CONFLICT, HttpStatusCode.Conflict, "Altinn already has a resource with this id"),
-                )
-            }
-        }
+        conflict()
 
-        HttpStatusCode.BadGateway {
-            description = "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
-                "did not cause it. Altinn may or may not have created the resource."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
-            }
-        }
+        badGateway(
+            "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
+                "did not cause it. Altinn may or may not have created the resource.",
+        )
 
-        HttpStatusCode.InternalServerError {
-            description = "An unexpected error in this API."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("InternalError", ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError))
-            }
-        }
+        internalError()
     }
 }
 
@@ -353,74 +273,26 @@ internal val genericAccessResourceCreateOperation: Operation.Builder.() -> Unit 
             }
         }
 
-        HttpStatusCode.BadRequest {
-            description = "The body cannot be read or has fields that are missing or invalid, or Altinn rejected the " +
+        badRequest(
+            "The body cannot be read or has fields that are missing or invalid, or Altinn rejected the " +
                 "resource. When Altinn rejects it, `detail` has Altinn's reasons. The body must be UTF-8 JSON that " +
-                "gives each name once."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example(
-                    "ValidationError",
-                    ErrorResponse.of(
-                        ProblemType.VALIDATION_ERROR,
-                        HttpStatusCode.BadRequest,
-                        errors = listOf(
-                            FieldError("delegable", ValidationCode.MISSING, "delegable is required"),
-                            FieldError("title.nn", ValidationCode.MISSING, "title.nn is required"),
-                        ),
-                    ),
-                )
-                example(
-                    "MalformedBody",
-                    ErrorResponse.of(
-                        ProblemType.MALFORMED_REQUEST,
-                        HttpStatusCode.BadRequest,
-                        "The body must be one JSON object, with no name given twice",
-                    ),
-                )
-                example(
-                    "RejectedByAltinn",
-                    ErrorResponse.of(
-                        ProblemType.UPSTREAM_REJECTED,
-                        HttpStatusCode.BadRequest,
-                        "Altinn rejected the resource: Identifier: Invalid Prefix. app_ is only for Altinn Studio apps",
-                    ),
-                )
-            }
-        }
+                "gives each name once.",
+            "ValidationError" to validationError(
+                FieldError("delegable", ValidationCode.MISSING, "delegable is required"),
+                FieldError("title.nn", ValidationCode.MISSING, "title.nn is required"),
+            ),
+            malformedBodyExample("The body must be one JSON object, with no name given twice"),
+            rejectedByAltinnExample("Altinn rejected the resource: Identifier: Invalid Prefix. app_ is only for Altinn Studio apps"),
+        )
 
-        HttpStatusCode.Conflict {
-            description = "Altinn already has a resource with this id. It may be of another type or owner, so a GET " +
-                "of the id can still give `404`."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example(
-                    "Conflict",
-                    ErrorResponse.of(ProblemType.CONFLICT, HttpStatusCode.Conflict, "Altinn already has a resource with this id"),
-                )
-            }
-        }
+        conflict()
 
-        HttpStatusCode.BadGateway {
-            description = "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
-                "did not cause it. Altinn may or may not have created the resource."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
-            }
-        }
+        badGateway(
+            "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
+                "did not cause it. Altinn may or may not have created the resource.",
+        )
 
-        HttpStatusCode.InternalServerError {
-            description = "An unexpected error in this API."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("InternalError", ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError))
-            }
-        }
+        internalError()
     }
 }
 
@@ -444,51 +316,16 @@ internal val genericAccessResourceGetOperation: Operation.Builder.() -> Unit = {
             }
         }
 
-        HttpStatusCode.BadRequest {
-            description = "The id is not valid."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example(
-                    "InvalidId",
-                    ErrorResponse.of(
-                        ProblemType.VALIDATION_ERROR,
-                        HttpStatusCode.BadRequest,
-                        errors = listOf(FieldError("id", ValidationCode.INVALID_FORMAT, "id must be 4 or more of a-z, 0-9, _ and -")),
-                    ),
-                )
-            }
-        }
+        badRequest("The id is not valid.", invalidIdExample)
 
-        HttpStatusCode.NotFound {
-            description = "Kartverket has no GenericAccessResource with this id in Altinn."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example(
-                    "NotFound",
-                    ErrorResponse.of(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, "There is no GenericAccessResource with this id"),
-                )
-            }
-        }
+        notFound(
+            "Kartverket has no GenericAccessResource with this id in Altinn.",
+            "There is no GenericAccessResource with this id",
+        )
 
-        HttpStatusCode.BadGateway {
-            description = "This API could not get an answer from Altinn. Your request did not cause it."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
-            }
-        }
+        badGateway("This API could not get an answer from Altinn. Your request did not cause it.")
 
-        HttpStatusCode.InternalServerError {
-            description = "An unexpected error in this API."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("InternalError", ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError))
-            }
-        }
+        internalError()
     }
 }
 
@@ -512,51 +349,13 @@ internal val maskinportenSchemaGetOperation: Operation.Builder.() -> Unit = {
             }
         }
 
-        HttpStatusCode.BadRequest {
-            description = "The id is not valid."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example(
-                    "InvalidId",
-                    ErrorResponse.of(
-                        ProblemType.VALIDATION_ERROR,
-                        HttpStatusCode.BadRequest,
-                        errors = listOf(FieldError("id", ValidationCode.INVALID_FORMAT, "id must be 4 or more of a-z, 0-9, _ and -")),
-                    ),
-                )
-            }
-        }
+        badRequest("The id is not valid.", invalidIdExample)
 
-        HttpStatusCode.NotFound {
-            description = "Altinn has no MaskinportenSchema with this id."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example(
-                    "NotFound",
-                    ErrorResponse.of(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, "There is no MaskinportenSchema with this id"),
-                )
-            }
-        }
+        notFound("Altinn has no MaskinportenSchema with this id.", "There is no MaskinportenSchema with this id")
 
-        HttpStatusCode.BadGateway {
-            description = "This API could not get an answer from Altinn. Your request did not cause it."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
-            }
-        }
+        badGateway("This API could not get an answer from Altinn. Your request did not cause it.")
 
-        HttpStatusCode.InternalServerError {
-            description = "An unexpected error in this API."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("InternalError", ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError))
-            }
-        }
+        internalError()
     }
 }
 
@@ -600,74 +399,30 @@ internal val maskinportenSchemaPutOperation: Operation.Builder.() -> Unit = {
             }
         }
 
-        HttpStatusCode.BadRequest {
-            description = "The id or the body is not valid, the body could not be read, or Altinn rejected the " +
+        badRequest(
+            "The id or the body is not valid, the body could not be read, or Altinn rejected the " +
                 "resource. Nothing was changed. The body must be UTF-8 JSON that gives each name once. " +
                 "`delegationDescription` is checked only when the rest of the body is valid, since this API has to ask " +
-                "Altinn whether the resource is `delegable`."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example(
-                    "MissingFields",
-                    ErrorResponse.of(
-                        ProblemType.VALIDATION_ERROR,
-                        HttpStatusCode.BadRequest,
-                        errors = listOf(
-                            FieldError("scopes", ValidationCode.MISSING, "scopes is required"),
-                            FieldError("title.nn", ValidationCode.MISSING, "title.nn is required"),
-                        ),
-                    ),
-                )
-                example(
-                    "MalformedBody",
-                    ErrorResponse.of(
-                        ProblemType.MALFORMED_REQUEST,
-                        HttpStatusCode.BadRequest,
-                        "The body must be a JSON object with only this API's fields, each of the right type",
-                    ),
-                )
-                example(
-                    "RejectedByAltinn",
-                    ErrorResponse.of(
-                        ProblemType.UPSTREAM_REJECTED,
-                        HttpStatusCode.BadRequest,
-                        "Altinn rejected the resource: InvalidPrefix: digdir:example",
-                    ),
-                )
-            }
-        }
+                "Altinn whether the resource is `delegable`.",
+            "MissingFields" to validationError(
+                FieldError("scopes", ValidationCode.MISSING, "scopes is required"),
+                FieldError("title.nn", ValidationCode.MISSING, "title.nn is required"),
+            ),
+            malformedBodyExample("The body must be a JSON object with only this API's fields, each of the right type"),
+            rejectedByAltinnExample("Altinn rejected the resource: InvalidPrefix: digdir:example"),
+        )
 
-        HttpStatusCode.NotFound {
-            description = "Kartverket has no MaskinportenSchema with this id in Altinn."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example(
-                    "NotFound",
-                    ErrorResponse.of(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, "There is no MaskinportenSchema with this id"),
-                )
-            }
-        }
+        notFound(
+            "Kartverket has no MaskinportenSchema with this id in Altinn.",
+            "There is no MaskinportenSchema with this id",
+        )
 
-        HttpStatusCode.BadGateway {
-            description = "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
-                "did not cause it, and the resource may or may not have been changed."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
-            }
-        }
+        badGateway(
+            "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
+                "did not cause it, and the resource may or may not have been changed.",
+        )
 
-        HttpStatusCode.InternalServerError {
-            description = "An unexpected error in this API."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("InternalError", ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError))
-            }
-        }
+        internalError()
     }
 }
 
@@ -719,77 +474,35 @@ internal val genericAccessResourcePolicyPutOperation: Operation.Builder.() -> Un
             headers { requestId() }
         }
 
-        HttpStatusCode.BadRequest {
-            description = "The id or the body is not valid, the body could not be read, or Altinn rejected the policy. " +
+        badRequest(
+            "The id or the body is not valid, the body could not be read, or Altinn rejected the policy. " +
                 "When Altinn rejects it, `detail` has Altinn's reasons. Nothing was changed. The body must be UTF-8 JSON " +
-                "that gives each name once."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example(
-                    "InvalidPolicy",
-                    ErrorResponse.of(
-                        ProblemType.VALIDATION_ERROR,
-                        HttpStatusCode.BadRequest,
-                        errors = listOf(
-                            FieldError(
-                                "rules[0].subjects[0][0]",
-                                ValidationCode.INVALID_FORMAT,
-                                "rules[0].subjects[0][0] must be a URN, like urn:altinn:accesspackage:eksplisitt",
-                            ),
-                            FieldError("rules[1].actions", ValidationCode.MISSING, "rules[1].actions is required"),
-                        ),
-                    ),
-                )
-                example(
-                    "MalformedBody",
-                    ErrorResponse.of(
-                        ProblemType.MALFORMED_REQUEST,
-                        HttpStatusCode.BadRequest,
-                        "The body must be a JSON object with only this API's fields, each of the right type",
-                    ),
-                )
-                example(
-                    "RejectedByAltinn",
-                    ErrorResponse.of(
-                        ProblemType.UPSTREAM_REJECTED,
-                        HttpStatusCode.BadRequest,
-                        "Altinn rejected the resource: Policy not accepted: Contains rule without reference to registry resource id",
-                    ),
-                )
-            }
-        }
+                "that gives each name once.",
+            "InvalidPolicy" to validationError(
+                FieldError(
+                    "rules[0].subjects[0][0]",
+                    ValidationCode.INVALID_FORMAT,
+                    "rules[0].subjects[0][0] must be a URN, like urn:altinn:accesspackage:eksplisitt",
+                ),
+                FieldError("rules[1].actions", ValidationCode.MISSING, "rules[1].actions is required"),
+            ),
+            malformedBodyExample("The body must be a JSON object with only this API's fields, each of the right type"),
+            rejectedByAltinnExample(
+                "Altinn rejected the resource: Policy not accepted: Contains rule without reference to registry resource id",
+            ),
+        )
 
-        HttpStatusCode.NotFound {
-            description = "Altinn has no GenericAccessResource of Kartverket's with this id."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example(
-                    "NotFound",
-                    ErrorResponse.of(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, "There is no GenericAccessResource with this id"),
-                )
-            }
-        }
+        notFound(
+            "Altinn has no GenericAccessResource of Kartverket's with this id.",
+            "There is no GenericAccessResource with this id",
+        )
 
-        HttpStatusCode.BadGateway {
-            description = "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
-                "did not cause it. Altinn may or may not have the policy."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
-            }
-        }
+        badGateway(
+            "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
+                "did not cause it. Altinn may or may not have the policy.",
+        )
 
-        HttpStatusCode.InternalServerError {
-            description = "An unexpected error in this API."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("InternalError", ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError))
-            }
-        }
+        internalError()
     }
 }
 
@@ -817,61 +530,21 @@ internal val genericAccessResourcePolicyGetOperation: Operation.Builder.() -> Un
             }
         }
 
-        HttpStatusCode.BadRequest {
-            description = "The id is not valid."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example(
-                    "InvalidId",
-                    ErrorResponse.of(
-                        ProblemType.VALIDATION_ERROR,
-                        HttpStatusCode.BadRequest,
-                        errors = listOf(FieldError("id", ValidationCode.INVALID_FORMAT, "id must be 4 or more of a-z, 0-9, _ and -")),
-                    ),
-                )
-            }
-        }
+        badRequest("The id is not valid.", invalidIdExample)
 
-        HttpStatusCode.NotFound {
-            description = "Altinn has no GenericAccessResource of Kartverket's with this id, or the resource has no " +
-                "policy yet. A new resource has none until it is given one."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example(
-                    "NotFound",
-                    ErrorResponse.of(
-                        ProblemType.NOT_FOUND,
-                        HttpStatusCode.NotFound,
-                        "There is no GenericAccessResource with this id, or it has no policy yet",
-                    ),
-                )
-            }
-        }
+        notFound(
+            "Altinn has no GenericAccessResource of Kartverket's with this id, or the resource has no " +
+                "policy yet. A new resource has none until it is given one.",
+            "There is no GenericAccessResource with this id, or it has no policy yet",
+        )
 
-        HttpStatusCode.BadGateway {
-            description = "This API could not get an answer from Altinn, or the policy in Altinn has parts this API " +
-                "cannot show, such as a rule with a condition. Your request did not cause it."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
-                example(
-                    "UnsupportedPolicy",
-                    ErrorResponse.of(ProblemType.UNSUPPORTED_POLICY, HttpStatusCode.BadGateway),
-                )
-            }
-        }
+        badGateway(
+            "This API could not get an answer from Altinn, or the policy in Altinn has parts this API " +
+                "cannot show, such as a rule with a condition. Your request did not cause it.",
+            unsupportedPolicyExample,
+        )
 
-        HttpStatusCode.InternalServerError {
-            description = "An unexpected error in this API."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("InternalError", ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError))
-            }
-        }
+        internalError()
     }
 }
 
@@ -913,61 +586,24 @@ internal val maskinportenSchemaWithdrawOperation: Operation.Builder.() -> Unit =
             }
         }
 
-        HttpStatusCode.BadRequest {
-            description = "The id is not valid, or Altinn rejected the resource, which it checks as a whole. Nothing " +
-                "was changed."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example(
-                    "InvalidId",
-                    ErrorResponse.of(
-                        ProblemType.VALIDATION_ERROR,
-                        HttpStatusCode.BadRequest,
-                        errors = listOf(FieldError("id", ValidationCode.INVALID_FORMAT, "id must be 4 or more of a-z, 0-9, _ and -")),
-                    ),
-                )
-                example(
-                    "RejectedByAltinn",
-                    ErrorResponse.of(
-                        ProblemType.UPSTREAM_REJECTED,
-                        HttpStatusCode.BadRequest,
-                        "Altinn rejected the resource: Title: Missing title in english en",
-                    ),
-                )
-            }
-        }
+        badRequest(
+            "The id is not valid, or Altinn rejected the resource, which it checks as a whole. Nothing " +
+                "was changed.",
+            invalidIdExample,
+            rejectedByAltinnExample("Altinn rejected the resource: Title: Missing title in english en"),
+        )
 
-        HttpStatusCode.NotFound {
-            description = "Kartverket has no MaskinportenSchema with this id in Altinn."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example(
-                    "NotFound",
-                    ErrorResponse.of(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, "There is no MaskinportenSchema with this id"),
-                )
-            }
-        }
+        notFound(
+            "Kartverket has no MaskinportenSchema with this id in Altinn.",
+            "There is no MaskinportenSchema with this id",
+        )
 
-        HttpStatusCode.BadGateway {
-            description = "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
-                "did not cause it, and the resource may or may not have been withdrawn."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
-            }
-        }
+        badGateway(
+            "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
+                "did not cause it, and the resource may or may not have been withdrawn.",
+        )
 
-        HttpStatusCode.InternalServerError {
-            description = "An unexpected error in this API."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("InternalError", ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError))
-            }
-        }
+        internalError()
     }
 }
 
@@ -1010,83 +646,34 @@ internal val genericAccessResourcePutOperation: Operation.Builder.() -> Unit = {
             }
         }
 
-        HttpStatusCode.BadRequest {
-            description = "The id or the body is not valid, the body could not be read, or Altinn rejected the " +
+        badRequest(
+            "The id or the body is not valid, the body could not be read, or Altinn rejected the " +
                 "resource. When Altinn rejects it, `detail` has Altinn's reasons. Nothing was changed. The body must " +
                 "be UTF-8 JSON that gives each name once. `delegationDescription` is checked only when the rest of the " +
-                "body is valid, since this API has to ask Altinn whether the resource is `delegable`."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example(
-                    "InvalidId",
-                    ErrorResponse.of(
-                        ProblemType.VALIDATION_ERROR,
-                        HttpStatusCode.BadRequest,
-                        errors = listOf(FieldError("id", ValidationCode.INVALID_FORMAT, "id must be 4 or more of a-z, 0-9, _ and -")),
-                    ),
-                )
-                example(
-                    "MissingFields",
-                    ErrorResponse.of(
-                        ProblemType.VALIDATION_ERROR,
-                        HttpStatusCode.BadRequest,
-                        errors = listOf(
-                            FieldError("title.nn", ValidationCode.MISSING, "title.nn is required"),
-                            FieldError("description", ValidationCode.MISSING, "description is required"),
-                        ),
-                    ),
-                )
-                example(
-                    "MalformedBody",
-                    ErrorResponse.of(
-                        ProblemType.MALFORMED_REQUEST,
-                        HttpStatusCode.BadRequest,
-                        "The body must be a JSON object with only this API's fields, each of the right type",
-                    ),
-                )
-                example(
-                    "RejectedByAltinn",
-                    ErrorResponse.of(
-                        ProblemType.UPSTREAM_REJECTED,
-                        HttpStatusCode.BadRequest,
-                        "Altinn rejected the resource: HasCompetentAuthority.Organization: HasCompetentAuthority needs " +
-                            "to be set with valid organization number and orgcode",
-                    ),
-                )
-            }
-        }
+                "body is valid, since this API has to ask Altinn whether the resource is `delegable`.",
+            invalidIdExample,
+            "MissingFields" to validationError(
+                FieldError("title.nn", ValidationCode.MISSING, "title.nn is required"),
+                FieldError("description", ValidationCode.MISSING, "description is required"),
+            ),
+            malformedBodyExample("The body must be a JSON object with only this API's fields, each of the right type"),
+            rejectedByAltinnExample(
+                "Altinn rejected the resource: HasCompetentAuthority.Organization: HasCompetentAuthority needs " +
+                    "to be set with valid organization number and orgcode",
+            ),
+        )
 
-        HttpStatusCode.NotFound {
-            description = "Kartverket has no GenericAccessResource with this id in Altinn."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example(
-                    "NotFound",
-                    ErrorResponse.of(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, "There is no GenericAccessResource with this id"),
-                )
-            }
-        }
+        notFound(
+            "Kartverket has no GenericAccessResource with this id in Altinn.",
+            "There is no GenericAccessResource with this id",
+        )
 
-        HttpStatusCode.BadGateway {
-            description = "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
-                "did not cause it, and the resource may or may not have been changed."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
-            }
-        }
+        badGateway(
+            "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
+                "did not cause it, and the resource may or may not have been changed.",
+        )
 
-        HttpStatusCode.InternalServerError {
-            description = "An unexpected error in this API."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("InternalError", ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError))
-            }
-        }
+        internalError()
     }
 }
 
@@ -1114,61 +701,24 @@ internal val genericAccessResourceWithdrawOperation: Operation.Builder.() -> Uni
             }
         }
 
-        HttpStatusCode.BadRequest {
-            description = "The id is not valid, or Altinn rejected the resource, which it checks as a whole. Nothing " +
-                "was changed."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example(
-                    "InvalidId",
-                    ErrorResponse.of(
-                        ProblemType.VALIDATION_ERROR,
-                        HttpStatusCode.BadRequest,
-                        errors = listOf(FieldError("id", ValidationCode.INVALID_FORMAT, "id must be 4 or more of a-z, 0-9, _ and -")),
-                    ),
-                )
-                example(
-                    "RejectedByAltinn",
-                    ErrorResponse.of(
-                        ProblemType.UPSTREAM_REJECTED,
-                        HttpStatusCode.BadRequest,
-                        "Altinn rejected the resource: Title: Missing title in english en",
-                    ),
-                )
-            }
-        }
+        badRequest(
+            "The id is not valid, or Altinn rejected the resource, which it checks as a whole. Nothing " +
+                "was changed.",
+            invalidIdExample,
+            rejectedByAltinnExample("Altinn rejected the resource: Title: Missing title in english en"),
+        )
 
-        HttpStatusCode.NotFound {
-            description = "Kartverket has no GenericAccessResource with this id in Altinn."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example(
-                    "NotFound",
-                    ErrorResponse.of(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, "There is no GenericAccessResource with this id"),
-                )
-            }
-        }
+        notFound(
+            "Kartverket has no GenericAccessResource with this id in Altinn.",
+            "There is no GenericAccessResource with this id",
+        )
 
-        HttpStatusCode.BadGateway {
-            description = "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
-                "did not cause it, and the resource may or may not have been withdrawn."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
-            }
-        }
+        badGateway(
+            "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
+                "did not cause it, and the resource may or may not have been withdrawn.",
+        )
 
-        HttpStatusCode.InternalServerError {
-            description = "An unexpected error in this API."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("InternalError", ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError))
-            }
-        }
+        internalError()
     }
 }
 
@@ -1191,61 +741,24 @@ internal val maskinportenSchemaPolicyPutOperation: Operation.Builder.() -> Unit 
             headers { requestId() }
         }
 
-        HttpStatusCode.BadRequest {
-            description = "The id is not valid, or Altinn rejected the policy. When Altinn rejects it, `detail` has " +
-                "Altinn's reasons."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example(
-                    "InvalidId",
-                    ErrorResponse.of(
-                        ProblemType.VALIDATION_ERROR,
-                        HttpStatusCode.BadRequest,
-                        errors = listOf(FieldError("id", ValidationCode.INVALID_FORMAT, "id must be 4 or more of a-z, 0-9, _ and -")),
-                    ),
-                )
-                example(
-                    "RejectedByAltinn",
-                    ErrorResponse.of(
-                        ProblemType.UPSTREAM_REJECTED,
-                        HttpStatusCode.BadRequest,
-                        "Altinn rejected the resource: Unknown resource",
-                    ),
-                )
-            }
-        }
+        badRequest(
+            "The id is not valid, or Altinn rejected the policy. When Altinn rejects it, `detail` has " +
+                "Altinn's reasons.",
+            invalidIdExample,
+            rejectedByAltinnExample("Altinn rejected the resource: Unknown resource"),
+        )
 
-        HttpStatusCode.NotFound {
-            description = "Altinn has no MaskinportenSchema of Kartverket's with this id."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example(
-                    "NotFound",
-                    ErrorResponse.of(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, "There is no MaskinportenSchema with this id"),
-                )
-            }
-        }
+        notFound(
+            "Altinn has no MaskinportenSchema of Kartverket's with this id.",
+            "There is no MaskinportenSchema with this id",
+        )
 
-        HttpStatusCode.BadGateway {
-            description = "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
-                "did not cause it. Altinn may or may not have the policy."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
-            }
-        }
+        badGateway(
+            "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
+                "did not cause it. Altinn may or may not have the policy.",
+        )
 
-        HttpStatusCode.InternalServerError {
-            description = "An unexpected error in this API."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("InternalError", ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError))
-            }
-        }
+        internalError()
     }
 }
 
@@ -1274,47 +787,19 @@ internal val genericAccessResourcesListOperation: Operation.Builder.() -> Unit =
             }
         }
 
-        HttpStatusCode.BadRequest {
-            description = "Filtering is on and the `X-Forwarded-Client-Cert` header is missing, so this API cannot tell " +
-                "which app is calling."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example(
-                    "MissingClientCertificate",
-                    ErrorResponse.of(
-                        ProblemType.VALIDATION_ERROR,
-                        HttpStatusCode.BadRequest,
-                        errors = listOf(
-                            FieldError(CLIENT_CERTIFICATE_HEADER, ValidationCode.MISSING, "$CLIENT_CERTIFICATE_HEADER is required"),
-                        ),
-                    ),
-                )
-            }
-        }
+        badRequest(
+            "Filtering is on and the `X-Forwarded-Client-Cert` header is missing, so this API cannot tell " +
+                "which app is calling.",
+            missingClientCertificateExample,
+        )
 
-        HttpStatusCode.BadGateway {
-            description = "This API could not get an answer from Altinn, or from the service that says which " +
-                "resources the calling app has access to. Your request did not cause it."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("UpstreamError", ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed"))
-                example(
-                    "FilteringError",
-                    ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to the filtering service failed"),
-                )
-            }
-        }
+        badGateway(
+            "This API could not get an answer from Altinn, or from the service that says which " +
+                "resources the calling app has access to. Your request did not cause it.",
+            filteringErrorExample,
+        )
 
-        HttpStatusCode.InternalServerError {
-            description = "An unexpected error in this API."
-            headers { requestId() }
-            ContentType.Application.ProblemJson {
-                schema = jsonSchema<ErrorResponse>()
-                example("InternalError", ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError))
-            }
-        }
+        internalError()
     }
 }
 
@@ -1353,3 +838,62 @@ private fun Headers.Builder.requestId() = header(HttpHeaders.XRequestId) {
 
 private inline fun <reified T : Any> MediaType.Builder.example(name: String, value: T) =
     example(name, ExampleObject(value = GenericElement(exampleJson.encodeToJsonElement(value))))
+
+internal fun Responses.Builder.badRequest(description: String, vararg examples: Pair<String, ErrorResponse>) =
+    problem(HttpStatusCode.BadRequest, description, examples.toList())
+
+internal fun Responses.Builder.notFound(description: String, detail: String) = problem(
+    HttpStatusCode.NotFound,
+    description,
+    listOf("NotFound" to ErrorResponse.of(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, detail)),
+)
+
+internal fun Responses.Builder.conflict() = problem(
+    HttpStatusCode.Conflict,
+    "Altinn already has a resource with this id. It may be of another type or owner, so a GET of the id can still give `404`.",
+    listOf("Conflict" to ErrorResponse.of(ProblemType.CONFLICT, HttpStatusCode.Conflict, "Altinn already has a resource with this id")),
+)
+
+internal fun Responses.Builder.badGateway(description: String, vararg examples: Pair<String, ErrorResponse>) = problem(
+    HttpStatusCode.BadGateway,
+    description,
+    listOf("UpstreamError" to ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed")) +
+        examples,
+)
+
+internal fun Responses.Builder.internalError() = problem(
+    HttpStatusCode.InternalServerError,
+    "An unexpected error in this API.",
+    listOf("InternalError" to ErrorResponse.of(ProblemType.INTERNAL_ERROR, HttpStatusCode.InternalServerError)),
+)
+
+private fun Responses.Builder.problem(status: HttpStatusCode, description: String, examples: List<Pair<String, ErrorResponse>>) {
+    status {
+        this.description = description
+        headers { requestId() }
+        ContentType.Application.ProblemJson {
+            schema = jsonSchema<ErrorResponse>()
+            examples.forEach { (name, value) -> example(name, value) }
+        }
+    }
+}
+
+internal fun validationError(vararg errors: FieldError) =
+    ErrorResponse.of(ProblemType.VALIDATION_ERROR, HttpStatusCode.BadRequest, errors = errors.toList())
+
+internal fun malformedBodyExample(detail: String) =
+    "MalformedBody" to ErrorResponse.of(ProblemType.MALFORMED_REQUEST, HttpStatusCode.BadRequest, detail)
+
+internal fun rejectedByAltinnExample(detail: String) =
+    "RejectedByAltinn" to ErrorResponse.of(ProblemType.UPSTREAM_REJECTED, HttpStatusCode.BadRequest, detail)
+
+internal val invalidIdExample =
+    "InvalidId" to validationError(FieldError("id", ValidationCode.INVALID_FORMAT, "id must be 4 or more of a-z, 0-9, _ and -"))
+
+internal val missingClientCertificateExample = "MissingClientCertificate" to
+    validationError(FieldError(CLIENT_CERTIFICATE_HEADER, ValidationCode.MISSING, "$CLIENT_CERTIFICATE_HEADER is required"))
+
+internal val filteringErrorExample =
+    "FilteringError" to ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to the filtering service failed")
+
+internal val unsupportedPolicyExample = "UnsupportedPolicy" to ErrorResponse.of(ProblemType.UNSUPPORTED_POLICY, HttpStatusCode.BadGateway)
