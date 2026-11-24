@@ -263,6 +263,7 @@ class GenericAccessResourcePolicyTest {
             "a level with another obligation id" to (":authenticationLevel1\"" to ":authenticationLevel2\""),
             "a level with another assignment id" to ("obligation1-assignment1\"" to "obligation1-assignment2\""),
             "a level with an issuer" to ("Category=\"urn:altinn:minimum-authenticationlevel\"" to "Category=\"urn:altinn:minimum-authenticationlevel\" Issuer=\"kv\""),
+            "a subject with a colon in its value" to (">eksplisitt<" to ">team:eksplisitt<"),
             "two AnyOfs for the subjects" to ("<xacml:Target>\n<xacml:AnyOf>" to "<xacml:Target>\n${subjectAnyOf("dagl")}\n<xacml:AnyOf>"),
             "a document type" to ("<?xml version=\"1.0\" encoding=\"utf-8\"?>" to "<?xml version=\"1.0\" encoding=\"utf-8\"?><!DOCTYPE p [<!ENTITY e \"e\">]>"),
             "rules combined with permit-overrides" to (":deny-overrides\"" to ":permit-overrides\""),

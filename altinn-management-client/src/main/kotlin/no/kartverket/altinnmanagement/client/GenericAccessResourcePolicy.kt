@@ -211,7 +211,11 @@ private fun parseRule(id: ResourceId, rule: Element): PolicyRule {
 
     val subjects = alternatives(SUBJECT_CATEGORY).map { group ->
         if (group.isEmpty() || group.any { it.function != STRING_EQUAL_IGNORE_CASE }) unsupported("a rule has a group of subjects that is empty or not matched by $STRING_EQUAL_IGNORE_CASE")
-        group.map { "${it.attributeId}:${it.value}" }
+        group.map { match ->
+            "${match.attributeId}:${match.value}".also {
+                if (subjectAttribute(it) != match.attributeId to match.value) unsupported("a subject would be split elsewhere when written back")
+            }
+        }
     }
     val actions = alternatives(ACTION_CATEGORY).map { allOf ->
         allOf.singleOrNull()?.takeIf { it.function == STRING_EQUAL_IGNORE_CASE && it.attributeId == ACTION_ID }?.value
