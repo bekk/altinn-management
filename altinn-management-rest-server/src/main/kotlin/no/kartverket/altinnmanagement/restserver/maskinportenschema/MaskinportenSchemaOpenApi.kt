@@ -182,7 +182,7 @@ internal val maskinportenSchemaGetOperation: Operation.Builder.() -> Unit = {
         "`MaskinportenSchema` are found: any other resource gives `404`, as if it did not exist."
 
     parameters {
-        idPath()
+        idPath("kv-matrikkel-brukernavn")
         requestId()
     }
 
@@ -224,7 +224,7 @@ internal val maskinportenSchemaPutOperation: Operation.Builder.() -> Unit = {
         "`MaskinportenSchema` can be changed: any other resource gives `404`, as if it did not exist."
 
     parameters {
-        idPath()
+        idPath("kv-matrikkel-brukernavn")
         requestId()
     }
 
@@ -280,7 +280,7 @@ internal val maskinportenSchemaWithdrawOperation: Operation.Builder.() -> Unit =
         "Kartverket's MaskinportenSchemas."
 
     parameters {
-        idPath()
+        idPath("kv-matrikkel-brukernavn")
         requestId()
     }
 
@@ -327,7 +327,7 @@ internal val maskinportenSchemaPolicyPutOperation: Operation.Builder.() -> Unit 
         "MaskinportenSchemas, and takes no body."
 
     parameters {
-        idPath()
+        idPath("kv-matrikkel-brukernavn")
         requestId()
     }
 

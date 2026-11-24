@@ -1,4 +1,4 @@
-package no.kartverket.altinnmanagement.restserver
+package no.kartverket.altinnmanagement.restserver.genericaccessresource
 
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
@@ -16,11 +16,19 @@ import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
 import no.kartverket.altinnmanagement.client.http.OutgoingRequest
 import no.kartverket.altinnmanagement.client.support.resourceJson
 import no.kartverket.altinnmanagement.client.support.response
-import no.kartverket.altinnmanagement.restserver.models.GenericAccessResource
+import no.kartverket.altinnmanagement.restserver.ContactPoint
+import no.kartverket.altinnmanagement.restserver.Keyword
+import no.kartverket.altinnmanagement.restserver.MultilingualText
+import no.kartverket.altinnmanagement.restserver.TEST_TOKEN
+import no.kartverket.altinnmanagement.restserver.assertProblem
+import no.kartverket.altinnmanagement.restserver.errorResponse
+import no.kartverket.altinnmanagement.restserver.genericAccessResourceNotFound
 import no.kartverket.altinnmanagement.restserver.problem.ErrorResponse
 import no.kartverket.altinnmanagement.restserver.problem.FieldError
 import no.kartverket.altinnmanagement.restserver.problem.ProblemType
 import no.kartverket.altinnmanagement.restserver.problem.ValidationCode
+import no.kartverket.altinnmanagement.restserver.testServer
+import no.kartverket.altinnmanagement.restserver.upstreamError
 import java.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals

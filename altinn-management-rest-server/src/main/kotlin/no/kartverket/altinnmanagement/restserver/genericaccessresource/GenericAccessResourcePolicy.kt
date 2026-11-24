@@ -1,4 +1,4 @@
-package no.kartverket.altinnmanagement.restserver.models
+package no.kartverket.altinnmanagement.restserver.genericaccessresource
 
 import io.ktor.openapi.JsonSchema
 import io.ktor.openapi.JsonType

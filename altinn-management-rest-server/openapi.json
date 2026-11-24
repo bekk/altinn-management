@@ -1876,7 +1876,7 @@
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "The resource's id: 4 or more of `a-z`, `0-9`, `_` and `-`, for example `kv-matrikkel-brukernavn`.",
+                        "description": "The resource's id: 4 or more of `a-z`, `0-9`, `_` and `-`, for example `kv-grunnbok-innsyn`.",
                         "required": true,
                         "schema": {
                             "type": "string",
@@ -2168,7 +2168,7 @@
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "The resource's id: 4 or more of `a-z`, `0-9`, `_` and `-`, for example `kv-matrikkel-brukernavn`.",
+                        "description": "The resource's id: 4 or more of `a-z`, `0-9`, `_` and `-`, for example `kv-grunnbok-innsyn`.",
                         "required": true,
                         "schema": {
                             "type": "string",
@@ -2379,7 +2379,7 @@
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "The resource's id: 4 or more of `a-z`, `0-9`, `_` and `-`, for example `kv-matrikkel-brukernavn`.",
+                        "description": "The resource's id: 4 or more of `a-z`, `0-9`, `_` and `-`, for example `kv-grunnbok-innsyn`.",
                         "required": true,
                         "schema": {
                             "type": "string",

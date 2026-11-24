@@ -1,4 +1,4 @@
-package no.kartverket.altinnmanagement.restserver.models
+package no.kartverket.altinnmanagement.restserver.genericaccessresource
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException

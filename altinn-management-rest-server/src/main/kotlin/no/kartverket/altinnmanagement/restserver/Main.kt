@@ -1,7 +1,6 @@
 package no.kartverket.altinnmanagement.restserver
 
 import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.DefaultJson
 import io.ktor.serialization.kotlinx.json.json
@@ -11,14 +10,10 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.statuspages.StatusPages
-import io.ktor.server.response.header
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
-import io.ktor.server.routing.openapi.describe
 import io.ktor.server.routing.openapi.hide
-import io.ktor.server.routing.post
-import io.ktor.server.routing.put
 import io.ktor.server.routing.routing
 import io.ktor.utils.io.ExperimentalKtorApi
 import kotlinx.serialization.json.Json
@@ -28,15 +23,10 @@ import no.kartverket.altinnmanagement.restserver.config.externalFiltering
 import no.kartverket.altinnmanagement.restserver.config.file
 import no.kartverket.altinnmanagement.restserver.config.loadApplicationConfig
 import no.kartverket.altinnmanagement.restserver.config.resourceRegistryClient
-import no.kartverket.altinnmanagement.restserver.filtering.CLIENT_CERTIFICATE_HEADER
 import no.kartverket.altinnmanagement.restserver.filtering.ExternalFiltering
-import no.kartverket.altinnmanagement.restserver.filtering.allowedBy
+import no.kartverket.altinnmanagement.restserver.genericaccessresource.genericAccessResources
 import no.kartverket.altinnmanagement.restserver.maskinportenschema.maskinportenSchemas
-import no.kartverket.altinnmanagement.restserver.models.GenericAccessResource
-import no.kartverket.altinnmanagement.restserver.models.GenericAccessResourcePolicy
 import no.kartverket.altinnmanagement.restserver.observability.installCallLogging
-import no.kartverket.altinnmanagement.restserver.problem.PolicyNotFoundException
-import no.kartverket.altinnmanagement.restserver.problem.ResourceNotFoundException
 import no.kartverket.altinnmanagement.restserver.problem.errorResponses
 
 internal val apiJson = Json(DefaultJson) {
@@ -82,52 +72,6 @@ fun Application.module(
         get("/openapi") { call.respondText(spec, ContentType.Application.Json) }.hide()
 
         maskinportenSchemas(client, externalFiltering)
-
-        get("/api/genericaccessresources") {
-            val certificate = clientCertificate(call.request.headers[CLIENT_CERTIFICATE_HEADER], required = externalFiltering.isOn)
-            val filter = externalFiltering.filterFor(certificate)
-            val resources = client.listGenericAccessResources()
-            call.respond(resources.allowedBy(filter) { allows(it) }.map(GenericAccessResource::from))
-        }.describe(genericAccessResourcesListOperation)
-
-        post("/api/genericaccessresources") {
-            val resource = newGenericAccessResource(call.newGenericAccessResourceRequest())
-            val created = client.createGenericAccessResource(resource)
-            call.response.header(HttpHeaders.Location, "/api/genericaccessresources/${created.resourceId.value}")
-            call.respond(HttpStatusCode.Created, GenericAccessResource.from(created))
-        }.describe(genericAccessResourceCreateOperation)
-
-        get("/api/genericaccessresources/{id}") {
-            val id = resourceId("id", call.pathParameters["id"]!!)
-            val resource = client.getGenericAccessResource(id) ?: throw ResourceNotFoundException("GenericAccessResource")
-            call.respond(GenericAccessResource.from(resource))
-        }.describe(genericAccessResourceGetOperation)
-
-        put("/api/genericaccessresources/{id}") {
-            val id = resourceId("id", call.pathParameters["id"]!!)
-            val content = genericAccessResourceContent(id, call.genericAccessResourceRequest())
-            val resource = client.updateGenericAccessResource(id) { content(it.delegable) }
-                ?: throw ResourceNotFoundException("GenericAccessResource")
-            call.respond(GenericAccessResource.from(resource))
-        }.describe(genericAccessResourcePutOperation)
-
-        put("/api/genericaccessresources/{id}/withdraw") {
-            val id = resourceId("id", call.pathParameters["id"]!!)
-            val resource = client.withdrawGenericAccessResource(id) ?: throw ResourceNotFoundException("GenericAccessResource")
-            call.respond(GenericAccessResource.from(resource))
-        }.describe(genericAccessResourceWithdrawOperation)
-
-        put("/api/genericaccessresources/{id}/policy") {
-            val id = resourceId("id", call.pathParameters["id"]!!)
-            val policy = genericAccessResourcePolicy(call.genericAccessResourcePolicyRequest())
-            if (!client.setGenericAccessResourcePolicy(id, policy)) throw ResourceNotFoundException("GenericAccessResource")
-            call.respond(HttpStatusCode.NoContent)
-        }.describe(genericAccessResourcePolicyPutOperation)
-
-        get("/api/genericaccessresources/{id}/policy") {
-            val id = resourceId("id", call.pathParameters["id"]!!)
-            val policy = client.getGenericAccessResourcePolicy(id) ?: throw PolicyNotFoundException()
-            call.respond(GenericAccessResourcePolicy.from(policy))
-        }.describe(genericAccessResourcePolicyGetOperation)
+        genericAccessResources(client, externalFiltering)
     }
 }
