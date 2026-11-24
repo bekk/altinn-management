@@ -8,17 +8,13 @@ import io.ktor.server.request.receive
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
 import no.kartverket.altinnmanagement.client.GenericAccessResourceContent
-import no.kartverket.altinnmanagement.client.MaskinportenSchemaContent
 import no.kartverket.altinnmanagement.client.PolicyEffect
 import no.kartverket.altinnmanagement.client.ResourceId
 import no.kartverket.altinnmanagement.client.ResourceStatus
 import no.kartverket.altinnmanagement.restserver.filtering.CLIENT_CERTIFICATE_HEADER
 import no.kartverket.altinnmanagement.restserver.models.GenericAccessResourcePolicy
 import no.kartverket.altinnmanagement.restserver.models.GenericAccessResourceRequest
-import no.kartverket.altinnmanagement.restserver.models.MaskinportenSchemaRequest
-import no.kartverket.altinnmanagement.restserver.models.MultilingualText
 import no.kartverket.altinnmanagement.restserver.models.NewGenericAccessResource
-import no.kartverket.altinnmanagement.restserver.models.NewMaskinportenSchema
 import no.kartverket.altinnmanagement.restserver.problem.FieldError
 import no.kartverket.altinnmanagement.restserver.problem.ValidationCode
 import tools.jackson.core.JacksonException
@@ -30,7 +26,6 @@ import java.nio.charset.CharacterCodingException
 import no.kartverket.altinnmanagement.client.AuthenticationLevels as ClientAuthenticationLevels
 import no.kartverket.altinnmanagement.client.GenericAccessResourcePolicy as ClientGenericAccessResourcePolicy
 import no.kartverket.altinnmanagement.client.NewGenericAccessResource as ClientNewGenericAccessResource
-import no.kartverket.altinnmanagement.client.NewMaskinportenSchema as ClientNewMaskinportenSchema
 import no.kartverket.altinnmanagement.client.PolicyRule as ClientPolicyRule
 
 internal class InvalidRequestException(val errors: List<FieldError>) : RuntimeException(errors.joinToString("; ") { it.message })
@@ -47,54 +42,16 @@ internal fun clientCertificate(value: String?, required: Boolean): String? {
     return certificate
 }
 
-internal fun scope(values: List<String>?): String? {
-    if (values == null) return null
-    val scope = values.singleOrNull() ?: invalidScope("scope must be sent once")
-    if (scope.isBlank()) invalidScope("scope must not be blank")
-    if (scope.any(Char::isWhitespace)) invalidScope("scope must not contain whitespace")
-    return scope
-}
-
-private fun invalidScope(message: String): Nothing =
-    throw InvalidRequestException(listOf(FieldError("scope", ValidationCode.INVALID_FORMAT, message)))
-
 internal fun resourceId(name: String, value: String): ResourceId =
     resourceIdOrNull(value) ?: throw InvalidRequestException(listOf(invalidResourceId(name)))
 
-private fun resourceIdOrNull(value: String): ResourceId? = try {
+internal fun resourceIdOrNull(value: String): ResourceId? = try {
     ResourceId.of(value)
 } catch (e: IllegalArgumentException) {
     null
 }
 
 private fun invalidResourceId(name: String) = FieldError(name, ValidationCode.INVALID_FORMAT, "$name must be 4 or more of a-z, 0-9, _ and -")
-
-// Checks what Altinn would refuse, by this API's field names. What does not depend on the resource is checked before
-// Altinn is asked, so that a body with errors gives 400 and not 404 or 502
-internal fun maskinportenSchemaContent(
-    id: ResourceId,
-    request: MaskinportenSchemaRequest,
-): (delegable: Boolean?) -> MaskinportenSchemaContent {
-    val errors = buildList {
-        addAll(pathIdErrors(id, request.resourceId))
-        addAll(scopeErrors(request.scopes))
-        addAll(textErrors("title", request.title))
-        addAll(textErrors("description", request.description))
-    }
-    if (errors.isNotEmpty()) throw InvalidRequestException(errors)
-    return { delegable ->
-        checkDelegationDescription(delegable, request.delegationDescription)
-        MaskinportenSchemaContent(
-            scopes = request.scopes!!,
-            title = request.title!!.toClient(),
-            description = request.description!!.toClient(),
-            delegationDescription = request.delegationDescription?.toClient(),
-            homepage = request.homepage,
-            contactPoints = request.contactPoints.orEmpty().map { it.toClient() },
-            keywords = request.keywords.orEmpty().map { it.toClient() },
-        )
-    }
-}
 
 // Checks what Altinn would refuse, by this API's field names. What does not depend on the resource is checked before
 // Altinn is asked, so that a body with errors gives 400 and not 404 or 502
@@ -122,45 +79,27 @@ internal fun genericAccessResourceContent(
 }
 
 // Altinn requires it only for a resource that can be delegated, and takes a resource without delegable as one
-private fun checkDelegationDescription(delegable: Boolean?, delegationDescription: MultilingualText?) {
+internal fun checkDelegationDescription(delegable: Boolean?, delegationDescription: MultilingualText?) {
     if (delegable == false) return
     val errors = textErrors("delegationDescription", delegationDescription)
     if (errors.isNotEmpty()) throw InvalidRequestException(errors)
 }
 
-private fun pathIdErrors(id: ResourceId, resourceId: String?): List<FieldError> =
+internal fun pathIdErrors(id: ResourceId, resourceId: String?): List<FieldError> =
     if (resourceId == null || resourceId == id.value) {
         emptyList()
     } else {
         listOf(FieldError("resourceId", ValidationCode.INVALID_FORMAT, "resourceId must be the id in the path"))
     }
 
-// Altinn takes a scope with whitespace, but no OAuth scope can hold any (RFC 6749, section 3.3)
-private fun scopeErrors(scopes: List<String>?): List<FieldError> {
-    if (scopes.isNullOrEmpty()) return listOf(missing("scopes"))
-    return scopes.withIndex().mapNotNull { (index, scope) ->
-        val field = "scopes[$index]"
-        when {
-            scope.isBlank() -> FieldError(field, ValidationCode.INVALID_FORMAT, "$field must not be blank")
-            scope.any(Char::isWhitespace) -> FieldError(field, ValidationCode.INVALID_FORMAT, "$field must not contain whitespace")
-            else -> null
-        }
-    }
-}
-
-private fun textErrors(field: String, text: MultilingualText?): List<FieldError> {
+internal fun textErrors(field: String, text: MultilingualText?): List<FieldError> {
     if (text == null) return listOf(missing(field))
     return listOf("en" to text.en, "nb" to text.nb, "nn" to text.nn)
         .filter { (_, value) -> value.isNullOrBlank() }
         .map { (language, _) -> missing("$field.$language") }
 }
 
-private fun missing(field: String) = FieldError(field, ValidationCode.MISSING, "$field is required")
-
-internal suspend fun ApplicationCall.maskinportenSchemaRequest(): MaskinportenSchemaRequest =
-    strictBody(MaskinportenSchemaRequest.serializer())
-
-internal suspend fun ApplicationCall.newMaskinportenSchemaRequest(): NewMaskinportenSchema = strictBody(NewMaskinportenSchema.serializer())
+internal fun missing(field: String) = FieldError(field, ValidationCode.MISSING, "$field is required")
 
 internal suspend fun ApplicationCall.newGenericAccessResourceRequest(): NewGenericAccessResource =
     strictBody(NewGenericAccessResource.serializer())
@@ -171,7 +110,7 @@ internal suspend fun ApplicationCall.genericAccessResourceRequest(): GenericAcce
 internal suspend fun ApplicationCall.genericAccessResourcePolicyRequest(): GenericAccessResourcePolicy =
     strictBody(GenericAccessResourcePolicy.serializer())
 
-private suspend fun <T> ApplicationCall.strictBody(serializer: KSerializer<T>): T {
+internal suspend fun <T> ApplicationCall.strictBody(serializer: KSerializer<T>): T {
     val body = strictJson(jsonBody())
     return try {
         apiJson.decodeFromString(serializer, body)
@@ -217,33 +156,6 @@ private fun ApplicationCall.requireJsonContentType() {
     }
 }
 
-// Checks every field before it fails, so the caller gets all the errors at once
-internal fun newMaskinportenSchema(body: NewMaskinportenSchema): ClientNewMaskinportenSchema {
-    val resourceId = body.resourceId?.let(::resourceIdOrNull)
-    val status = resourceStatus(body.status)
-    val errors = buildList {
-        addAll(newResourceIdErrors(body.resourceId, resourceId))
-        addAll(scopeErrors(body.scopes))
-        addAll(textErrors("title", body.title))
-        addAll(textErrors("description", body.description))
-        addAll(textErrors("delegationDescription", body.delegationDescription))
-        addAll(statusErrors(body.status, status))
-    }
-    if (errors.isNotEmpty()) throw InvalidRequestException(errors)
-
-    return ClientNewMaskinportenSchema(
-        resourceId = resourceId!!,
-        scopes = body.scopes!!,
-        title = body.title!!.toClient(),
-        description = body.description!!.toClient(),
-        delegationDescription = body.delegationDescription!!.toClient(),
-        homepage = body.homepage,
-        contactPoints = body.contactPoints.orEmpty().map { it.toClient() },
-        keywords = body.keywords.orEmpty().map { it.toClient() },
-        status = status,
-    )
-}
-
 internal fun newGenericAccessResource(body: NewGenericAccessResource): ClientNewGenericAccessResource {
     val resourceId = body.resourceId?.let(::resourceIdOrNull)
     val status = resourceStatus(body.status)
@@ -271,7 +183,7 @@ internal fun newGenericAccessResource(body: NewGenericAccessResource): ClientNew
     )
 }
 
-private fun newResourceIdErrors(value: String?, resourceId: ResourceId?): List<FieldError> = when {
+internal fun newResourceIdErrors(value: String?, resourceId: ResourceId?): List<FieldError> = when {
     value.isNullOrBlank() -> listOf(missing("resourceId"))
 
     resourceId == null -> listOf(invalidResourceId("resourceId"))
@@ -283,9 +195,9 @@ private fun newResourceIdErrors(value: String?, resourceId: ResourceId?): List<F
     else -> emptyList()
 }
 
-private fun resourceStatus(value: String?): ResourceStatus? = value?.let { ResourceStatus.entries.find { it.value == value } }
+internal fun resourceStatus(value: String?): ResourceStatus? = value?.let { ResourceStatus.entries.find { it.value == value } }
 
-private fun statusErrors(value: String?, status: ResourceStatus?): List<FieldError> {
+internal fun statusErrors(value: String?, status: ResourceStatus?): List<FieldError> {
     if (value == null || status != null) return emptyList()
     val values = ResourceStatus.entries.joinToString { it.value }
     return listOf(FieldError("status", ValidationCode.INVALID_FORMAT, "status must be one of $values"))

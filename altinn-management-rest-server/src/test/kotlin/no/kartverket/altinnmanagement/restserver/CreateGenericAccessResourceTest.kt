@@ -13,10 +13,7 @@ import no.kartverket.altinnmanagement.client.http.HttpMethod
 import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
 import no.kartverket.altinnmanagement.client.http.OutgoingRequest
 import no.kartverket.altinnmanagement.client.support.response
-import no.kartverket.altinnmanagement.restserver.models.ContactPoint
 import no.kartverket.altinnmanagement.restserver.models.GenericAccessResource
-import no.kartverket.altinnmanagement.restserver.models.Keyword
-import no.kartverket.altinnmanagement.restserver.models.MultilingualText
 import no.kartverket.altinnmanagement.restserver.problem.ErrorResponse
 import no.kartverket.altinnmanagement.restserver.problem.FieldError
 import no.kartverket.altinnmanagement.restserver.problem.ProblemType

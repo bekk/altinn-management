@@ -3,6 +3,9 @@ package no.kartverket.altinnmanagement.restserver.models
 import io.ktor.openapi.JsonSchema
 import io.ktor.openapi.JsonType
 import kotlinx.serialization.Serializable
+import no.kartverket.altinnmanagement.restserver.ContactPoint
+import no.kartverket.altinnmanagement.restserver.Keyword
+import no.kartverket.altinnmanagement.restserver.MultilingualText
 
 // The fields are nullable so a missing one is a validation error that names it, not a body that cannot be read
 @Serializable

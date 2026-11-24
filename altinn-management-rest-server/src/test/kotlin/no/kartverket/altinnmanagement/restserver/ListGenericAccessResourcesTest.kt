@@ -18,10 +18,7 @@ import no.kartverket.altinnmanagement.client.support.response
 import no.kartverket.altinnmanagement.restserver.filtering.CLIENT_CERTIFICATE_HEADER
 import no.kartverket.altinnmanagement.restserver.filtering.ExternalFiltering
 import no.kartverket.altinnmanagement.restserver.filtering.ExternalFilteringClient
-import no.kartverket.altinnmanagement.restserver.models.ContactPoint
 import no.kartverket.altinnmanagement.restserver.models.GenericAccessResource
-import no.kartverket.altinnmanagement.restserver.models.Keyword
-import no.kartverket.altinnmanagement.restserver.models.MultilingualText
 import no.kartverket.altinnmanagement.restserver.problem.ErrorResponse
 import no.kartverket.altinnmanagement.restserver.problem.FieldError
 import no.kartverket.altinnmanagement.restserver.problem.ProblemType

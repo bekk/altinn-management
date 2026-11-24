@@ -1,8 +1,11 @@
-package no.kartverket.altinnmanagement.restserver.models
+package no.kartverket.altinnmanagement.restserver.maskinportenschema
 
 import io.ktor.openapi.JsonSchema
 import io.ktor.openapi.JsonType
 import kotlinx.serialization.Serializable
+import no.kartverket.altinnmanagement.restserver.ContactPoint
+import no.kartverket.altinnmanagement.restserver.Keyword
+import no.kartverket.altinnmanagement.restserver.MultilingualText
 
 @Serializable
 @JsonSchema.Description(

@@ -3,6 +3,9 @@ package no.kartverket.altinnmanagement.restserver.models
 import io.ktor.openapi.JsonSchema
 import io.ktor.openapi.JsonType
 import kotlinx.serialization.Serializable
+import no.kartverket.altinnmanagement.restserver.ContactPoint
+import no.kartverket.altinnmanagement.restserver.Keyword
+import no.kartverket.altinnmanagement.restserver.MultilingualText
 import no.kartverket.altinnmanagement.client.GenericAccessResource as ClientGenericAccessResource
 
 @Serializable

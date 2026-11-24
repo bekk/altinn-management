@@ -1,4 +1,4 @@
-package no.kartverket.altinnmanagement.restserver
+package no.kartverket.altinnmanagement.restserver.maskinportenschema
 
 import io.ktor.client.request.get
 import io.ktor.client.request.header
@@ -16,14 +16,16 @@ import no.kartverket.altinnmanagement.client.http.OutgoingRequest
 import no.kartverket.altinnmanagement.client.http.OutgoingResponse
 import no.kartverket.altinnmanagement.client.support.resourceJson
 import no.kartverket.altinnmanagement.client.support.response
+import no.kartverket.altinnmanagement.restserver.assertProblem
 import no.kartverket.altinnmanagement.restserver.filtering.CLIENT_CERTIFICATE_HEADER
 import no.kartverket.altinnmanagement.restserver.filtering.ExternalFiltering
 import no.kartverket.altinnmanagement.restserver.filtering.ExternalFilteringClient
-import no.kartverket.altinnmanagement.restserver.models.MaskinportenSchema
 import no.kartverket.altinnmanagement.restserver.problem.ErrorResponse
 import no.kartverket.altinnmanagement.restserver.problem.FieldError
 import no.kartverket.altinnmanagement.restserver.problem.ProblemType
 import no.kartverket.altinnmanagement.restserver.problem.ValidationCode
+import no.kartverket.altinnmanagement.restserver.testServer
+import no.kartverket.altinnmanagement.restserver.upstreamError
 import java.io.IOException
 import java.net.URI
 import kotlin.test.Test

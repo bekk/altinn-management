@@ -31,9 +31,9 @@ import no.kartverket.altinnmanagement.restserver.config.resourceRegistryClient
 import no.kartverket.altinnmanagement.restserver.filtering.CLIENT_CERTIFICATE_HEADER
 import no.kartverket.altinnmanagement.restserver.filtering.ExternalFiltering
 import no.kartverket.altinnmanagement.restserver.filtering.allowedBy
+import no.kartverket.altinnmanagement.restserver.maskinportenschema.maskinportenSchemas
 import no.kartverket.altinnmanagement.restserver.models.GenericAccessResource
 import no.kartverket.altinnmanagement.restserver.models.GenericAccessResourcePolicy
-import no.kartverket.altinnmanagement.restserver.models.MaskinportenSchema
 import no.kartverket.altinnmanagement.restserver.observability.installCallLogging
 import no.kartverket.altinnmanagement.restserver.problem.PolicyNotFoundException
 import no.kartverket.altinnmanagement.restserver.problem.ResourceNotFoundException
@@ -81,47 +81,7 @@ fun Application.module(
         get("/health/live") { call.respond(HttpStatusCode.OK) }.hide()
         get("/openapi") { call.respondText(spec, ContentType.Application.Json) }.hide()
 
-        get("/api/maskinportenschemas") {
-            val scope = scope(call.queryParameters.getAll("scope"))
-            val certificate = clientCertificate(call.request.headers[CLIENT_CERTIFICATE_HEADER], required = externalFiltering.isOn)
-            val filter = externalFiltering.filterFor(certificate)
-            val schemas = client.listMaskinportenSchemas()
-            val matching = if (scope == null) schemas else schemas.filter { scope in it.scopes.orEmpty() }
-            call.respond(matching.allowedBy(filter) { allows(it) }.map(MaskinportenSchema::from))
-        }.describe(maskinportenSchemasListOperation)
-
-        post("/api/maskinportenschemas") {
-            val schema = newMaskinportenSchema(call.newMaskinportenSchemaRequest())
-            val created = client.createMaskinportenSchema(schema)
-            call.response.header(HttpHeaders.Location, "/api/maskinportenschemas/${created.resourceId.value}")
-            call.respond(HttpStatusCode.Created, MaskinportenSchema.from(created))
-        }.describe(maskinportenSchemaCreateOperation)
-
-        get("/api/maskinportenschemas/{id}") {
-            val id = resourceId("id", call.pathParameters["id"]!!)
-            val schema = client.getMaskinportenSchema(id) ?: throw ResourceNotFoundException("MaskinportenSchema")
-            call.respond(MaskinportenSchema.from(schema))
-        }.describe(maskinportenSchemaGetOperation)
-
-        put("/api/maskinportenschemas/{id}") {
-            val id = resourceId("id", call.pathParameters["id"]!!)
-            val content = maskinportenSchemaContent(id, call.maskinportenSchemaRequest())
-            val schema = client.updateMaskinportenSchema(id) { content(it.delegable) }
-                ?: throw ResourceNotFoundException("MaskinportenSchema")
-            call.respond(MaskinportenSchema.from(schema))
-        }.describe(maskinportenSchemaPutOperation)
-
-        put("/api/maskinportenschemas/{id}/withdraw") {
-            val id = resourceId("id", call.pathParameters["id"]!!)
-            val schema = client.withdrawMaskinportenSchema(id) ?: throw ResourceNotFoundException("MaskinportenSchema")
-            call.respond(MaskinportenSchema.from(schema))
-        }.describe(maskinportenSchemaWithdrawOperation)
-
-        put("/api/maskinportenschemas/{id}/policy") {
-            val id = resourceId("id", call.pathParameters["id"]!!)
-            if (!client.setMaskinportenSchemaPolicy(id)) throw ResourceNotFoundException("MaskinportenSchema")
-            call.respond(HttpStatusCode.NoContent)
-        }.describe(maskinportenSchemaPolicyPutOperation)
+        maskinportenSchemas(client, externalFiltering)
 
         get("/api/genericaccessresources") {
             val certificate = clientCertificate(call.request.headers[CLIENT_CERTIFICATE_HEADER], required = externalFiltering.isOn)
