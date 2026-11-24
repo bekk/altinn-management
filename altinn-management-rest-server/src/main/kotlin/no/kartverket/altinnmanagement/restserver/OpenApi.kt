@@ -601,7 +601,9 @@ internal val maskinportenSchemaPutOperation: Operation.Builder.() -> Unit = {
 
         HttpStatusCode.BadRequest {
             description = "The id or the body is not valid, the body could not be read, or Altinn rejected the " +
-                "resource. Nothing was changed. The body must be UTF-8 JSON that gives each name once."
+                "resource. Nothing was changed. The body must be UTF-8 JSON that gives each name once. " +
+                "`delegationDescription` is checked only when the rest of the body is valid, since this API has to ask " +
+                "Altinn whether the resource is `delegable`."
             headers { requestId() }
             ContentType.Application.ProblemJson {
                 schema = jsonSchema<ErrorResponse>()

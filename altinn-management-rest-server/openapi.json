@@ -649,7 +649,7 @@
                         }
                     },
                     "400": {
-                        "description": "The id or the body is not valid, the body could not be read, or Altinn rejected the resource. Nothing was changed. The body must be UTF-8 JSON that gives each name once.",
+                        "description": "The id or the body is not valid, the body could not be read, or Altinn rejected the resource. Nothing was changed. The body must be UTF-8 JSON that gives each name once. `delegationDescription` is checked only when the rest of the body is valid, since this API has to ask Altinn whether the resource is `delegable`.",
                         "headers": {
                             "X-Request-ID": {
                                 "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",

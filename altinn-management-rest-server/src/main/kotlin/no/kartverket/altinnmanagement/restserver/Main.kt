@@ -112,7 +112,8 @@ fun Application.module(
         put("/api/maskinportenschemas/{id}") {
             val id = resourceId("id", call.pathParameters["id"]!!)
             val content = maskinportenSchemaContent(id, call.maskinportenSchemaRequest())
-            val schema = client.updateMaskinportenSchema(id, content) ?: throw ResourceNotFoundException("MaskinportenSchema")
+            val schema = client.updateMaskinportenSchema(id) { content(it.delegable) }
+                ?: throw ResourceNotFoundException("MaskinportenSchema")
             call.respond(MaskinportenSchema.from(schema))
         }.describe(maskinportenSchemaPutOperation)
 

@@ -68,8 +68,12 @@ private fun resourceIdOrNull(value: String): ResourceId? = try {
 
 private fun invalidResourceId(name: String) = FieldError(name, ValidationCode.INVALID_FORMAT, "$name must be 4 or more of a-z, 0-9, _ and -")
 
-// Checks what Altinn would refuse, so that a caller gets every error at once, by this API's field names
-internal fun maskinportenSchemaContent(id: ResourceId, request: MaskinportenSchemaRequest): MaskinportenSchemaContent {
+// Checks what Altinn would refuse, by this API's field names. What does not depend on the resource is checked before
+// Altinn is asked, so that a body with errors gives 400 and not 404 or 502
+internal fun maskinportenSchemaContent(
+    id: ResourceId,
+    request: MaskinportenSchemaRequest,
+): (delegable: Boolean?) -> MaskinportenSchemaContent {
     val errors = buildList {
         addAll(pathIdErrors(id, request.resourceId))
         addAll(scopeErrors(request.scopes))
@@ -77,15 +81,18 @@ internal fun maskinportenSchemaContent(id: ResourceId, request: MaskinportenSche
         addAll(textErrors("description", request.description))
     }
     if (errors.isNotEmpty()) throw InvalidRequestException(errors)
-    return MaskinportenSchemaContent(
-        scopes = request.scopes!!,
-        title = request.title!!.toClient(),
-        description = request.description!!.toClient(),
-        delegationDescription = request.delegationDescription?.toClient(),
-        homepage = request.homepage,
-        contactPoints = request.contactPoints.orEmpty().map { it.toClient() },
-        keywords = request.keywords.orEmpty().map { it.toClient() },
-    )
+    return { delegable ->
+        checkDelegationDescription(delegable, request.delegationDescription)
+        MaskinportenSchemaContent(
+            scopes = request.scopes!!,
+            title = request.title!!.toClient(),
+            description = request.description!!.toClient(),
+            delegationDescription = request.delegationDescription?.toClient(),
+            homepage = request.homepage,
+            contactPoints = request.contactPoints.orEmpty().map { it.toClient() },
+            keywords = request.keywords.orEmpty().map { it.toClient() },
+        )
+    }
 }
 
 // Checks what Altinn would refuse, by this API's field names. What does not depend on the resource is checked before
@@ -101,11 +108,7 @@ internal fun genericAccessResourceContent(
     }
     if (errors.isNotEmpty()) throw InvalidRequestException(errors)
     return { delegable ->
-        // Altinn requires it only for a resource that can be delegated, and takes a resource without delegable as one
-        if (delegable != false) {
-            val delegationErrors = textErrors("delegationDescription", request.delegationDescription)
-            if (delegationErrors.isNotEmpty()) throw InvalidRequestException(delegationErrors)
-        }
+        checkDelegationDescription(delegable, request.delegationDescription)
         GenericAccessResourceContent(
             title = request.title!!.toClient(),
             description = request.description!!.toClient(),
@@ -115,6 +118,13 @@ internal fun genericAccessResourceContent(
             keywords = request.keywords.orEmpty().map { it.toClient() },
         )
     }
+}
+
+// Altinn requires it only for a resource that can be delegated, and takes a resource without delegable as one
+private fun checkDelegationDescription(delegable: Boolean?, delegationDescription: MultilingualText?) {
+    if (delegable == false) return
+    val errors = textErrors("delegationDescription", delegationDescription)
+    if (errors.isNotEmpty()) throw InvalidRequestException(errors)
 }
 
 private fun pathIdErrors(id: ResourceId, resourceId: String?): List<FieldError> =
