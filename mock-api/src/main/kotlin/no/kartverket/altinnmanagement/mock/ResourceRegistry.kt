@@ -22,9 +22,12 @@ private class Version(val versionId: Long, val resource: JsonObject, val created
 
 /**
  * Altinn's Resource Registry in memory. Like Altinn, it keeps every version of a resource: a version is a resource as
- * Altinn returns it, with its `versionId`, `createdAt` and `updatedAt`.
+ * Altinn returns it, with its `versionId`, `createdAt` and `updatedAt`. A resource has at most one policy, which is
+ * not versioned.
  */
-class ResourceRegistry(versions: List<JsonObject>) {
+class ResourceRegistry(versions: List<JsonObject>, policies: Map<String, ByteArray> = emptyMap()) {
+    private val policies = ConcurrentHashMap(policies)
+
     // A write replaces a resource's list instead of changing it, so a read without the lock still sees a whole list
     private val versions: MutableMap<String, List<Version>> = versions
         .map { Version(it.long("versionId"), it - METADATA, it.string("createdAt"), it.string("updatedAt")) }
@@ -57,6 +60,13 @@ class ResourceRegistry(versions: List<JsonObject>) {
         versions[id] = versions.getValue(id) + Version(lastVersionId.incrementAndGet(), resource, now, now)
     }
 
+    fun policy(id: String): ByteArray? = policies[id]
+
+    /** Replaces the policy of [id], like Altinn does: it keeps the file it was sent, byte for byte. */
+    fun setPolicy(id: String, policy: ByteArray) {
+        policies[id] = policy
+    }
+
     /**
      * Like Altinn, it filters every version, and keeps the newest version of each resource that matches. So when only
      * an older version matches, that older version is returned.
@@ -77,10 +87,17 @@ class ResourceRegistry(versions: List<JsonObject>) {
     companion object {
         private val METADATA = setOf("versionId", "createdAt", "updatedAt")
 
-        /** Kartverket's three MaskinportenSchema resources in production, and one of another organisation's. */
+        /**
+         * Kartverket's three MaskinportenSchema resources in production, one of another organisation's, and
+         * Kartverket's GenericAccessResource `kv-geonorge` in TT02, with its policy from `policies/kv-geonorge.xml`.
+         */
         fun seeded(): ResourceRegistry {
             val json = ResourceRegistry::class.java.getResource("/resources.json")!!.readText()
-            return ResourceRegistry(Json.parseToJsonElement(json).jsonArray.map { it.jsonObject })
+            val versions = Json.parseToJsonElement(json).jsonArray.map { it.jsonObject }
+            val policies = versions.map { it.string("identifier") }.mapNotNull { id ->
+                ResourceRegistry::class.java.getResource("/policies/$id.xml")?.let { id to it.readBytes() }
+            }
+            return ResourceRegistry(versions, policies.toMap())
         }
     }
 }

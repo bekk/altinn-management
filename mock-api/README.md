@@ -2,7 +2,8 @@
 
 A mock of Altinn, of Maskinporten, which issues the tokens Altinn's write routes require, and of the filtering service,
 for running altinn-management locally. It keeps its data in memory, so every start begins from the seed in [`resources.json`](src/main/resources/resources.json): Kartverket's three MaskinportenSchema resources in
-production, and one of another organisation's.
+production, one of another organisation's, and Kartverket's GenericAccessResource `kv-geonorge` in TT02, with its policy
+from [`policies`](src/main/resources/policies).
 
 It copies Altinn's behaviour from Altinn's source code in
 [Altinn/altinn-auth](https://github.com/Altinn/altinn-auth/tree/main/src/apps/Altinn.ResourceRegistry), not from the
@@ -24,9 +25,10 @@ token from the exchange under [Tokens](#tokens), with the scope `altinn:resource
 | :-- | :-- |
 | `GET /resourceregistry/api/v1/resource/{id}` | The newest version of the resource, or the one in `?versionId=`. The id must match exactly |
 | `GET /resourceregistry/api/v1/resource/search` | Filters on `id`, `resourceType`, `orgCode`, `organizationId`, `description`, `keyword` and `reference`, and ignores `title`. `resourceType` is a type's name or number, and any other value is 400. `reference` matches part of any reference, of every type. The filters run over every version, so when only an older version of a resource matches, that older version is returned |
-| `POST /resourceregistry/api/v1/resource` | Creates a resource, and answers 201 with a `Location` and no body. First it checks the resource: the identifier, title, description and, when the resource can be delegated, right description in `en`, `nb` and `nn`, the owner's org code, and a `MaskinportenScope` reference. Then it checks that the owner in the body is the token's organisation, and then the scope prefixes. An identifier that is taken is 409 |
+| `POST /resourceregistry/api/v1/resource` | Creates a resource, and answers 201 with a `Location` and no body. First it checks the resource: the identifier, title, description and, when the resource can be delegated, right description in `en`, `nb` and `nn`, the owner's org code, and for a MaskinportenSchema a `MaskinportenScope` reference. Then it checks that the owner in the body is the token's organisation, and then the scope prefixes. An identifier that is taken is 409 |
 | `PUT /resourceregistry/api/v1/resource/{id}` | Adds a new version that replaces the whole resource, and answers 200 with no body. It checks like a POST, but only the owner in the body, not the one the mock has |
-| `POST` or `PUT /resourceregistry/api/v1/resource/{id}/policy` | Checks the XACML policy in the multipart field `policyFile`: every rule must be about the resource. It checks the owner the mock has, and answers 201 with no body. The mock does not keep the policy |
+| `POST` or `PUT /resourceregistry/api/v1/resource/{id}/policy` | Checks the XACML policy in the multipart field `policyFile`: every rule must be about the resource. It checks the owner the mock has, keeps the file as it was sent in place of the one before, and answers 201 with no body |
+| `GET /resourceregistry/api/v1/resource/{id}/policy` | The policy as it was sent, as `text/xml`. Without the resource or a policy it answers 404 as plain text: "Unable to find resource" or "Unable to find requested policy" |
 
 Errors look like Altinn's: ProblemDetails sent as `application/json`, or a JSON string. A missing or unknown token gives
 401 and a token without access gives 403, both without a body.

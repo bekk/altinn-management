@@ -2,18 +2,25 @@ package no.kartverket.altinnmanagement.mock
 
 import io.ktor.client.request.forms.formData
 import io.ktor.client.request.forms.submitFormWithBinaryData
+import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsBytes
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
 import io.ktor.server.testing.ApplicationTestBuilder
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 
 class PolicyTest {
+
+    private val path = "/resourceregistry/api/v1/resource"
 
     private fun match(resource: String) = """
         <xacml:Match MatchId="urn:oasis:names:tc:xacml:1.0:function:string-equal">
@@ -141,5 +148,38 @@ class PolicyTest {
     @Test
     fun `a policy needs a token with a scope to write`() = mockApi {
         assertEquals(HttpStatusCode.Unauthorized, upload("nrl-reporting", policy(rule("nrl-reporting")), token = "nope").status)
+    }
+
+    @Test
+    fun `the policy that was accepted last is returned as it was sent`() = mockApi {
+        val newest = policy(rule("nrl-reporting"), rule("nrl-reporting"))
+        upload("nrl-reporting", policy(rule("nrl-reporting")))
+        upload("nrl-reporting", newest)
+        upload("nrl-reporting", policy(rule("nrl-retrieval")))
+
+        val response = client.get("$path/nrl-reporting/policy")
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(ContentType.Text.Xml, response.contentType())
+        assertEquals(newest, response.bodyAsText())
+    }
+
+    @Test
+    fun `the seed has kv-geonorge's policy from TT02`() = mockApi {
+        val seeded = PolicyTest::class.java.getResource("/policies/kv-geonorge.xml")!!.readBytes()
+
+        assertContentEquals(seeded, client.get("$path/kv-geonorge/policy").bodyAsBytes())
+    }
+
+    @Test
+    fun `without the resource or its policy, the policy is not found, as plain text`() = mockApi {
+        val noResource = client.get("$path/kv-nothing/policy")
+        val noPolicy = client.get("$path/nrl-reporting/policy")
+
+        assertEquals(HttpStatusCode.NotFound, noResource.status)
+        assertEquals(ContentType.Text.Plain, noResource.contentType()?.withoutParameters())
+        assertEquals("Unable to find resource", noResource.bodyAsText())
+        assertEquals(HttpStatusCode.NotFound, noPolicy.status)
+        assertEquals("Unable to find requested policy", noPolicy.bodyAsText())
     }
 }

@@ -12,6 +12,7 @@ import io.ktor.server.request.receiveMultipart
 import io.ktor.server.request.receiveText
 import io.ktor.server.response.header
 import io.ktor.server.response.respond
+import io.ktor.server.response.respondBytes
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
@@ -85,10 +86,16 @@ fun Route.resourceRegistry(registry: ResourceRegistry, tokens: Tokens) {
         call.respond(HttpStatusCode.OK)
     }
 
-    // Altinn takes a policy with POST and with PUT, and does the same with both
     route("$RESOURCE_PATH/{id}/policy") {
-        post { policy(registry, tokens) }
-        put { policy(registry, tokens) }
+        get {
+            val id = call.pathParameters["id"]!!
+            if (registry.get(id) == null) return@get call.respondText("Unable to find resource", status = HttpStatusCode.NotFound)
+            val policy = registry.policy(id) ?: return@get call.respondText("Unable to find requested policy", status = HttpStatusCode.NotFound)
+            call.respondBytes(policy, ContentType.Text.Xml)
+        }
+        // Altinn takes a policy with POST and with PUT, and does the same with both
+        post { writePolicy(registry, tokens) }
+        put { writePolicy(registry, tokens) }
     }
 }
 
@@ -100,7 +107,7 @@ private val REQUIRED = listOf(
     "hasCompetentAuthority" to "HasCompetentAuthority",
 )
 
-private suspend fun RoutingContext.policy(registry: ResourceRegistry, tokens: Tokens) {
+private suspend fun RoutingContext.writePolicy(registry: ResourceRegistry, tokens: Tokens) {
     val claims = call.writer(tokens) ?: return
     if (!call.request.contentType().match(ContentType.MultiPart.FormData)) return call.unsupportedMediaType()
     val id = call.pathParameters["id"]!!
@@ -120,6 +127,7 @@ private suspend fun RoutingContext.policy(registry: ResourceRegistry, tokens: To
     }
     if (problem != null) return call.respondJson(HttpStatusCode.BadRequest, JsonPrimitive(problem))
 
+    registry.setPolicy(id, file)
     call.response.header(HttpHeaders.Location, "$id/policy")
     call.respond(HttpStatusCode.Created)
 }

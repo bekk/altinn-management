@@ -100,7 +100,7 @@ class ResourceWritesTest {
         create(body { put("versionId", JsonPrimitive(1)); put("createdAt", JsonPrimitive("2000-01-01T00:00:00+00:00")) })
         val stored = fetch("kv-test")
 
-        assertEquals("3775", stored.text("versionId"), "the seed's highest is 3774, and the count is shared by all resources")
+        assertEquals("14524", stored.text("versionId"), "the seed's highest is 14523, and the count is shared by all resources")
         assertEquals(stored.text("createdAt"), stored.text("updatedAt"))
         assertFalse(stored.text("createdAt").startsWith("2000"))
         assertEquals("true", stored.text("delegable"))
