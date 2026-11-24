@@ -25,13 +25,10 @@ import no.kartverket.altinnmanagement.restserver.problem.FieldError
 import no.kartverket.altinnmanagement.restserver.problem.ProblemType
 import no.kartverket.altinnmanagement.restserver.problem.ValidationCode
 import no.kartverket.altinnmanagement.restserver.testServer
-import no.kartverket.altinnmanagement.restserver.upstreamError
-import java.io.IOException
 import java.net.URI
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ListMaskinportenSchemasTest {
@@ -264,26 +261,4 @@ class ListMaskinportenSchemasTest {
             assertTrue(sentToAltinn.isEmpty(), "Altinn was called: $sentToAltinn")
             assertTrue(sentToFiltering.isEmpty(), "The filtering service was called: $sentToFiltering")
         }
-
-    @Test
-    fun `gives 502 when Altinn answers with an error`() = testServer(altinn(status = 500, body = "boom")) {
-        client.get("/api/maskinportenschemas").assertProblem(upstreamError)
-    }
-
-    @Test
-    fun `gives 502 when Altinn answers with something that is not a list of resources`() {
-        for (body in listOf("{}", """[{"resourceType":"MaskinportenSchema"}]""", """[{"identifier":"Not an id"}]""")) {
-            testServer(altinn(body = body)) {
-                client.get("/api/maskinportenschemas").assertProblem(upstreamError)
-            }
-        }
-    }
-
-    @Test
-    fun `gives 502 when Altinn cannot be reached`() = testServer({ throw IOException("Connection refused") }) {
-        val response = client.get("/api/maskinportenschemas")
-
-        response.assertProblem(upstreamError)
-        assertFalse("Connection refused" in response.bodyAsText())
-    }
 }

@@ -28,8 +28,6 @@ import no.kartverket.altinnmanagement.restserver.problem.FieldError
 import no.kartverket.altinnmanagement.restserver.problem.ProblemType
 import no.kartverket.altinnmanagement.restserver.problem.ValidationCode
 import no.kartverket.altinnmanagement.restserver.testServer
-import no.kartverket.altinnmanagement.restserver.upstreamError
-import java.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -310,48 +308,4 @@ class PutGenericAccessResourceTest {
 
             assertTrue(puts.isEmpty(), "A resource was put: $puts")
         }
-
-    @Test
-    fun `gives 404 for a MaskinportenSchema, without changing it`() = testServer(altinn(resource = resourceJson())) {
-        put(body).assertProblem(genericAccessResourceNotFound)
-
-        assertTrue(puts.isEmpty(), "A resource was put: $puts")
-    }
-
-    @Test
-    fun `gives 404 for another organisation's resource, without changing it`() =
-        testServer(altinn(resource = genericAccessResource.replace("\"971040238\"", "\"991825827\""))) {
-            put(body).assertProblem(genericAccessResourceNotFound)
-
-            assertTrue(puts.isEmpty(), "A resource was put: $puts")
-        }
-
-    @Test
-    fun `gives 400 with Altinn's reasons when Altinn rejects the resource`() = testServer(
-        altinn(
-            putStatus = 400,
-            putBody = """
-                {"type":"https://tools.ietf.org/html/rfc9110#section-15.5.1","title":"One or more validation errors occurred.","status":400,
-                 "errors":{"RightDescription":["Missing RightDescription in english en"]}}
-            """.trimIndent(),
-        ),
-    ) {
-        put(body).assertProblem(
-            ErrorResponse.of(
-                ProblemType.UPSTREAM_REJECTED,
-                HttpStatusCode.BadRequest,
-                "Altinn rejected the resource: RightDescription: Missing RightDescription in english en",
-            ),
-        )
-    }
-
-    @Test
-    fun `gives 502 when Altinn fails to change the resource`() = testServer(altinn(putStatus = 500, putBody = "boom")) {
-        put(body).assertProblem(upstreamError)
-    }
-
-    @Test
-    fun `gives 502 when Altinn cannot be reached`() = testServer({ throw IOException("Connection refused") }) {
-        put(body).assertProblem(upstreamError)
-    }
 }

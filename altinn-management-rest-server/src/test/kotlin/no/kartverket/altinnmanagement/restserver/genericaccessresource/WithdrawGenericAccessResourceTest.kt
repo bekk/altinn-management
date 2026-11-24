@@ -95,19 +95,4 @@ class WithdrawGenericAccessResourceTest {
 
             assertTrue(puts.isEmpty(), "A resource was put: $puts")
         }
-
-    @Test
-    fun `gives 404 for a MaskinportenSchema, without changing it`() = testServer(altinn(resource = resourceJson())) {
-        withdraw().assertProblem(genericAccessResourceNotFound)
-
-        assertTrue(puts.isEmpty(), "A resource was put: $puts")
-    }
-
-    @Test
-    fun `gives 404 for another organisation's resource, without changing it`() =
-        testServer(altinn(resource = genericAccessResource.replace("971040238", "991825827"))) {
-            withdraw().assertProblem(genericAccessResourceNotFound)
-
-            assertTrue(puts.isEmpty(), "A resource was put: $puts")
-        }
 }

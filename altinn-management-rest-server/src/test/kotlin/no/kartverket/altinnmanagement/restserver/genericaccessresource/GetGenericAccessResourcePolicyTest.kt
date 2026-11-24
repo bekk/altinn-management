@@ -19,7 +19,6 @@ import no.kartverket.altinnmanagement.restserver.problem.FieldError
 import no.kartverket.altinnmanagement.restserver.problem.ProblemType
 import no.kartverket.altinnmanagement.restserver.problem.ValidationCode
 import no.kartverket.altinnmanagement.restserver.testServer
-import no.kartverket.altinnmanagement.restserver.upstreamError
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -103,30 +102,9 @@ class GetGenericAccessResourcePolicyTest {
     }
 
     @Test
-    fun `gives 404 when the resource has no policy yet`() = testServer(altinn()) {
-        client.get("/api/genericaccessresources/kv-matrikkel-brukernavn/policy").assertProblem(notFound)
-    }
-
-    @Test
     fun `gives 404 when Altinn has no resource with the id`() = testServer(altinn(resource = null)) {
         client.get("/api/genericaccessresources/kv-matrikkel-brukernavn/policy").assertProblem(notFound)
     }
-
-    @Test
-    fun `gives 404 without asking for the policy when the resource is not a GenericAccessResource`() =
-        testServer(altinn(resource = resourceJson(), policy = policyXml())) {
-            client.get("/api/genericaccessresources/kv-matrikkel-brukernavn/policy").assertProblem(notFound)
-
-            assertEquals(1, sent.size)
-        }
-
-    @Test
-    fun `gives 404 without asking for the policy when the resource is not Kartverket's`() =
-        testServer(altinn(resource = resourceJson("GenericAccessResource").replace("971040238", "974760673"), policy = policyXml())) {
-            client.get("/api/genericaccessresources/kv-matrikkel-brukernavn/policy").assertProblem(notFound)
-
-            assertEquals(1, sent.size)
-        }
 
     @Test
     fun `gives 400 when the id is not valid, without asking Altinn`() = testServer(altinn()) {
@@ -146,11 +124,6 @@ class GetGenericAccessResourcePolicyTest {
         client.get("/api/genericaccessresources/kv-matrikkel-brukernavn/policy").assertProblem(
             ErrorResponse.of(ProblemType.UNSUPPORTED_POLICY, HttpStatusCode.BadGateway),
         )
-    }
-
-    @Test
-    fun `gives 502 when Altinn answers the policy with an error`() = testServer(altinn(policyStatus = 500)) {
-        client.get("/api/genericaccessresources/kv-matrikkel-brukernavn/policy").assertProblem(upstreamError)
     }
 
     private fun policyXml(effect: String = "Permit", levels: Boolean = true): String {

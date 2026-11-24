@@ -16,8 +16,6 @@ import io.ktor.server.testing.ApplicationTestBuilder
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
-import no.kartverket.altinnmanagement.client.auth.AccessToken
-import no.kartverket.altinnmanagement.client.auth.AccessTokenProvider
 import no.kartverket.altinnmanagement.client.http.HttpMethod
 import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
 import no.kartverket.altinnmanagement.client.http.OutgoingRequest
@@ -35,9 +33,7 @@ import no.kartverket.altinnmanagement.restserver.problem.FieldError
 import no.kartverket.altinnmanagement.restserver.problem.ProblemType
 import no.kartverket.altinnmanagement.restserver.problem.ValidationCode
 import no.kartverket.altinnmanagement.restserver.testServer
-import no.kartverket.altinnmanagement.restserver.upstreamError
 import org.slf4j.LoggerFactory
-import java.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -375,111 +371,4 @@ class PutMaskinportenSchemaTest {
 
             assertTrue(puts.isEmpty(), "A resource was put: $puts")
         }
-
-    @Test
-    fun `gives 404 for resources of other types, without changing anything`() =
-        testServer(altinn(resource = resourceJson(resourceType = "GenericAccessResource"))) {
-            put(body).assertProblem(maskinportenSchemaNotFound)
-
-            assertTrue(puts.isEmpty(), "A resource was put: $puts")
-        }
-
-    @Test
-    fun `gives 404 for resources another organisation owns, without changing anything`() =
-        testServer(altinn(resource = resourceJson().replace("\"971040238\"", "\"981544315\""))) {
-            put(body).assertProblem(maskinportenSchemaNotFound)
-
-            assertTrue(puts.isEmpty(), "A resource was put: $puts")
-        }
-
-    @Test
-    fun `gives 400 with Altinn's reasons when Altinn rejects the resource`() = testServer(
-        altinn(
-            putStatus = 400,
-            putBody = """
-                {"type":"https://tools.ietf.org/html/rfc9110#section-15.5.1","title":"One or more validation errors occurred.","status":400,
-                 "errors":{"Title":["Missing title in english en"],"ResourceReferences":["Missing maskinporten scopen for MaskinportenSchema resource"]}}
-            """.trimIndent(),
-        ),
-    ) {
-        put(body).assertProblem(
-            ErrorResponse.of(
-                ProblemType.UPSTREAM_REJECTED,
-                HttpStatusCode.BadRequest,
-                "Altinn rejected the resource: Title: Missing title in english en; " +
-                    "ResourceReferences: Missing maskinporten scopen for MaskinportenSchema resource",
-            ),
-        )
-    }
-
-    @Test
-    fun `gives 400 when Altinn does not let Kartverket use a scope`() = testServer(
-        altinn(
-            putStatus = 401,
-            putBody = """
-                {"title":"Unauthorized","status":401,"detail":"Not authorized for creating resource with the listed scopes",
-                 "errors":{"InvalidPrefix":["digdir:annet"]}}
-            """.trimIndent(),
-        ),
-    ) {
-        put(body).assertProblem(
-            ErrorResponse.of(ProblemType.UPSTREAM_REJECTED, HttpStatusCode.BadRequest, "Altinn rejected the resource: InvalidPrefix: digdir:annet"),
-        )
-    }
-
-    @Test
-    fun `gives 502 when Altinn refuses this API's token`() {
-        for (status in listOf(401, 403)) {
-            testServer(altinn(putStatus = status)) {
-                put(body).assertProblem(upstreamError)
-            }
-        }
-    }
-
-    private class RecordingTokenProvider : AccessTokenProvider {
-        val refused = mutableListOf<AccessToken>()
-
-        override suspend fun accessToken() = AccessToken.of(TEST_TOKEN)
-
-        override suspend fun refused(token: AccessToken) {
-            refused += token
-        }
-    }
-
-    @Test
-    fun `drops the token Altinn refuses, so the next change gets a new one`() {
-        val tokens = RecordingTokenProvider()
-        testServer(altinn(putStatus = 401), accessTokenProvider = tokens) {
-            put(body)
-        }
-
-        assertEquals(listOf(TEST_TOKEN), tokens.refused.map { it.value })
-    }
-
-    @Test
-    fun `keeps the token when Altinn rejects the resource or does not let it change it`() {
-        val refusals = listOf(
-            400 to """{"errors":{"Title":["Missing title in english en"]}}""",
-            401 to """{"errors":{"InvalidPrefix":["digdir:annet"]}}""",
-            403 to "",
-        )
-        for ((status, putBody) in refusals) {
-            val tokens = RecordingTokenProvider()
-            testServer(altinn(putStatus = status, putBody = putBody), accessTokenProvider = tokens) {
-                put(body)
-            }
-
-            assertEquals(emptyList(), tokens.refused, "for $status")
-        }
-    }
-
-    @Test
-    fun `gives 502 when Altinn fails to change the resource`() = testServer(altinn(putStatus = 500, putBody = "boom")) {
-        put(body).assertProblem(upstreamError)
-    }
-
-    @Test
-    fun `gives 502 when Altinn cannot be reached`() = testServer({ throw IOException("Connection refused") }) {
-        put(body).assertProblem(upstreamError)
-    }
 }

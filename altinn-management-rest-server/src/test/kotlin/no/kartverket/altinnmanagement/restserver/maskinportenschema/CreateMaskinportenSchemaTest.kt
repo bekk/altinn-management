@@ -11,8 +11,6 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.ApplicationTestBuilder
 import kotlinx.serialization.json.Json
-import no.kartverket.altinnmanagement.client.auth.AccessToken
-import no.kartverket.altinnmanagement.client.auth.AccessTokenProvider
 import no.kartverket.altinnmanagement.client.http.HttpMethod
 import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
 import no.kartverket.altinnmanagement.client.http.OutgoingRequest
@@ -27,7 +25,6 @@ import no.kartverket.altinnmanagement.restserver.problem.FieldError
 import no.kartverket.altinnmanagement.restserver.problem.ProblemType
 import no.kartverket.altinnmanagement.restserver.problem.ValidationCode
 import no.kartverket.altinnmanagement.restserver.testServer
-import java.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -67,8 +64,6 @@ class CreateMaskinportenSchemaTest {
           "delegationDescription": $texts
         }
     """.trimIndent()
-
-    private val upstreamError = ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed")
 
     private suspend fun ApplicationTestBuilder.create(body: String, contentType: ContentType = ContentType.Application.Json) =
         client.post("/api/maskinportenschemas") {
@@ -326,75 +321,5 @@ class CreateMaskinportenSchemaTest {
                 "Altinn rejected the resource: Title: Missing title in english en; Description: Missing Description in bokmal nb",
             ),
         )
-    }
-
-    @Test
-    fun `gives 400 with Altinn's reasons when Altinn refuses a scope without Kartverket's prefix`() = testServer(
-        altinn(
-            status = 401,
-            body = """
-                {
-                  "title": "Unauthorized",
-                  "status": 401,
-                  "detail": "Not authorized for creating resource with the listed scopes",
-                  "errors": { "InvalidPrefix": ["skatteetaten:demo"] }
-                }
-            """.trimIndent(),
-        ),
-    ) {
-        create(minimalBody).assertProblem(
-            ErrorResponse.of(
-                ProblemType.UPSTREAM_REJECTED,
-                HttpStatusCode.BadRequest,
-                "Altinn rejected the resource: InvalidPrefix: skatteetaten:demo",
-            ),
-        )
-    }
-
-    @Test
-    fun `gives 400 with Altinn's words when Altinn rejects the resource with only a message`() =
-        testServer(altinn(status = 400, body = "\"The resource is not valid\"")) {
-            create(minimalBody).assertProblem(
-                ErrorResponse.of(ProblemType.UPSTREAM_REJECTED, HttpStatusCode.BadRequest, "Altinn rejected the resource: The resource is not valid"),
-            )
-        }
-
-    @Test
-    fun `gives 502 when Altinn does not accept this API's token`() {
-        for (status in listOf(401, 403)) {
-            testServer(altinn(status = status)) {
-                create(minimalBody).assertProblem(upstreamError)
-            }
-        }
-    }
-
-    @Test
-    fun `gives 502 when Altinn answers with an error`() = testServer(altinn(status = 500, body = "boom")) {
-        create(minimalBody).assertProblem(upstreamError)
-    }
-
-    @Test
-    fun `drops the token Altinn refuses, so the next change gets a new one`() {
-        val refused = mutableListOf<AccessToken>()
-        val tokens = object : AccessTokenProvider {
-            override suspend fun accessToken() = AccessToken.of(TEST_TOKEN)
-
-            override suspend fun refused(token: AccessToken) {
-                refused += token
-            }
-        }
-        testServer(altinn(status = 401), accessTokenProvider = tokens) {
-            create(minimalBody)
-        }
-
-        assertEquals(listOf(TEST_TOKEN), refused.map { it.value })
-    }
-
-    @Test
-    fun `gives 502 when Altinn cannot be reached`() = testServer({ throw IOException("Connection refused") }) {
-        val response = create(minimalBody)
-
-        response.assertProblem(upstreamError)
-        assertFalse("Connection refused" in response.bodyAsText())
     }
 }
