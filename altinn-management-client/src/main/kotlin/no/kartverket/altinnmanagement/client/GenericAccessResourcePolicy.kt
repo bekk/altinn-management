@@ -66,9 +66,9 @@ internal fun genericAccessResourcePolicy(id: ResourceId, policy: GenericAccessRe
     val rules = policy.rules.withIndex().joinToString("\n") { (index, rule) -> rule(id, index + 1, rule) }
     val levels = policy.minimumAuthenticationLevel
     val obligations = listOfNotNull(
-        levels.endUser?.let { obligation(1, END_USER_LEVEL, it) },
-        levels.organisation?.let { obligation(2, ORGANISATION_LEVEL, it) },
-        levels.systemUser?.let { obligation(3, SYSTEM_USER_LEVEL, it) },
+        levels.endUser?.let { obligation(END_USER_LEVEL, it) },
+        levels.organisation?.let { obligation(ORGANISATION_LEVEL, it) },
+        levels.systemUser?.let { obligation(SYSTEM_USER_LEVEL, it) },
     )
     return buildString {
         appendLine("""<?xml version="1.0" encoding="utf-8"?>""")
@@ -130,9 +130,9 @@ private fun match(matchId: String, value: String, attributeId: String, category:
     "</xacml:Match>",
 ).joinToString("\n")
 
-private fun obligation(number: Int, category: String, level: Int): String = """
-    |<xacml:ObligationExpression ObligationId="urn:altinn:obligation:authenticationLevel$number" FulfillOn="Permit">
-    |<xacml:AttributeAssignmentExpression AttributeId="urn:altinn:obligation$number-assignment$number" Category="$category">
+private fun obligation(category: String, level: Int): String = """
+    |<xacml:ObligationExpression ObligationId="${obligationId(category)}" FulfillOn="Permit">
+    |<xacml:AttributeAssignmentExpression AttributeId="${assignmentId(category)}" Category="$category">
     |<xacml:AttributeValue DataType="$INTEGER">$level</xacml:AttributeValue>
     |</xacml:AttributeAssignmentExpression>
     |</xacml:ObligationExpression>
@@ -184,10 +184,15 @@ private fun parseXml(xml: ByteArray): Document = try {
 private fun level(obligation: Element): Pair<String, Int> {
     val assignment = obligation.children("AttributeAssignmentExpression").singleOrNull()
     val value = assignment?.children("AttributeValue")?.singleOrNull()?.takeIf { it.getAttribute("DataType") == INTEGER }
-    val category = assignment?.getAttribute("Category")
+    val category = assignment?.getAttribute("Category")?.takeIf { it in LEVELS }
     val level = value?.textContent?.trim()?.toIntOrNull()
-    if (obligation.getAttribute("FulfillOn") != "Permit" || category == null || category !in LEVELS || level == null) {
+    if (obligation.getAttribute("FulfillOn") != "Permit" || category == null || level == null) {
         unsupported("it has an obligation that is not an authentication level")
+    }
+    if (obligation.getAttribute("ObligationId") != obligationId(category) || assignment?.getAttribute("AttributeId") != assignmentId(category) ||
+        assignment.hasAttribute("Issuer")
+    ) {
+        unsupported("it has an authentication level with other ids or an issuer")
     }
     return category to level
 }
@@ -260,7 +265,12 @@ private const val ORGANISATION_LEVEL = "urn:altinn:minimum-authenticationlevel-o
 
 private const val SYSTEM_USER_LEVEL = "urn:altinn:minimum-authenticationlevel-systemuser"
 
-private val LEVELS = setOf(END_USER_LEVEL, ORGANISATION_LEVEL, SYSTEM_USER_LEVEL)
+// Numbered as Studio numbers them, whichever levels a policy has
+private val LEVELS = mapOf(END_USER_LEVEL to 1, ORGANISATION_LEVEL to 2, SYSTEM_USER_LEVEL to 3)
+
+private fun obligationId(category: String) = "urn:altinn:obligation:authenticationLevel${LEVELS.getValue(category)}"
+
+private fun assignmentId(category: String) = LEVELS.getValue(category).let { "urn:altinn:obligation$it-assignment$it" }
 
 private const val RESOURCE_ID = "urn:altinn:resource"
 
