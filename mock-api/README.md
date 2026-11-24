@@ -1,7 +1,7 @@
 # mock-api
 
-A mock of Altinn, and of Maskinporten, which issues the tokens Altinn's write routes require, for running
-altinn-management locally. It keeps its data in memory, so every start begins from the seed in [`resources.json`](src/main/resources/resources.json): Kartverket's three MaskinportenSchema resources in
+A mock of Altinn, of Maskinporten, which issues the tokens Altinn's write routes require, and of the filtering service,
+for running altinn-management locally. It keeps its data in memory, so every start begins from the seed in [`resources.json`](src/main/resources/resources.json): Kartverket's three MaskinportenSchema resources in
 production, and one of another organisation's.
 
 It copies Altinn's behaviour from Altinn's source code in
@@ -49,3 +49,12 @@ and a colon, unless the token has the admin scope. Otherwise it answers 401, wit
 | `GET /authentication/api/v1/exchange/maskinporten` | Altinn's exchange of a Maskinporten token for an Altinn token. The Altinn token lasts 30 minutes and has the Maskinporten token's claims, `scope` and `consumer` among them |
 
 The mock's tokens are JWTs without a signature. Instead, the mock only accepts a token it issued itself.
+
+## Filtering
+
+| Route | What it plays |
+| :-- | :-- |
+| `POST /filtering` | The filtering service, which tells the server which resources and scopes a caller has access to. It answers every caller the same way: the resources that start with `nrl-` and the scopes that start with `kartverk:nrl.`. That is two of the three Kartverket resources in the seed, so a list shows that filtering is on |
+
+The filtering service is ours, not Altinn's, so this route does not copy Altinn's source. It answers in the format
+the server's `ExternalFilteringClient` reads, and does not look at what the server sends.

@@ -60,7 +60,7 @@ on, lists only show the resources the calling app has access to.
 | :--------------------------------------------------------------- | :------------------------------------------------------------ | :---------------------------------------------------------------------------- |
 | [`altinn-management-client`](altinn-management-client)           | Kotlin library that talks to Maskinporten and Altinn directly | nothing yet, as only the server uses it                                       |
 | [`altinn-management-rest-server`](altinn-management-rest-server) | Ktor server exposing a REST/JSON API over the client          | a Docker image, built with [Jib](https://github.com/GoogleContainerTools/jib) |
-| [`mock-api`](mock-api)                                           | A mock of Altinn and Maskinporten, with its data in memory    | nothing, as it is only for local runs                                         |
+| [`mock-api`](mock-api)                                           | A mock of Altinn, Maskinporten and the filtering service      | nothing, as it is only for local runs                                         |
 
 `altinn-management-rest-server` is the intended consumer of `altinn-management-client`, so other systems can manage
 resources over plain JSON without speaking Maskinporten and Altinn's API themselves.
@@ -89,6 +89,15 @@ curl -i localhost:8080/api/maskinportenschemas
 `.env.example` sets `ALTINN_ENVIRONMENT` to `LOCAL`, so the server talks to the mock instead of Altinn, and needs no
 real Maskinporten client. The mock starts from a few of Kartverket's resources each time. See its
 [README](mock-api/README.md) for what it plays and how closely it follows Altinn.
+
+The mock also plays the filtering service, and gives every caller access to the resources that start with `nrl-` and
+the scopes that start with `kartverk:nrl.`. To try filtering, set `EXTERNAL_FILTERING_ENABLED=true` in `.env` and
+restart `dev.sh`. Lists then need the `X-Forwarded-Client-Cert` header, which Istio sets in the cluster, and any value
+will do locally:
+
+```bash
+curl -i -H 'X-Forwarded-Client-Cert: URI=spiffe://cluster.local/ns/demo/sa/demo' localhost:8080/api/maskinportenschemas
+```
 
 `dev.sh` is what turns `.env` into real environment variables. The server itself only reads the environment, so
 starting it any other way, like an IDE run configuration or `./gradlew :altinn-management-rest-server:run`, means
