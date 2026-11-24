@@ -109,6 +109,7 @@ setting them yourself.
 | `GET /api/genericaccessresources`               | Lists Kartverket's GenericAccessResources                               |
 | `POST /api/genericaccessresources`              | Creates a GenericAccessResource                                         |
 | `GET /api/genericaccessresources/{id}`          | Gets a GenericAccessResource                                            |
+| `PUT /api/genericaccessresources/{id}`          | Changes a GenericAccessResource                                         |
 | `PUT /api/genericaccessresources/{id}/withdraw` | Withdraws a GenericAccessResource                                       |
 | `PUT /api/genericaccessresources/{id}/policy`   | Sets or replaces the policy of a GenericAccessResource                  |
 | `GET /openapi`                                  | The OpenAPI spec as JSON                                                |
