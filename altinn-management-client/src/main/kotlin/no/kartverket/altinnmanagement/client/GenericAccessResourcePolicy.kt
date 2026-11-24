@@ -245,6 +245,7 @@ private fun parseMatch(match: Element): Match {
     val designator = match.xacmlChildren().singleOrNull { it.localName == "AttributeDesignator" }
     if (match.xacmlChildren().size != 2 || value == null || designator == null) unsupported("a match is not a value and an attribute")
     if (value.getAttribute("DataType") != STRING || designator.getAttribute("DataType") != STRING) unsupported("a match compares something other than text")
+    if (designator.hasAttribute("Issuer") || designator.getAttribute("MustBePresent") != "false") unsupported("a match has an issuer or must be present")
     return Match(match.getAttribute("MatchId"), designator.getAttribute("Category"), designator.getAttribute("AttributeId"), value.textContent)
 }
 
