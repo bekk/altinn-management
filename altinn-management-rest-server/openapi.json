@@ -2593,7 +2593,7 @@
         "/api/genericaccessresources/{id}/policy": {
             "put": {
                 "summary": "Set or replace the policy of a GenericAccessResource",
-                "description": "Uploads the policy in the body to Altinn, in place of any policy the resource has, so it both sets and changes a policy. Send the whole policy, since rules left out are removed. A resource cannot be delegated or used until it has a policy, so call this after `POST /api/genericaccessresources`. It only works on Kartverket's GenericAccessResources.",
+                "description": "Uploads the policy in the body to Altinn, in place of any policy the resource has, so it both sets and changes a policy. To change one, get it with `GET /api/genericaccessresources/{id}/policy`, change it and put all of it back, since rules left out are removed. A resource cannot be delegated or used until it has a policy, so call this after `POST /api/genericaccessresources`. It only works on Kartverket's GenericAccessResources.",
                 "parameters": [
                     {
                         "name": "id",
@@ -2820,6 +2820,219 @@
                         }
                     }
                 }
+            },
+            "get": {
+                "summary": "Get the policy of a GenericAccessResource",
+                "description": "Gets the resource's policy from Altinn, in the same form as `PUT /api/genericaccessresources/{id}/policy` takes it. It only works on Kartverket's GenericAccessResources.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "The resource's id: 4 or more of `a-z`, `0-9`, `_` and `-`, for example `kv-grunnbok-innsyn`.",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[a-z0-9_-]{4,}$"
+                        }
+                    },
+                    {
+                        "name": "X-Request-ID",
+                        "in": "header",
+                        "description": "An id to find this call by in this API's logs. Up to 128 ASCII letters, digits, `-`, `_`, `.` and `:`. Without it, or with any other value, this API makes a new one. Every response has the id in its `X-Request-Id` header.",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "3f2b8c1e-7d4a-4f0e-9b6a-2c5d8e1f4a7b"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The policy.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GenericAccessResourcePolicy"
+                                },
+                                "examples": {
+                                    "Policy": {
+                                        "value": {
+                                            "minimumAuthenticationLevel": {
+                                                "endUser": 4,
+                                                "organisation": 3
+                                            },
+                                            "rules": [
+                                                {
+                                                    "description": "Explicitly granted users may open the service.",
+                                                    "subjects": [
+                                                        [
+                                                            "urn:altinn:accesspackage:eksplisitt"
+                                                        ]
+                                                    ],
+                                                    "actions": [
+                                                        "access"
+                                                    ]
+                                                },
+                                                {
+                                                    "description": "Explicitly granted users may download the datasets.",
+                                                    "subjects": [
+                                                        [
+                                                            "urn:altinn:accesspackage:eksplisitt"
+                                                        ]
+                                                    ],
+                                                    "actions": [
+                                                        "download"
+                                                    ],
+                                                    "subResources": [
+                                                        {
+                                                            "urn:kv:geonorge": "dataset"
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "The id is not valid.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "InvalidId": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:validation-error",
+                                            "title": "Validation failed",
+                                            "status": 400,
+                                            "errors": [
+                                                {
+                                                    "field": "id",
+                                                    "code": "INVALID_FORMAT",
+                                                    "message": "id must be 4 or more of a-z, 0-9, _ and -"
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Altinn has no GenericAccessResource of Kartverket's with this id, or the resource has no policy yet. A new resource has none until it is given one.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "NotFound": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:not-found",
+                                            "title": "Not found",
+                                            "status": 404,
+                                            "detail": "There is no GenericAccessResource with this id, or it has no policy yet"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "This API could not get an answer from Altinn, or the policy in Altinn has parts this API cannot show, such as a rule with a condition. Your request did not cause it.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "UpstreamError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:upstream-error",
+                                            "title": "A service this API depends on failed",
+                                            "status": 502,
+                                            "detail": "The call to Altinn failed"
+                                        }
+                                    },
+                                    "UnsupportedPolicy": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:unsupported-policy",
+                                            "title": "The policy in Altinn has parts this API cannot show",
+                                            "status": 502
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "An unexpected error in this API.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "InternalError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:internal-error",
+                                            "title": "Internal error",
+                                            "status": 500
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     },
@@ -2981,7 +3194,7 @@
                 "properties": {
                     "type": {
                         "type": "string",
-                        "description": "What went wrong, as a name that does not change, so your code can rely on it.\n\n- `tag:kartverket.no,2026:validation-error` (400): one or more fields are missing or invalid. `errors` lists all of\n  them.\n- `tag:kartverket.no,2026:malformed-request` (400): the request could not be read, for example a body that is not\n  valid JSON, a field with the wrong type, or a `Content-Type` that is not `application/json`.\n- `tag:kartverket.no,2026:upstream-rejected` (400): the values passed this API's checks, but Altinn rejected them.\n- `tag:kartverket.no,2026:not-found` (404): there is nothing at this path: no endpoint, or no MaskinportenSchema\n  or GenericAccessResource with this id.\n- `tag:kartverket.no,2026:method-not-allowed` (405): the endpoint at this path does not accept this HTTP method.\n- `tag:kartverket.no,2026:conflict` (409): the request clashes with what Altinn has, for example a resource id that\n  is taken.\n- `tag:kartverket.no,2026:upstream-error` (502): this API could not get a usable answer from Altinn, or from the\n  service that says which resources and scopes the calling app has access to. Your request did not cause it.\n- `tag:kartverket.no,2026:internal-error` (500): an unexpected error in this API.",
+                        "description": "What went wrong, as a name that does not change, so your code can rely on it.\n\n- `tag:kartverket.no,2026:validation-error` (400): one or more fields are missing or invalid. `errors` lists all of\n  them.\n- `tag:kartverket.no,2026:malformed-request` (400): the request could not be read, for example a body that is not\n  valid JSON, a field with the wrong type, or a `Content-Type` that is not `application/json`.\n- `tag:kartverket.no,2026:upstream-rejected` (400): the values passed this API's checks, but Altinn rejected them.\n- `tag:kartverket.no,2026:not-found` (404): there is nothing at this path: no endpoint, or no MaskinportenSchema\n  or GenericAccessResource with this id.\n- `tag:kartverket.no,2026:method-not-allowed` (405): the endpoint at this path does not accept this HTTP method.\n- `tag:kartverket.no,2026:conflict` (409): the request clashes with what Altinn has, for example a resource id that\n  is taken.\n- `tag:kartverket.no,2026:upstream-error` (502): this API could not get a usable answer from Altinn, or from the\n  service that says which resources and scopes the calling app has access to. Your request did not cause it.\n- `tag:kartverket.no,2026:unsupported-policy` (502): the policy in Altinn has parts this API cannot show, such as a\n  rule with a condition. Asking again gives the same answer until the policy in Altinn is replaced.\n- `tag:kartverket.no,2026:internal-error` (500): an unexpected error in this API.",
                         "enum": [
                             "tag:kartverket.no,2026:validation-error",
                             "tag:kartverket.no,2026:malformed-request",
@@ -2990,6 +3203,7 @@
                             "tag:kartverket.no,2026:method-not-allowed",
                             "tag:kartverket.no,2026:conflict",
                             "tag:kartverket.no,2026:upstream-error",
+                            "tag:kartverket.no,2026:unsupported-policy",
                             "tag:kartverket.no,2026:internal-error"
                         ]
                     },
@@ -3410,7 +3624,7 @@
                     },
                     "subResources": {
                         "type": "array",
-                        "description": "The parts of the resource the rule covers, each as attribute ids and values, like `{\"urn:kv:geonorge\": \"dataset\"}`. Left out, the rule covers the whole resource.",
+                        "description": "The parts of the resource the rule covers, each as attribute ids and values, like `{\"urn:kv:geonorge\": \"dataset\"}`, but not `urn:altinn:resource`, which the rule has already. Left out, the rule covers the whole resource.",
                         "items": {
                             "type": "object",
                             "additionalProperties": {
@@ -3431,7 +3645,7 @@
             "GenericAccessResourcePolicy": {
                 "type": "object",
                 "title": "GenericAccessResourcePolicy",
-                "description": "A whole policy for a GenericAccessResource, to replace the one in Altinn. It says who may do what with the resource, and how securely they must have logged in.",
+                "description": "A whole policy for a GenericAccessResource. It says who may do what with the resource, and how securely they must have logged in.",
                 "required": [
                     "rules"
                 ],

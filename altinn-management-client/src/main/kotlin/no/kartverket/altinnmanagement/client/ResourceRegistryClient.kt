@@ -10,6 +10,7 @@ import no.kartverket.altinnmanagement.client.auth.AccessTokenProvider
 import no.kartverket.altinnmanagement.client.exception.AltinnException
 import no.kartverket.altinnmanagement.client.exception.AltinnRejectedException
 import no.kartverket.altinnmanagement.client.exception.ResourceAlreadyExistsException
+import no.kartverket.altinnmanagement.client.exception.UnsupportedPolicyException
 import no.kartverket.altinnmanagement.client.http.Http
 import no.kartverket.altinnmanagement.client.http.HttpMethod
 import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
@@ -176,6 +177,24 @@ public class ResourceRegistryClient(
      */
     public suspend fun setGenericAccessResourcePolicy(id: ResourceId, policy: GenericAccessResourcePolicy): Boolean =
         setPolicy(id, GENERIC_ACCESS_RESOURCE, genericAccessResourcePolicy(id, policy))
+
+    /**
+     * Returns the policy of Kartverket's GenericAccessResource [id], or null when Altinn has no GenericAccessResource of
+     * Kartverket's with this id, or it has no policy yet. Throws [UnsupportedPolicyException] when the policy has parts
+     * that [GenericAccessResourcePolicy] cannot hold.
+     */
+    public suspend fun getGenericAccessResourcePolicy(id: ResourceId): GenericAccessResourcePolicy? {
+        val (_, resource) = getResource(id) ?: return null
+        if (resource.resourceType != GENERIC_ACCESS_RESOURCE || !resource.isKartverkets) return null
+        val request = OutgoingRequest(HttpMethod.GET, Http.url(platformBaseUrl, "$RESOURCE_PATH/${id.value}/policy"), mapOf("Accept" to "text/xml"))
+        val response = try {
+            Http.sendExpectingOk(httpClient, request, TARGET, ::AltinnException)
+        } catch (e: AltinnException) {
+            if (e.statusCode == 404) return null
+            throw e
+        }
+        return parseGenericAccessResourcePolicy(id, response.body)
+    }
 
     private suspend fun setPolicy(id: ResourceId, resourceType: String, policy: String): Boolean {
         val tokens = tokens()

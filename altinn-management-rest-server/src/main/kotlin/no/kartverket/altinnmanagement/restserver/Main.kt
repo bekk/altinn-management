@@ -28,6 +28,7 @@ import io.ktor.utils.io.ExperimentalKtorApi
 import kotlinx.serialization.json.Json
 import no.kartverket.altinnmanagement.client.ResourceRegistryClient
 import no.kartverket.altinnmanagement.restserver.models.GenericAccessResource
+import no.kartverket.altinnmanagement.restserver.models.GenericAccessResourcePolicy
 import no.kartverket.altinnmanagement.restserver.models.MaskinportenSchema
 import org.slf4j.LoggerFactory
 import java.util.UUID
@@ -167,5 +168,11 @@ fun Application.module(
             if (!client.setGenericAccessResourcePolicy(id, policy)) throw ResourceNotFoundException("GenericAccessResource")
             call.respond(HttpStatusCode.NoContent)
         }.describe(genericAccessResourcePolicyPutOperation)
+
+        get("/api/genericaccessresources/{id}/policy") {
+            val id = resourceId("id", call.pathParameters["id"]!!)
+            val policy = client.getGenericAccessResourcePolicy(id) ?: throw PolicyNotFoundException()
+            call.respond(GenericAccessResourcePolicy.from(policy))
+        }.describe(genericAccessResourcePolicyGetOperation)
     }
 }
