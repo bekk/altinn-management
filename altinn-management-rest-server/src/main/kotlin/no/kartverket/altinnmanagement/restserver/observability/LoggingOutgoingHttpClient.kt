@@ -1,4 +1,4 @@
-package no.kartverket.altinnmanagement.restserver
+package no.kartverket.altinnmanagement.restserver.observability
 
 import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
 import no.kartverket.altinnmanagement.client.http.OutgoingRequest

@@ -1,4 +1,4 @@
-package no.kartverket.altinnmanagement.restserver.models
+package no.kartverket.altinnmanagement.restserver.problem
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

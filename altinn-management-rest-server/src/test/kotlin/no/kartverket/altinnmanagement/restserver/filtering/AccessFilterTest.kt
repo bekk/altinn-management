@@ -1,4 +1,4 @@
-package no.kartverket.altinnmanagement.restserver
+package no.kartverket.altinnmanagement.restserver.filtering
 
 import no.kartverket.altinnmanagement.client.GenericAccessResource
 import no.kartverket.altinnmanagement.client.MaskinportenSchema

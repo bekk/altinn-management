@@ -1,4 +1,4 @@
-package no.kartverket.altinnmanagement.restserver.models
+package no.kartverket.altinnmanagement.restserver.problem
 
 import io.ktor.openapi.JsonSchema
 import kotlinx.serialization.Serializable

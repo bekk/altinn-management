@@ -1,4 +1,4 @@
-package no.kartverket.altinnmanagement.restserver
+package no.kartverket.altinnmanagement.restserver.observability
 
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
@@ -16,6 +16,10 @@ import io.ktor.server.routing.routing
 import io.ktor.server.testing.testApplication
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import no.kartverket.altinnmanagement.restserver.filtering.CLIENT_CERTIFICATE_HEADER
+import no.kartverket.altinnmanagement.restserver.module
+import no.kartverket.altinnmanagement.restserver.noFiltering
+import no.kartverket.altinnmanagement.restserver.testResourceRegistryClient
 import org.slf4j.LoggerFactory
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest

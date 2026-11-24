@@ -1,4 +1,4 @@
-package no.kartverket.altinnmanagement.restserver
+package no.kartverket.altinnmanagement.restserver.problem
 
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
@@ -12,9 +12,13 @@ import no.kartverket.altinnmanagement.client.exception.AltinnManagementException
 import no.kartverket.altinnmanagement.client.exception.AltinnRejectedException
 import no.kartverket.altinnmanagement.client.exception.ResourceAlreadyExistsException
 import no.kartverket.altinnmanagement.client.exception.UnsupportedPolicyException
-import no.kartverket.altinnmanagement.restserver.models.ErrorResponse
-import no.kartverket.altinnmanagement.restserver.models.FieldError
-import no.kartverket.altinnmanagement.restserver.models.ProblemType
+import no.kartverket.altinnmanagement.restserver.InvalidRequestException
+import no.kartverket.altinnmanagement.restserver.MalformedRequestException
+import no.kartverket.altinnmanagement.restserver.filtering.ExternalFilteringException
+
+internal class ResourceNotFoundException(resourceType: String) : RuntimeException("There is no $resourceType with this id")
+
+internal class PolicyNotFoundException : RuntimeException("There is no GenericAccessResource with this id, or it has no policy yet")
 
 internal fun StatusPagesConfig.errorResponses() {
     exception<BadRequestException> { call, cause ->

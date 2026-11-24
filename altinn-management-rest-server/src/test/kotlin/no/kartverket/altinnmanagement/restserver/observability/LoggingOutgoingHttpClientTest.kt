@@ -1,4 +1,4 @@
-package no.kartverket.altinnmanagement.restserver
+package no.kartverket.altinnmanagement.restserver.observability
 
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
@@ -8,6 +8,7 @@ import no.kartverket.altinnmanagement.client.ResourceId
 import no.kartverket.altinnmanagement.client.exception.AltinnException
 import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
 import no.kartverket.altinnmanagement.client.support.response
+import no.kartverket.altinnmanagement.restserver.testResourceRegistryClient
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import kotlin.test.AfterTest

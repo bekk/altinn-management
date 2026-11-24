@@ -1,4 +1,4 @@
-package no.kartverket.altinnmanagement.restserver
+package no.kartverket.altinnmanagement.restserver.config
 
 import no.kartverket.altinnmanagement.client.AltinnEnvironment
 import java.net.URI

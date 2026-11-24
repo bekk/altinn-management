@@ -1,9 +1,10 @@
-package no.kartverket.altinnmanagement.restserver
+package no.kartverket.altinnmanagement.restserver.filtering
 
 import kotlinx.coroutines.runBlocking
 import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
 import no.kartverket.altinnmanagement.client.http.OutgoingRequest
 import no.kartverket.altinnmanagement.client.support.response
+import no.kartverket.altinnmanagement.restserver.noFiltering
 import java.net.URI
 import java.time.Duration
 import kotlin.test.Test

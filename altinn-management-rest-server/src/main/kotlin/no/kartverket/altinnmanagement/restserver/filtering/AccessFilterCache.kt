@@ -1,4 +1,4 @@
-package no.kartverket.altinnmanagement.restserver
+package no.kartverket.altinnmanagement.restserver.filtering
 
 import java.time.Clock
 import java.time.Duration

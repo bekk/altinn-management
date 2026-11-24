@@ -1,4 +1,4 @@
-package no.kartverket.altinnmanagement.restserver
+package no.kartverket.altinnmanagement.restserver.filtering
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -7,6 +7,8 @@ import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
 import no.kartverket.altinnmanagement.client.http.OutgoingRequest
 import java.io.IOException
 import java.net.URI
+
+internal const val CLIENT_CERTIFICATE_HEADER = "X-Forwarded-Client-Cert"
 
 class ExternalFilteringClient(private val url: URI, private val httpClient: OutgoingHttpClient) {
     suspend fun filterFor(clientCertificate: String): AccessFilter {

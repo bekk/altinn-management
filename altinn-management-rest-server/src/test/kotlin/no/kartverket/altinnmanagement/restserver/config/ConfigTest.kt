@@ -1,4 +1,4 @@
-package no.kartverket.altinnmanagement.restserver
+package no.kartverket.altinnmanagement.restserver.config
 
 import io.ktor.server.config.MapApplicationConfig
 import no.kartverket.altinnmanagement.client.AltinnEnvironment

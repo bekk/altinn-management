@@ -13,10 +13,10 @@ import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
 import no.kartverket.altinnmanagement.client.http.OutgoingRequest
 import no.kartverket.altinnmanagement.client.support.resourceJson
 import no.kartverket.altinnmanagement.client.support.response
-import no.kartverket.altinnmanagement.restserver.models.ErrorResponse
-import no.kartverket.altinnmanagement.restserver.models.FieldError
-import no.kartverket.altinnmanagement.restserver.models.ProblemType
-import no.kartverket.altinnmanagement.restserver.models.ValidationCode
+import no.kartverket.altinnmanagement.restserver.problem.ErrorResponse
+import no.kartverket.altinnmanagement.restserver.problem.FieldError
+import no.kartverket.altinnmanagement.restserver.problem.ProblemType
+import no.kartverket.altinnmanagement.restserver.problem.ValidationCode
 import java.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals

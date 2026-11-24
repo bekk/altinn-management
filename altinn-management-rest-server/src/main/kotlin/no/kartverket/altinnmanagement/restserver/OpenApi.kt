@@ -22,10 +22,9 @@ import io.ktor.server.routing.getAllRoutes
 import io.ktor.server.routing.openapi.plus
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement
+import no.kartverket.altinnmanagement.restserver.filtering.CLIENT_CERTIFICATE_HEADER
 import no.kartverket.altinnmanagement.restserver.models.AuthenticationLevels
 import no.kartverket.altinnmanagement.restserver.models.ContactPoint
-import no.kartverket.altinnmanagement.restserver.models.ErrorResponse
-import no.kartverket.altinnmanagement.restserver.models.FieldError
 import no.kartverket.altinnmanagement.restserver.models.GenericAccessResource
 import no.kartverket.altinnmanagement.restserver.models.GenericAccessResourcePolicy
 import no.kartverket.altinnmanagement.restserver.models.GenericAccessResourceRequest
@@ -36,8 +35,10 @@ import no.kartverket.altinnmanagement.restserver.models.MultilingualText
 import no.kartverket.altinnmanagement.restserver.models.NewGenericAccessResource
 import no.kartverket.altinnmanagement.restserver.models.NewMaskinportenSchema
 import no.kartverket.altinnmanagement.restserver.models.PolicyRule
-import no.kartverket.altinnmanagement.restserver.models.ProblemType
-import no.kartverket.altinnmanagement.restserver.models.ValidationCode
+import no.kartverket.altinnmanagement.restserver.problem.ErrorResponse
+import no.kartverket.altinnmanagement.restserver.problem.FieldError
+import no.kartverket.altinnmanagement.restserver.problem.ProblemType
+import no.kartverket.altinnmanagement.restserver.problem.ValidationCode
 
 private val openApiJson = Json { prettyPrint = true }
 

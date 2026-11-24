@@ -13,8 +13,9 @@ import no.kartverket.altinnmanagement.client.ResourceRegistryClient
 import no.kartverket.altinnmanagement.client.auth.AccessToken
 import no.kartverket.altinnmanagement.client.auth.AccessTokenProvider
 import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
-import no.kartverket.altinnmanagement.restserver.models.ErrorResponse
-import no.kartverket.altinnmanagement.restserver.models.ProblemType
+import no.kartverket.altinnmanagement.restserver.filtering.ExternalFiltering
+import no.kartverket.altinnmanagement.restserver.problem.ErrorResponse
+import no.kartverket.altinnmanagement.restserver.problem.ProblemType
 import kotlin.test.assertEquals
 
 internal fun testServer(

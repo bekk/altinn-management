@@ -1,4 +1,4 @@
-package no.kartverket.altinnmanagement.restserver.models
+package no.kartverket.altinnmanagement.restserver.problem
 
 import io.ktor.http.HttpStatusCode
 import io.ktor.openapi.JsonSchema

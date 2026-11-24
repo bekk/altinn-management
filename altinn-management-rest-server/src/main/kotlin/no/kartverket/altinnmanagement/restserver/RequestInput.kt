@@ -12,14 +12,15 @@ import no.kartverket.altinnmanagement.client.MaskinportenSchemaContent
 import no.kartverket.altinnmanagement.client.PolicyEffect
 import no.kartverket.altinnmanagement.client.ResourceId
 import no.kartverket.altinnmanagement.client.ResourceStatus
-import no.kartverket.altinnmanagement.restserver.models.FieldError
+import no.kartverket.altinnmanagement.restserver.filtering.CLIENT_CERTIFICATE_HEADER
 import no.kartverket.altinnmanagement.restserver.models.GenericAccessResourcePolicy
 import no.kartverket.altinnmanagement.restserver.models.GenericAccessResourceRequest
 import no.kartverket.altinnmanagement.restserver.models.MaskinportenSchemaRequest
 import no.kartverket.altinnmanagement.restserver.models.MultilingualText
 import no.kartverket.altinnmanagement.restserver.models.NewGenericAccessResource
 import no.kartverket.altinnmanagement.restserver.models.NewMaskinportenSchema
-import no.kartverket.altinnmanagement.restserver.models.ValidationCode
+import no.kartverket.altinnmanagement.restserver.problem.FieldError
+import no.kartverket.altinnmanagement.restserver.problem.ValidationCode
 import tools.jackson.core.JacksonException
 import tools.jackson.core.StreamReadFeature
 import tools.jackson.databind.DeserializationFeature

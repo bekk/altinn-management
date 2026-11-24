@@ -9,12 +9,8 @@ import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
-import io.ktor.server.plugins.callid.CallId
-import io.ktor.server.plugins.callid.callIdMdc
-import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.statuspages.StatusPages
-import io.ktor.server.request.path
 import io.ktor.server.response.header
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
@@ -27,11 +23,21 @@ import io.ktor.server.routing.routing
 import io.ktor.utils.io.ExperimentalKtorApi
 import kotlinx.serialization.json.Json
 import no.kartverket.altinnmanagement.client.ResourceRegistryClient
+import no.kartverket.altinnmanagement.restserver.config.AppConfig
+import no.kartverket.altinnmanagement.restserver.config.externalFiltering
+import no.kartverket.altinnmanagement.restserver.config.file
+import no.kartverket.altinnmanagement.restserver.config.loadApplicationConfig
+import no.kartverket.altinnmanagement.restserver.config.resourceRegistryClient
+import no.kartverket.altinnmanagement.restserver.filtering.CLIENT_CERTIFICATE_HEADER
+import no.kartverket.altinnmanagement.restserver.filtering.ExternalFiltering
+import no.kartverket.altinnmanagement.restserver.filtering.allowedBy
 import no.kartverket.altinnmanagement.restserver.models.GenericAccessResource
 import no.kartverket.altinnmanagement.restserver.models.GenericAccessResourcePolicy
 import no.kartverket.altinnmanagement.restserver.models.MaskinportenSchema
-import org.slf4j.LoggerFactory
-import java.util.UUID
+import no.kartverket.altinnmanagement.restserver.observability.installCallLogging
+import no.kartverket.altinnmanagement.restserver.problem.PolicyNotFoundException
+import no.kartverket.altinnmanagement.restserver.problem.ResourceNotFoundException
+import no.kartverket.altinnmanagement.restserver.problem.errorResponses
 
 internal val apiJson = Json(DefaultJson) {
     explicitNulls = false
@@ -62,19 +68,7 @@ fun Application.module(
     accessLog: Boolean = true,
     accessLogHealth: Boolean = false,
 ) {
-    install(CallId) {
-        header(HttpHeaders.XRequestId)
-        generate { UUID.randomUUID().toString() }
-        verify(::isSafeRequestId)
-    }
-    install(CallLogging) {
-        mdc("workload") { workloadFrom(it.request.headers[CLIENT_CERTIFICATE_HEADER]) }
-        callIdMdc("request_id")
-
-        logger = LoggerFactory.getLogger("access")
-        disableDefaultColors()
-        filter { accessLog && (accessLogHealth || !it.request.path().startsWith("/health/")) }
-    }
+    installCallLogging(accessLog, accessLogHealth)
     install(ContentNegotiation) {
         json(apiJson)
         accept { _, _ -> emptyList() }
