@@ -18,7 +18,7 @@ class TokenCacheTest {
     private val leeway: Duration = Duration.ofSeconds(30)
 
     @Test
-    fun `serves the cached token while it is fresh`() = runBlocking {
+    fun `serves the cached token while it is fresh`(): Unit = runBlocking {
         val cache = TokenCache<AltinnToken>(MutableClock(), leeway)
         val loads = AtomicInteger()
 
@@ -28,7 +28,7 @@ class TokenCacheTest {
     }
 
     @Test
-    fun `reloads once the cached token enters the refresh window`() = runBlocking {
+    fun `reloads once the cached token enters the refresh window`(): Unit = runBlocking {
         val clock = MutableClock()
         val cache = TokenCache<AltinnToken>(clock, leeway)
         val loads = AtomicInteger()
@@ -45,7 +45,7 @@ class TokenCacheTest {
     }
 
     @Test
-    fun `concurrent callers on a cold cache trigger exactly one load`() = runBlocking {
+    fun `concurrent callers on a cold cache trigger exactly one load`(): Unit = runBlocking {
         val cache = TokenCache<AltinnToken>(MutableClock(), leeway)
         val loads = AtomicInteger()
 

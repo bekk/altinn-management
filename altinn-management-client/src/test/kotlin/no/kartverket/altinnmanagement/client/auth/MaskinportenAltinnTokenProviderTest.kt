@@ -22,7 +22,7 @@ class MaskinportenAltinnTokenProviderTest {
     private fun sentTo(path: String) = sent.filter { it.url.path == path }
 
     @Test
-    fun `fetches a Maskinporten token and exchanges it for an Altinn token`() = runBlocking {
+    fun `fetches a Maskinporten token and exchanges it for an Altinn token`(): Unit = runBlocking {
         val token = maskinportenAltinnTokenProvider(recording(sent, bothTokens())).accessToken()
 
         assertEquals("Bearer mp-token", sentTo(exchangePath).single().headers["Authorization"])
@@ -30,7 +30,7 @@ class MaskinportenAltinnTokenProviderTest {
     }
 
     @Test
-    fun `serves both tokens from cache on later calls`() = runBlocking {
+    fun `serves both tokens from cache on later calls`(): Unit = runBlocking {
         val provider = maskinportenAltinnTokenProvider(recording(sent, bothTokens()))
 
         repeat(3) { provider.accessToken() }
@@ -40,7 +40,7 @@ class MaskinportenAltinnTokenProviderTest {
     }
 
     @Test
-    fun `exchanges again when the Altinn token is about to expire`() = runBlocking {
+    fun `exchanges again when the Altinn token is about to expire`(): Unit = runBlocking {
         val clock = MutableClock()
         val provider = maskinportenAltinnTokenProvider(recording(sent, bothTokens(Duration.ofSeconds(300))), clock)
 
@@ -52,7 +52,7 @@ class MaskinportenAltinnTokenProviderTest {
     }
 
     @Test
-    fun `exchanges again after Altinn refuses the token`() = runBlocking {
+    fun `exchanges again after Altinn refuses the token`(): Unit = runBlocking {
         val provider = maskinportenAltinnTokenProvider(recording(sent, bothTokens()))
 
         provider.refused(provider.accessToken())
@@ -62,7 +62,7 @@ class MaskinportenAltinnTokenProviderTest {
     }
 
     @Test
-    fun `keeps a newer token when an older one is refused`() = runBlocking {
+    fun `keeps a newer token when an older one is refused`(): Unit = runBlocking {
         val provider = maskinportenAltinnTokenProvider(recording(sent, bothTokens()))
 
         provider.refused(AccessToken.of("an-older-token"))

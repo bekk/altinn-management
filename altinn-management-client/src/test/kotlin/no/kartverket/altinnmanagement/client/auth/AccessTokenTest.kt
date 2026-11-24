@@ -35,7 +35,7 @@ class AccessTokenTest {
     }
 
     @Test
-    fun `does not show the token the Maskinporten provider hands out`() = runBlocking {
+    fun `does not show the token the Maskinporten provider hands out`(): Unit = runBlocking {
         val token = maskinportenAltinnTokenProvider(OutgoingHttpClient { bothTokens()(it) }).accessToken()
 
         assertFalse(token.value in token.toString())

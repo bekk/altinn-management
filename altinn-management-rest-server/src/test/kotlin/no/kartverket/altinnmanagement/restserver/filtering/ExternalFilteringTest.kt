@@ -31,7 +31,7 @@ class ExternalFilteringTest {
     )
 
     @Test
-    fun `asks the filtering service once per caller while the answer is remembered`() = runBlocking {
+    fun `asks the filtering service once per caller while the answer is remembered`(): Unit = runBlocking {
         filtering.filterFor("caller")
         filtering.filterFor("caller")
         assertEquals(1, sent.size)
@@ -41,7 +41,7 @@ class ExternalFilteringTest {
     }
 
     @Test
-    fun `does not remember an answer that failed`() = runBlocking {
+    fun `does not remember an answer that failed`(): Unit = runBlocking {
         answer = response(503, "text/plain", "unavailable")
         assertFailsWith<ExternalFilteringException> { filtering.filterFor("caller") }
 
@@ -51,7 +51,7 @@ class ExternalFilteringTest {
     }
 
     @Test
-    fun `gives no filter when filtering is off`() = runBlocking {
+    fun `gives no filter when filtering is off`(): Unit = runBlocking {
         assertFalse(noFiltering.isOn)
         assertNull(noFiltering.filterFor(null))
     }
