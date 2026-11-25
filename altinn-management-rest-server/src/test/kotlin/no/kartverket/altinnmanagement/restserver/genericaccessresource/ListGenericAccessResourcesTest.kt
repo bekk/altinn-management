@@ -27,8 +27,6 @@ import no.kartverket.altinnmanagement.restserver.problem.FieldError
 import no.kartverket.altinnmanagement.restserver.problem.ProblemType
 import no.kartverket.altinnmanagement.restserver.problem.ValidationCode
 import no.kartverket.altinnmanagement.restserver.testServer
-import no.kartverket.altinnmanagement.restserver.upstreamError
-import java.io.IOException
 import java.net.URI
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -186,28 +184,6 @@ class ListGenericAccessResourcesTest {
 
             assertTrue(sentToAltinn.isEmpty(), "Altinn was called: $sentToAltinn")
         }
-
-    @Test
-    fun `gives 502 when Altinn answers with an error`() = testServer(altinn(status = 500, body = "boom")) {
-        client.get("/api/genericaccessresources").assertProblem(upstreamError)
-    }
-
-    @Test
-    fun `gives 502 when Altinn answers with something that is not a list of resources`() {
-        for (body in listOf("{}", """[{"resourceType":"$GENERIC_ACCESS_RESOURCE"}]""", """[{"identifier":"Not an id"}]""")) {
-            testServer(altinn(body = body)) {
-                client.get("/api/genericaccessresources").assertProblem(upstreamError)
-            }
-        }
-    }
-
-    @Test
-    fun `gives 502 when Altinn cannot be reached`() = testServer({ throw IOException("Connection refused") }) {
-        val response = client.get("/api/genericaccessresources")
-
-        response.assertProblem(upstreamError)
-        assertFalse("Connection refused" in response.bodyAsText())
-    }
 
     private companion object {
         const val GENERIC_ACCESS_RESOURCE = "GenericAccessResource"

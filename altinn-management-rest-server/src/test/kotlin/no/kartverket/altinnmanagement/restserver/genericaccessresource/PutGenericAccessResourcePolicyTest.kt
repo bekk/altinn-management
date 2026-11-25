@@ -19,7 +19,6 @@ import no.kartverket.altinnmanagement.restserver.problem.FieldError
 import no.kartverket.altinnmanagement.restserver.problem.ProblemType
 import no.kartverket.altinnmanagement.restserver.problem.ValidationCode
 import no.kartverket.altinnmanagement.restserver.testServer
-import no.kartverket.altinnmanagement.restserver.upstreamError
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -213,39 +212,5 @@ class PutGenericAccessResourcePolicyTest {
         putPolicy().assertProblem(notFound)
 
         assertNothingWritten()
-    }
-
-    @Test
-    fun `gives 404 when the resource is not a GenericAccessResource, without writing to Altinn`() =
-        testServer(altinn(resource = resourceJson())) {
-            putPolicy().assertProblem(notFound)
-
-            assertNothingWritten()
-        }
-
-    @Test
-    fun `gives 404 when the resource is not Kartverket's, without writing to Altinn`() =
-        testServer(altinn(resource = genericAccessResource.replace("971040238", "974760673"))) {
-            putPolicy().assertProblem(notFound)
-
-            assertNothingWritten()
-        }
-
-    @Test
-    fun `gives 400 with Altinn's words when Altinn rejects the policy`() = testServer(
-        altinn(status = 400, body = "\"Policy not accepted: Contains rule without reference to registry resource id\""),
-    ) {
-        putPolicy().assertProblem(
-            ErrorResponse.of(
-                ProblemType.UPSTREAM_REJECTED,
-                HttpStatusCode.BadRequest,
-                "Altinn rejected the resource: Policy not accepted: Contains rule without reference to registry resource id",
-            ),
-        )
-    }
-
-    @Test
-    fun `gives 502 when Altinn answers the upload with an error`() = testServer(altinn(status = 500, body = "boom")) {
-        putPolicy().assertProblem(upstreamError)
     }
 }

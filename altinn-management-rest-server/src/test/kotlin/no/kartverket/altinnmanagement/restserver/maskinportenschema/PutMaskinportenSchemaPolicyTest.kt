@@ -6,8 +6,6 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
-import no.kartverket.altinnmanagement.client.auth.AccessToken
-import no.kartverket.altinnmanagement.client.auth.AccessTokenProvider
 import no.kartverket.altinnmanagement.client.http.HttpMethod
 import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
 import no.kartverket.altinnmanagement.client.http.OutgoingRequest
@@ -21,7 +19,6 @@ import no.kartverket.altinnmanagement.restserver.problem.FieldError
 import no.kartverket.altinnmanagement.restserver.problem.ProblemType
 import no.kartverket.altinnmanagement.restserver.problem.ValidationCode
 import no.kartverket.altinnmanagement.restserver.testServer
-import java.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -40,8 +37,6 @@ class PutMaskinportenSchemaPolicyTest {
             else -> response(200, "application/json; charset=utf-8", resource)
         }
     }
-
-    private val upstreamError = ErrorResponse.of(ProblemType.UPSTREAM_ERROR, HttpStatusCode.BadGateway, "The call to Altinn failed")
 
     private suspend fun HttpResponse.assertProblem(expected: ErrorResponse) {
         assertEquals(expected.status, status.value)
@@ -112,22 +107,6 @@ class PutMaskinportenSchemaPolicyTest {
     }
 
     @Test
-    fun `gives 404 when the resource is not a MaskinportenSchema, without writing to Altinn`() =
-        testServer(altinn(resource = resourceJson(resourceType = "GenericAccessResource"))) {
-            client.put(path).assertProblem(maskinportenSchemaNotFound)
-
-            assertNothingWritten()
-        }
-
-    @Test
-    fun `gives 404 when the resource is not Kartverket's, without writing to Altinn`() =
-        testServer(altinn(resource = resourceJson().replace("971040238", "974760673"))) {
-            client.put(path).assertProblem(maskinportenSchemaNotFound)
-
-            assertNothingWritten()
-        }
-
-    @Test
     fun `gives 400 when the id is not valid, without asking Altinn`() = testServer(altinn()) {
         client.put("/api/maskinportenschemas/KV-eksempel/policy").assertProblem(
             ErrorResponse.of(
@@ -138,50 +117,5 @@ class PutMaskinportenSchemaPolicyTest {
         )
 
         assertTrue(sent.isEmpty(), "Altinn was called: $sent")
-    }
-
-    @Test
-    fun `gives 400 with Altinn's words when Altinn rejects the policy`() = testServer(
-        altinn(status = 400, body = "\"Policy not accepted: Contains rule without reference to registry resource id\""),
-    ) {
-        client.put(path).assertProblem(
-            ErrorResponse.of(
-                ProblemType.UPSTREAM_REJECTED,
-                HttpStatusCode.BadRequest,
-                "Altinn rejected the resource: Policy not accepted: Contains rule without reference to registry resource id",
-            ),
-        )
-    }
-
-    @Test
-    fun `gives 502 when Altinn refuses the upload`() = testServer(altinn(status = 403)) {
-        client.put(path).assertProblem(upstreamError)
-    }
-
-    @Test
-    fun `drops the token Altinn refuses, so the next upload gets a new one`() {
-        val refused = mutableListOf<AccessToken>()
-        val tokens = object : AccessTokenProvider {
-            override suspend fun accessToken() = AccessToken.of(TEST_TOKEN)
-
-            override suspend fun refused(token: AccessToken) {
-                refused += token
-            }
-        }
-        testServer(altinn(status = 401), accessTokenProvider = tokens) {
-            client.put(path)
-        }
-
-        assertEquals(listOf(TEST_TOKEN), refused.map { it.value })
-    }
-
-    @Test
-    fun `gives 502 when Altinn answers the upload with an error`() = testServer(altinn(status = 500, body = "boom")) {
-        client.put(path).assertProblem(upstreamError)
-    }
-
-    @Test
-    fun `gives 502 when Altinn cannot be reached`() = testServer({ throw IOException("Connection refused") }) {
-        client.put(path).assertProblem(upstreamError)
     }
 }

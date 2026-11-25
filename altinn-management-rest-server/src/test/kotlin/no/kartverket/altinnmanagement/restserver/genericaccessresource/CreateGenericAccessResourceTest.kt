@@ -23,7 +23,6 @@ import no.kartverket.altinnmanagement.restserver.problem.FieldError
 import no.kartverket.altinnmanagement.restserver.problem.ProblemType
 import no.kartverket.altinnmanagement.restserver.problem.ValidationCode
 import no.kartverket.altinnmanagement.restserver.testServer
-import no.kartverket.altinnmanagement.restserver.upstreamError
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -229,40 +228,5 @@ class CreateGenericAccessResourceTest {
         }
 
         assertAltinnNotCalled()
-    }
-
-    @Test
-    fun `gives 409 when Altinn has a resource with the id`() =
-        testServer(altinn(status = 409, body = "\"The Resource already exist: kv-eksempel\"")) {
-            create(minimalBody).assertProblem(
-                ErrorResponse.of(ProblemType.CONFLICT, HttpStatusCode.Conflict, "Altinn already has a resource with this id"),
-            )
-        }
-
-    @Test
-    fun `gives 400 upstream-rejected with Altinn's reasons when Altinn rejects it`() = testServer(
-        altinn(
-            status = 400,
-            body = """
-                {
-                  "title": "One or more validation errors occurred.",
-                  "status": 400,
-                  "errors": { "Identifier": ["Invalid Prefix. app_ is only for Altinn Studio apps"] }
-                }
-            """.trimIndent(),
-        ),
-    ) {
-        create(minimalBody.replace("kv-eksempel", "app_kv_eksempel")).assertProblem(
-            ErrorResponse.of(
-                ProblemType.UPSTREAM_REJECTED,
-                HttpStatusCode.BadRequest,
-                "Altinn rejected the resource: Identifier: Invalid Prefix. app_ is only for Altinn Studio apps",
-            ),
-        )
-    }
-
-    @Test
-    fun `gives 502 when Altinn fails`() = testServer(altinn(status = 500, body = "boom")) {
-        create(minimalBody).assertProblem(upstreamError)
     }
 }

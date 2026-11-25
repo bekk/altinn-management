@@ -41,9 +41,18 @@ scripts/dev.sh           # run the server on :8080 with the variables in .env
   `type` is a `tag:kartverket.no,2026:` name for each kind of error, from `ProblemType`, and `title` comes from the
   type. Leave out `detail` when the title says it all.
 - The `type` names and the response fields are a contract with callers. Change them only on purpose.
-- Server tests start the app with `testServer(...)`. Name a test with a sentence in backticks.
 - Comment only a reason the code cannot show.
 - Never log request bodies or tokens.
+
+## Tests
+
+- Name a test with a sentence in backticks.
+- Test what the client does for every endpoint, like treating another organisation's resource as missing, dropping
+  a token Altinn refuses and failing when Altinn does, in the client's own tests. The server's tests start the app
+  with `testServer(...)` and test what each endpoint adds, and how each kind of failure from the client becomes an
+  answer, once.
+- JUnit skips a test that returns a value, without a word. Write a test as `fun ...(): Unit = runBlocking { ... }`
+  or with a block body, since `= runBlocking { ... }` returns whatever the last line gives.
 
 ## Decisions (ADRs)
 

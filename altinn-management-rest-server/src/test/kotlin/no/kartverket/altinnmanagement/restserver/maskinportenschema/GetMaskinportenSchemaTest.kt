@@ -135,32 +135,6 @@ class GetMaskinportenSchemaTest {
     }
 
     @Test
-    fun `gives 404 for resources of other types, as if they did not exist`() = testServer(altinn(body = resourceJson(resourceType = "GenericAccessResource"))) {
-        client.get("/api/maskinportenschemas/kv-matrikkel-brukernavn").assertProblem(maskinportenSchemaNotFound)
-    }
-
-    @Test
-    fun `gives 404 for resources another organisation owns`() =
-        testServer(altinn(body = resourceJson().replace("\"971040238\"", "\"981544315\""))) {
-            client.get("/api/maskinportenschemas/kv-matrikkel-brukernavn").assertProblem(maskinportenSchemaNotFound)
-        }
-
-    @Test
-    fun `gives 404 for a resource with no owner`() =
-        testServer(altinn(body = """{"identifier":"kv-matrikkel-brukernavn","resourceType":"MaskinportenSchema"}""")) {
-            client.get("/api/maskinportenschemas/kv-matrikkel-brukernavn").assertProblem(maskinportenSchemaNotFound)
-        }
-
-    @Test
-    fun `gives 404 for an id that is one of Altinn's fixed routes, without asking Altinn`() = testServer(altinn(body = "[]")) {
-        for (id in listOf("resourcelist", "export", "search", "updated", "changes", "orgs")) {
-            client.get("/api/maskinportenschemas/$id").assertProblem(maskinportenSchemaNotFound)
-        }
-
-        assertTrue(sent.isEmpty(), "Altinn was called: $sent")
-    }
-
-    @Test
     fun `gives 400 for an id Altinn would not accept, without asking Altinn`() = testServer(altinn()) {
         for (id in listOf("abc", "Kv-matrikkel", "kv.matrikkel", "..", "..%2Fsearch", "kv%2Fx")) {
             client.get("/api/maskinportenschemas/$id").assertProblem(
@@ -177,11 +151,6 @@ class GetMaskinportenSchemaTest {
 
     @Test
     fun `gives 502 when Altinn answers with an error`() = testServer(altinn(status = 500, body = "boom")) {
-        client.get("/api/maskinportenschemas/kv-matrikkel-brukernavn").assertProblem(upstreamError)
-    }
-
-    @Test
-    fun `gives 502 when Altinn answers with something that is not a resource`() = testServer(altinn(body = "[]")) {
         client.get("/api/maskinportenschemas/kv-matrikkel-brukernavn").assertProblem(upstreamError)
     }
 

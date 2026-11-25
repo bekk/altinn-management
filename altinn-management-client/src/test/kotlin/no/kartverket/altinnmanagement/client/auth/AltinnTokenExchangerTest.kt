@@ -25,7 +25,7 @@ class AltinnTokenExchangerTest {
     private val maskinportenToken = MaskinportenToken("maskinporten-token", NOW.plusSeconds(300))
 
     @Test
-    fun `sends the Maskinporten token as a bearer token on a GET`() = runBlocking {
+    fun `sends the Maskinporten token as a bearer token on a GET`(): Unit = runBlocking {
         exchangerAnswering(signedJwt(NOW.plusSeconds(300))).exchange(maskinportenToken)
 
         val request = sent.single()
@@ -35,7 +35,7 @@ class AltinnTokenExchangerTest {
     }
 
     @Test
-    fun `takes the expiry from the returned token's own exp claim`() = runBlocking {
+    fun `takes the expiry from the returned token's own exp claim`(): Unit = runBlocking {
         val expiresAt = NOW.plusSeconds(300)
 
         val token = exchangerAnswering(signedJwt(expiresAt)).exchange(maskinportenToken)
@@ -44,14 +44,14 @@ class AltinnTokenExchangerTest {
     }
 
     @Test
-    fun `trims whitespace around the returned token`() = runBlocking {
+    fun `trims whitespace around the returned token`(): Unit = runBlocking {
         val jwt = signedJwt(NOW.plusSeconds(300))
 
         assertEquals(jwt, exchangerAnswering("  $jwt\n").exchange(maskinportenToken).value)
     }
 
     @Test
-    fun `fails on an answer that is not a token it can use`() = runBlocking {
+    fun `fails on an answer that is not a token it can use`(): Unit = runBlocking {
         val cases = mapOf(
             "no exp claim" to (signedJwt(expiresAt = null) to "exp"),
             "an empty body" to ("" to "empty"),
@@ -67,7 +67,7 @@ class AltinnTokenExchangerTest {
     }
 
     @Test
-    fun `keeps the token out of the error when it has no usable expiry`() = runBlocking {
+    fun `keeps the token out of the error when it has no usable expiry`(): Unit = runBlocking {
         val jwt = signedJwt(expiresAt = null)
 
         val e = assertFailsWith<AltinnException> { exchangerAnswering(jwt).exchange(maskinportenToken) }
@@ -76,14 +76,14 @@ class AltinnTokenExchangerTest {
     }
 
     @Test
-    fun `keeps the token out of the error when it is not a JWT`() = runBlocking {
+    fun `keeps the token out of the error when it is not a JWT`(): Unit = runBlocking {
         val e = assertFailsWith<AltinnException> { exchangerAnswering("secret.altinn.token").exchange(maskinportenToken) }
 
         assertNoTokenIn(e, "secret.altinn.token")
     }
 
     @Test
-    fun `fails without the token in the error when the token is not a valid bearer token`() = runBlocking {
+    fun `fails without the token in the error when the token is not a valid bearer token`(): Unit = runBlocking {
         val jwt = signedJwt(NOW.plusSeconds(300))
         val split = jwt.indexOf('.') + 5
 

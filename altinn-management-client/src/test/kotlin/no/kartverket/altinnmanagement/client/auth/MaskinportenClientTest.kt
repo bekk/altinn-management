@@ -61,7 +61,7 @@ class MaskinportenClientTest {
     }
 
     @Test
-    fun `posts the JWT grant as a form-encoded body`() = runBlocking {
+    fun `posts the JWT grant as a form-encoded body`(): Unit = runBlocking {
         clientAnswering(maskinportenTokenResponse("maskinporten-token")).getToken()
 
         val request = sent.single()
@@ -83,7 +83,7 @@ class MaskinportenClientTest {
     }
 
     @Test
-    fun `reads the access token and its lifetime from the response`() = runBlocking {
+    fun `reads the access token and its lifetime from the response`(): Unit = runBlocking {
         val token = clientAnswering(maskinportenTokenResponse("maskinporten-token", expiresIn = 120)).getToken()
 
         assertEquals("maskinporten-token", token.value)
@@ -91,7 +91,7 @@ class MaskinportenClientTest {
     }
 
     @Test
-    fun `the token's lifetime counts from when it was requested, not from when Maskinporten answered`() = runBlocking {
+    fun `the token's lifetime counts from when it was requested, not from when Maskinporten answered`(): Unit = runBlocking {
         val clock = MutableClock()
         val http = OutgoingHttpClient {
             clock.advance(Duration.ofSeconds(5))
@@ -104,7 +104,7 @@ class MaskinportenClientTest {
     }
 
     @Test
-    fun `fails on an answer it cannot take a token from`() = runBlocking {
+    fun `fails on an answer it cannot take a token from`(): Unit = runBlocking {
         val cases = mapOf(
             "no expires_in" to (maskinportenTokenResponse(expiresIn = null) to "expires_in"),
             "no access_token" to ("""{"token_type":"Bearer"}""" to "access_token"),
@@ -121,7 +121,7 @@ class MaskinportenClientTest {
     }
 
     @Test
-    fun `keeps the token out of the error when the rest of the answer is unusable`() = runBlocking {
+    fun `keeps the token out of the error when the rest of the answer is unusable`(): Unit = runBlocking {
         val e = assertFailsWith<MaskinportenException> {
             clientAnswering("""{"access_token":"secret-mp-token","expires_in":"soon"}""").getToken()
         }
@@ -130,7 +130,7 @@ class MaskinportenClientTest {
     }
 
     @Test
-    fun `keeps the token out of the error when it is not a valid bearer token`() = runBlocking {
+    fun `keeps the token out of the error when it is not a valid bearer token`(): Unit = runBlocking {
         val e = assertFailsWith<MaskinportenException> {
             clientAnswering("""{"access_token":"secret-mp\ntoken","expires_in":3600}""").getToken()
         }

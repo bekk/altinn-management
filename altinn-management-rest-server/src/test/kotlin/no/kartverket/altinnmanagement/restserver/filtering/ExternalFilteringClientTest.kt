@@ -38,7 +38,7 @@ class ExternalFilteringClientTest {
     private data class SentInput(val headers: Map<String, String>)
 
     @Test
-    fun `posts the client certificate as input headers and reads scopes and resources from the result`() = runBlocking {
+    fun `posts the client certificate as input headers and reads scopes and resources from the result`(): Unit = runBlocking {
         val filtering = filteringAnswering {
             json(
                 200,
@@ -67,7 +67,7 @@ class ExternalFilteringClientTest {
     }
 
     @Test
-    fun `ignores fields it does not know`() = runBlocking {
+    fun `ignores fields it does not know`(): Unit = runBlocking {
         val filtering = filteringAnswering {
             json(
                 200,
@@ -79,7 +79,7 @@ class ExternalFilteringClientTest {
     }
 
     @Test
-    fun `treats a missing result as an undefined document, so no access`() = runBlocking {
+    fun `treats a missing result as an undefined document, so no access`(): Unit = runBlocking {
         val filtering = filteringAnswering { json(200, "{}") }
 
         assertEquals(AccessFilter.NOTHING, filtering.filterFor(certificate))

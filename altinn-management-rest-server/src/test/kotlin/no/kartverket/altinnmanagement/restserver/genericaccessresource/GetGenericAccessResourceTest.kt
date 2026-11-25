@@ -25,8 +25,6 @@ import no.kartverket.altinnmanagement.restserver.problem.FieldError
 import no.kartverket.altinnmanagement.restserver.problem.ProblemType
 import no.kartverket.altinnmanagement.restserver.problem.ValidationCode
 import no.kartverket.altinnmanagement.restserver.testServer
-import no.kartverket.altinnmanagement.restserver.upstreamError
-import java.io.IOException
 import java.net.URI
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -117,32 +115,6 @@ class GetGenericAccessResourceTest {
     }
 
     @Test
-    fun `gives 404 for resources of other types, as if they did not exist`() = testServer(altinn(body = resourceJson())) {
-        client.get("/api/genericaccessresources/kv-matrikkel-brukernavn").assertProblem(genericAccessResourceNotFound)
-    }
-
-    @Test
-    fun `gives 404 for resources another organisation owns`() =
-        testServer(altinn(body = genericAccessResourceJson.replace("\"971040238\"", "\"981544315\""))) {
-            client.get("/api/genericaccessresources/kv-matrikkel-brukernavn").assertProblem(genericAccessResourceNotFound)
-        }
-
-    @Test
-    fun `gives 404 for a resource with no owner`() =
-        testServer(altinn(body = """{"identifier":"kv-matrikkel-brukernavn","resourceType":"GenericAccessResource"}""")) {
-            client.get("/api/genericaccessresources/kv-matrikkel-brukernavn").assertProblem(genericAccessResourceNotFound)
-        }
-
-    @Test
-    fun `gives 404 for an id that is one of Altinn's fixed routes, without asking Altinn`() = testServer(altinn(body = "[]")) {
-        for (id in listOf("resourcelist", "export", "search", "updated", "changes", "orgs")) {
-            client.get("/api/genericaccessresources/$id").assertProblem(genericAccessResourceNotFound)
-        }
-
-        assertTrue(sent.isEmpty(), "Altinn was called: $sent")
-    }
-
-    @Test
     fun `gives 400 for an id Altinn would not accept, without asking Altinn`() = testServer(altinn()) {
         for (id in listOf("abc", "Kv-matrikkel", "kv.matrikkel", "..", "..%2Fsearch", "kv%2Fx")) {
             client.get("/api/genericaccessresources/$id").assertProblem(
@@ -168,18 +140,5 @@ class GetGenericAccessResourceTest {
         ),
     ) {
         assertEquals(HttpStatusCode.OK, client.get("/api/genericaccessresources/kv-matrikkel-brukernavn").status)
-    }
-
-    @Test
-    fun `gives 502 when Altinn answers with an error`() = testServer(altinn(status = 500, body = "boom")) {
-        client.get("/api/genericaccessresources/kv-matrikkel-brukernavn").assertProblem(upstreamError)
-    }
-
-    @Test
-    fun `gives 502 when Altinn cannot be reached`() = testServer({ throw IOException("Connection refused") }) {
-        val response = client.get("/api/genericaccessresources/kv-matrikkel-brukernavn")
-
-        response.assertProblem(upstreamError)
-        assertFalse("Connection refused" in response.bodyAsText())
     }
 }
