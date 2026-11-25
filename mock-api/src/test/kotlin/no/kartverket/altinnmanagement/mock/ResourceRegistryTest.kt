@@ -23,10 +23,10 @@ class ResourceRegistryTest {
         body.jsonArray.map { it.jsonObject.getValue("identifier").jsonPrimitive.content }
 
     @Test
-    fun `the seed holds Kartverket's three resources and one of another organisation`() = mockApi {
+    fun `the seed holds Kartverket's four resources and one of another organisation`() = mockApi {
         val all = client.get("$path/search").json()
 
-        assertEquals(listOf("kv-matrikkel-brukernavn", "nrl-reporting", "nrl-retrieval", "slf-skogtiltakws"), ids(all))
+        assertEquals(listOf("kv-geonorge", "kv-matrikkel-brukernavn", "nrl-reporting", "nrl-retrieval", "slf-skogtiltakws"), ids(all))
     }
 
     @Test
@@ -152,7 +152,7 @@ class ResourceRegistryTest {
 
     @Test
     fun `search ignores title, and an empty value is no filter`() = mockApi {
-        assertEquals(4, client.get("$path/search?title=nothing-like-this&organizationId=").json().jsonArray.size)
+        assertEquals(5, client.get("$path/search?title=nothing-like-this&organizationId=").json().jsonArray.size)
     }
 
     @Test

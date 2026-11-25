@@ -1,5 +1,67 @@
 [
   {
+    "identifier": "kv-geonorge",
+    "version": "0.0.6",
+    "createdAt": "2026-10-12T13:26:32.615952+00:00",
+    "updatedAt": "2026-11-13T10:37:55.855775+00:00",
+    "title": {
+      "en": "Geonorge",
+      "nb": "Geonorge",
+      "nn": "Geonorge"
+    },
+    "description": {
+      "en": "Geonorge authorization",
+      "nb": "Geonorge tilgangsstyring",
+      "nn": "Geonorge tilgangsstyring"
+    },
+    "rightDescription": {
+      "en": "Access lets the user log into Geonorge with Ansattporten. Download lets the user download datasets which are access restricted in Kartkatalogen. NB: There might exist other restrictions on the dataset, prohibiting download. The Download action in itself is no guarantee for being able to download restricted datasets.",
+      "nb": "Access gir bruker mulighet til å logge inn på Geonorge med Ansattporten. Download gir bruker mulighet til å laste ned tilgangsbegrensede datasett via Kartkatalogen. NB: Det kan være andre restriksjoner på nedlastbare data - Download alene er ikke garanti for at bruker får lastet ned data.",
+      "nn": "Access gjer det mogleg for brukar å logge inn på Geonorge med Ansattporten. Download gjer det mogleg for brukar å lasta ned avgrensa datasett via Kartkatalogen. NB: Det kan være andre restriksjonar på nedlastbare data - Download åleine er ikkje ein garanti for at brukar får lasta ned data."
+    },
+    "homepage": "https://www.geonorge.no",
+    "status": "UnderDevelopment",
+    "contactPoints": [
+      {
+        "category": "Brukerstøtte",
+        "email": "kundesenter@kartverket.no",
+        "telephone": "",
+        "contactPage": ""
+      }
+    ],
+    "delegable": true,
+    "visible": true,
+    "hasCompetentAuthority": {
+      "name": {
+        "en": "Norwegian Mapping Authority",
+        "nb": "Kartverket",
+        "nn": "Kartverket"
+      },
+      "organization": "971040238",
+      "orgcode": "kv"
+    },
+    "keywords": [
+      {
+        "word": "geonorge",
+        "language": "nb"
+      },
+      {
+        "word": "kartverket",
+        "language": "nb"
+      }
+    ],
+    "accessListMode": "Enabled",
+    "selfIdentifiedUserEnabled": false,
+    "enterpriseUserEnabled": false,
+    "resourceType": "GenericAccessResource",
+    "availableForType": [
+      "LegalEntityEnterprise",
+      "Company"
+    ],
+    "isOneTimeConsent": false,
+    "versionId": 14523
+  },
+  {
     "identifier": "kv-matrikkel-brukernavn",
     "version": "v1.0",
     "createdAt": "2026-10-14T07:26:00.171396+00:00",
