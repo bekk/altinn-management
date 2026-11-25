@@ -153,6 +153,8 @@ class ResourceRegistryClientTest {
         assertFailsWith<AltinnException> { client(resource = json(200, "[]")).getMaskinportenSchema(id) }
         assertFailsWith<AltinnException> { client(resource = json(500, "boom")).listMaskinportenSchemas() }
         assertFailsWith<AltinnException> { client(resource = json(200, "{}")).listGenericAccessResources() }
+        assertFailsWith<AltinnException> { client(resource = json(200, """[{"resourceType":"MaskinportenSchema"}]""")).listMaskinportenSchemas() }
+        assertFailsWith<AltinnException> { client(resource = json(200, """[{"identifier":"Not an id"}]""")).listGenericAccessResources() }
         assertFailsWith<AltinnException> {
             client(resource = json(200, resourceJson("GenericAccessResource")), policy = response(500, "text/plain", "boom"))
                 .getGenericAccessResourcePolicy(id)
