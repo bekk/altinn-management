@@ -12,8 +12,8 @@ import io.ktor.server.routing.routing
 import io.ktor.server.testing.testApplication
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
-import no.kartverket.altinnmanagement.restserver.models.ErrorResponse
-import no.kartverket.altinnmanagement.restserver.models.ProblemType
+import no.kartverket.altinnmanagement.restserver.problem.ErrorResponse
+import no.kartverket.altinnmanagement.restserver.problem.ProblemType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
