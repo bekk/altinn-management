@@ -123,6 +123,7 @@ setting them yourself.
 | `PUT /api/genericaccessresources/{id}/withdraw` | Withdraws a GenericAccessResource                                       |
 | `PUT /api/genericaccessresources/{id}/policy`   | Sets or replaces the policy of a GenericAccessResource                  |
 | `GET /api/genericaccessresources/{id}/policy`   | Gets the policy of a GenericAccessResource                              |
+| `GET /api/accesslists`                          | Lists Kartverket's access lists                                         |
 | `GET /api/accesslists/{id}`                     | Gets an access list                                                     |
 | `GET /openapi`                                  | The OpenAPI spec as JSON                                                |
 | `GET /health/live`                              | Liveness probe for the platform, left out of the spec                   |
@@ -130,7 +131,8 @@ setting them yourself.
 The server does no authentication itself: the platform checks the calling app before a call reaches it. When
 filtering is on, the server sends the caller's `X-Forwarded-Client-Cert` header, which Istio sets, to the filtering
 service, which says which resources and scopes the caller has access to. A list then shows a resource only when the
-caller has access to it and to all its scopes.
+caller has access to it and to all its scopes, and an access list only when its id starts with one of the caller's
+prefixes for resources.
 
 Every call gets a request id: the caller's `X-Request-Id` header, or a new UUID when it is missing or not safe to log.
 The server logs it on every line of the call as `request_id`, and sends it back in the response's `X-Request-Id`
