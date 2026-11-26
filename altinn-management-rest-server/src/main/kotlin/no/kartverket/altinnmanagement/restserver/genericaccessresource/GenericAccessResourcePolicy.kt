@@ -62,8 +62,9 @@ data class PolicyRule(
     @JsonSchema.Description(
         "At least one group. Who the rule is for, as groups of URNs: an access package like " +
             "`urn:altinn:accesspackage:eksplisitt`, a role like `urn:altinn:rolecode:dagl`, an access list as " +
-            "`urn:altinn:access-list:{owner}:{list}`, or any other subject Altinn knows. A user the rule is for has every " +
-            "subject in one of the groups, so `[[\"A\", \"B\"], [\"C\"]]` is for users with both A and B, and for users with C.",
+            "`urn:altinn:access-list:{owner}:{list}` (a PUT takes only Kartverket's, `kv`), or any other subject Altinn " +
+            "knows. A user the rule is for has every subject in one of the groups, so `[[\"A\", \"B\"], [\"C\"]]` is for " +
+            "users with both A and B, and for users with C.",
     )
     val subjects: List<List<String>>? = null,
 
