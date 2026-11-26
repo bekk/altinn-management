@@ -25,6 +25,9 @@ internal data class AltinnAccessList(
 }
 
 @Serializable
+internal data class AltinnAccessListContent(val name: String, val description: String)
+
+@Serializable
 internal data class AltinnResourceConnection(val resourceIdentifier: String)
 
 @Serializable

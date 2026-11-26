@@ -42,7 +42,7 @@ internal fun resourceIdOrNull(value: String): ResourceId? = try {
     null
 }
 
-private fun invalidResourceId(name: String) = FieldError(name, ValidationCode.INVALID_FORMAT, "$name must be 4 or more of a-z, 0-9, _ and -")
+internal fun invalidResourceId(name: String) = FieldError(name, ValidationCode.INVALID_FORMAT, "$name must be 4 or more of a-z, 0-9, _ and -")
 
 // Altinn requires it only for a resource that can be delegated, and takes a resource without delegable as one
 internal fun checkDelegationDescription(delegable: Boolean?, delegationDescription: MultilingualText?) {
@@ -51,11 +51,11 @@ internal fun checkDelegationDescription(delegable: Boolean?, delegationDescripti
     if (errors.isNotEmpty()) throw InvalidRequestException(errors)
 }
 
-internal fun pathIdErrors(id: ResourceId, resourceId: String?): List<FieldError> =
-    if (resourceId == null || resourceId == id.value) {
+internal fun pathIdErrors(field: String, id: String, value: String?): List<FieldError> =
+    if (value == null || value == id) {
         emptyList()
     } else {
-        listOf(FieldError("resourceId", ValidationCode.INVALID_FORMAT, "resourceId must be the id in the path"))
+        listOf(FieldError(field, ValidationCode.INVALID_FORMAT, "$field must be the id in the path"))
     }
 
 internal fun textErrors(field: String, text: MultilingualText?): List<FieldError> {

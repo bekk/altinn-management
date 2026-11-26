@@ -102,10 +102,14 @@ internal fun Responses.Builder.notFound(description: String, detail: String) = p
     listOf("NotFound" to ErrorResponse.of(ProblemType.NOT_FOUND, HttpStatusCode.NotFound, detail)),
 )
 
-internal fun Responses.Builder.conflict() = problem(
+internal fun Responses.Builder.conflict(
+    description: String =
+        "Altinn already has a resource with this id. It may be of another type or owner, so a GET of the id can still give `404`.",
+    detail: String = "Altinn already has a resource with this id",
+) = problem(
     HttpStatusCode.Conflict,
-    "Altinn already has a resource with this id. It may be of another type or owner, so a GET of the id can still give `404`.",
-    listOf("Conflict" to ErrorResponse.of(ProblemType.CONFLICT, HttpStatusCode.Conflict, "Altinn already has a resource with this id")),
+    description,
+    listOf("Conflict" to ErrorResponse.of(ProblemType.CONFLICT, HttpStatusCode.Conflict, detail)),
 )
 
 internal fun Responses.Builder.badGateway(description: String, vararg examples: Pair<String, ErrorResponse>) = problem(

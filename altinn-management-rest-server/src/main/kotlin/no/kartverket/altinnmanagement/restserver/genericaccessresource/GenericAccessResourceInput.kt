@@ -28,7 +28,7 @@ internal fun genericAccessResourceContent(
     request: GenericAccessResourceRequest,
 ): (delegable: Boolean?) -> GenericAccessResourceContent {
     val errors = buildList {
-        addAll(pathIdErrors(id, request.resourceId))
+        addAll(pathIdErrors("resourceId", id.value, request.resourceId))
         addAll(textErrors("title", request.title))
         addAll(textErrors("description", request.description))
     }

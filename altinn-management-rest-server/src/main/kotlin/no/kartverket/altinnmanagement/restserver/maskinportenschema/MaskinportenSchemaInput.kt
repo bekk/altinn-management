@@ -35,7 +35,7 @@ internal fun maskinportenSchemaContent(
     request: MaskinportenSchemaRequest,
 ): (delegable: Boolean?) -> MaskinportenSchemaContent {
     val errors = buildList {
-        addAll(pathIdErrors(id, request.resourceId))
+        addAll(pathIdErrors("resourceId", id.value, request.resourceId))
         addAll(scopeErrors(request.scopes))
         addAll(textErrors("title", request.title))
         addAll(textErrors("description", request.description))
