@@ -130,7 +130,9 @@ internal const val GENERIC_ACCESS_RESOURCE = "GenericAccessResource"
 
 internal const val KARTVERKET_ORGANIZATION_NUMBER = "971040238"
 
-private val KARTVERKET_AUTHORITY = AltinnCompetentAuthority(organization = KARTVERKET_ORGANIZATION_NUMBER, orgcode = "kv")
+internal const val KARTVERKET_ORGCODE = "kv"
+
+private val KARTVERKET_AUTHORITY = AltinnCompetentAuthority(organization = KARTVERKET_ORGANIZATION_NUMBER, orgcode = KARTVERKET_ORGCODE)
 
 private const val ACCESS_LIST_MODE_DISABLED = "Disabled"
 

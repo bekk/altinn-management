@@ -28,12 +28,13 @@ scripts/dev.sh           # run the server on :8080 with the variables in .env
 - A new setting goes in `application.yaml` as `"$?ENV_VAR"`, in `.env.example` and in the environment variable table
   in the README. Its errors name the `application.yaml` key and end with `(see .env.example)`, like the helpers in
   `config/Config.kt`.
-- The server's code is grouped by feature. `maskinportenschema/` and `genericaccessresource/` each hold their routes
-  (`Route.maskinportenSchemas(...)`, `Route.genericAccessResources(...)`), their OpenAPI operations, their models and
-  their request validation. `problem/` holds the error answers, `observability/` the call logging and the outgoing
-  call log, `filtering/` the filtering service, and `config/` the settings and the clients built from them. The root
-  keeps `Main.kt`, `OpenApi.kt` with the builders the operations share, `RequestInput.kt` with the shared checks, and
-  `ResourceFields.kt` with the fields both resource types have. Tests sit in the package of the code they test.
+- The server's code is grouped by feature. `maskinportenschema/`, `genericaccessresource/` and `accesslist/` each hold
+  their routes (`Route.maskinportenSchemas(...)`, `Route.genericAccessResources(...)`, `Route.accessLists(...)`), their
+  OpenAPI operations, their models and their request validation. `problem/` holds the error answers, `observability/`
+  the call logging and the outgoing call log, `filtering/` the filtering service, and `config/` the settings and the
+  clients built from them. The root keeps `Main.kt`, `OpenApi.kt` with the builders the operations share,
+  `RequestInput.kt` with the shared checks, and `ResourceFields.kt` with the fields both resource types have. Tests sit
+  in the package of the code they test.
 - The OpenAPI spec is generated from the routes and each feature's `*OpenApi.kt`. Describe an error response with
   the shared builders in `OpenApi.kt`, like `badRequest(...)`, `notFound(...)` and `internalError()`. A test fails if
   the checked-in `openapi.json` is out of date.
