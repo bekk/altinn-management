@@ -58,6 +58,14 @@ public class ResourceRegistryClient(
         change(id, AltinnResource::isMaskinportenSchema) { json, _ -> json.withdrawn() }?.toMaskinportenSchema(id)
 
     /**
+     * Keeps the rest of the resource as it is. Null when Kartverket has no MaskinportenSchema [id]. Throws
+     * [AltinnRejectedException] when Altinn would not take the change, and [IllegalStateException] when this client has
+     * no [AccessTokenProvider].
+     */
+    public suspend fun setMaskinportenSchemaAccessListMode(id: ResourceId, mode: AccessListMode): MaskinportenSchema? =
+        change(id, AltinnResource::isMaskinportenSchema) { json, _ -> json.withAccessListMode(mode) }?.toMaskinportenSchema(id)
+
+    /**
      * Replaces the content of the GenericAccessResource with the id [id] by what [content] gives for the resource as
      * Altinn has it, and keeps the rest of it as it is in Altinn, such as its resource references and access list mode.
      * When [content] throws, nothing is changed. Returns the GenericAccessResource as it was sent to Altinn, or null when
@@ -74,6 +82,14 @@ public class ResourceRegistryClient(
     /** Altinn does not let a resource be deleted in production, so it is made neither delegable nor visible instead. */
     public suspend fun withdrawGenericAccessResource(id: ResourceId): GenericAccessResource? =
         change(id, AltinnResource::isGenericAccessResource) { json, _ -> json.withdrawn() }?.toGenericAccessResource(id)
+
+    /**
+     * Keeps the rest of the resource as it is. Null when Kartverket has no GenericAccessResource [id]. Throws
+     * [AltinnRejectedException] when Altinn would not take the change, and [IllegalStateException] when this client has
+     * no [AccessTokenProvider].
+     */
+    public suspend fun setGenericAccessResourceAccessListMode(id: ResourceId, mode: AccessListMode): GenericAccessResource? =
+        change(id, AltinnResource::isGenericAccessResource) { json, _ -> json.withAccessListMode(mode) }?.toGenericAccessResource(id)
 
     private suspend fun change(
         id: ResourceId,

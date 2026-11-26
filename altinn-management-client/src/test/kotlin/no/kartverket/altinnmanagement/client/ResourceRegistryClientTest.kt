@@ -68,6 +68,7 @@ class ResourceRegistryClientTest {
         { getMaskinportenSchema(it) },
         { updateMaskinportenSchema(it) { MaskinportenSchemaContent(listOf("kartverk:a"), text, text, text, null, emptyList(), emptyList()) } },
         { withdrawMaskinportenSchema(it) },
+        { setMaskinportenSchemaAccessListMode(it, AccessListMode.ENABLED) },
         { setMaskinportenSchemaPolicy(it).takeIf { set -> set } },
     )
 
@@ -75,6 +76,7 @@ class ResourceRegistryClientTest {
         { getGenericAccessResource(it) },
         { updateGenericAccessResource(it) { GenericAccessResourceContent(text, text, text, null, emptyList(), emptyList()) } },
         { withdrawGenericAccessResource(it) },
+        { setGenericAccessResourceAccessListMode(it, AccessListMode.ENABLED) },
         { setGenericAccessResourcePolicy(it, policy).takeIf { set -> set } },
         { getGenericAccessResourcePolicy(it) },
     )

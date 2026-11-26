@@ -75,3 +75,16 @@ data class Keyword(
 
     fun toClient() = ClientKeyword(word = word, language = language)
 }
+
+@Serializable
+@JsonSchema.Required("accessListMode")
+@JsonSchema.Description("Whether only organisations on the resource's connected access lists get access to it.")
+data class AccessListModeRequest(
+    @JsonSchema.Type(JsonType.STRING)
+    @JsonSchema.Enum("Enabled", "Disabled")
+    @JsonSchema.Description(
+        "Required. `Enabled` lets only the organisations on the resource's connected access lists through, and " +
+            "`Disabled` turns that off.",
+    )
+    val accessListMode: String? = null,
+)

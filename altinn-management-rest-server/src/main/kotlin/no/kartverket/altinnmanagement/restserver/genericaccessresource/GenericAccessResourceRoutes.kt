@@ -11,6 +11,7 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.utils.io.ExperimentalKtorApi
 import no.kartverket.altinnmanagement.client.ResourceRegistryClient
+import no.kartverket.altinnmanagement.restserver.accessListMode
 import no.kartverket.altinnmanagement.restserver.clientCertificate
 import no.kartverket.altinnmanagement.restserver.filtering.CLIENT_CERTIFICATE_HEADER
 import no.kartverket.altinnmanagement.restserver.filtering.ExternalFiltering
@@ -54,6 +55,13 @@ internal fun Route.genericAccessResources(client: ResourceRegistryClient, extern
         val resource = client.withdrawGenericAccessResource(id) ?: throw ResourceNotFoundException("GenericAccessResource")
         call.respond(GenericAccessResource.from(resource))
     }.describe(genericAccessResourceWithdrawOperation)
+
+    put("/api/genericaccessresources/{id}/accesslistmode") {
+        val id = resourceId("id", call.pathParameters["id"]!!)
+        val mode = call.accessListMode()
+        val resource = client.setGenericAccessResourceAccessListMode(id, mode) ?: throw ResourceNotFoundException("GenericAccessResource")
+        call.respond(GenericAccessResource.from(resource))
+    }.describe(genericAccessResourceAccessListModeOperation)
 
     put("/api/genericaccessresources/{id}/policy") {
         val id = resourceId("id", call.pathParameters["id"]!!)

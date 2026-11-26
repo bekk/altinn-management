@@ -107,23 +107,25 @@ setting them yourself.
 
 ## 🔌 API
 
-| Endpoint                                        | What it is                                                              |
-| :---------------------------------------------- | :---------------------------------------------------------------------- |
-| `GET /api/maskinportenschemas`                  | Lists Kartverket's MaskinportenSchemas, or with `?scope=` those for one |
-| `POST /api/maskinportenschemas`                 | Creates a MaskinportenSchema                                            |
-| `GET /api/maskinportenschemas/{id}`             | Gets a MaskinportenSchema                                               |
-| `PUT /api/maskinportenschemas/{id}`             | Changes a MaskinportenSchema                                            |
-| `PUT /api/maskinportenschemas/{id}/withdraw`    | Withdraws a MaskinportenSchema                                          |
-| `PUT /api/maskinportenschemas/{id}/policy`      | Gives a MaskinportenSchema the policy every MaskinportenSchema gets     |
-| `GET /api/genericaccessresources`               | Lists Kartverket's GenericAccessResources                               |
-| `POST /api/genericaccessresources`              | Creates a GenericAccessResource                                         |
-| `GET /api/genericaccessresources/{id}`          | Gets a GenericAccessResource                                            |
-| `PUT /api/genericaccessresources/{id}`          | Changes a GenericAccessResource                                         |
-| `PUT /api/genericaccessresources/{id}/withdraw` | Withdraws a GenericAccessResource                                       |
-| `PUT /api/genericaccessresources/{id}/policy`   | Sets or replaces the policy of a GenericAccessResource                  |
-| `GET /api/genericaccessresources/{id}/policy`   | Gets the policy of a GenericAccessResource                              |
-| `GET /openapi`                                  | The OpenAPI spec as JSON                                                |
-| `GET /health/live`                              | Liveness probe for the platform, left out of the spec                   |
+| Endpoint                                              | What it is                                                              |
+| :---------------------------------------------------- | :---------------------------------------------------------------------- |
+| `GET /api/maskinportenschemas`                        | Lists Kartverket's MaskinportenSchemas, or with `?scope=` those for one |
+| `POST /api/maskinportenschemas`                       | Creates a MaskinportenSchema                                            |
+| `GET /api/maskinportenschemas/{id}`                   | Gets a MaskinportenSchema                                               |
+| `PUT /api/maskinportenschemas/{id}`                   | Changes a MaskinportenSchema                                            |
+| `PUT /api/maskinportenschemas/{id}/withdraw`          | Withdraws a MaskinportenSchema                                          |
+| `PUT /api/maskinportenschemas/{id}/accesslistmode`    | Turns access lists on or off for a MaskinportenSchema                   |
+| `PUT /api/maskinportenschemas/{id}/policy`            | Gives a MaskinportenSchema the policy every MaskinportenSchema gets     |
+| `GET /api/genericaccessresources`                     | Lists Kartverket's GenericAccessResources                               |
+| `POST /api/genericaccessresources`                    | Creates a GenericAccessResource                                         |
+| `GET /api/genericaccessresources/{id}`                | Gets a GenericAccessResource                                            |
+| `PUT /api/genericaccessresources/{id}`                | Changes a GenericAccessResource                                         |
+| `PUT /api/genericaccessresources/{id}/withdraw`       | Withdraws a GenericAccessResource                                       |
+| `PUT /api/genericaccessresources/{id}/accesslistmode` | Turns access lists on or off for a GenericAccessResource                |
+| `PUT /api/genericaccessresources/{id}/policy`         | Sets or replaces the policy of a GenericAccessResource                  |
+| `GET /api/genericaccessresources/{id}/policy`         | Gets the policy of a GenericAccessResource                              |
+| `GET /openapi`                                        | The OpenAPI spec as JSON                                                |
+| `GET /health/live`                                    | Liveness probe for the platform, left out of the spec                   |
 
 The server does no authentication itself: the platform checks the calling app before a call reaches it. When
 filtering is on, the server sends the caller's `X-Forwarded-Client-Cert` header, which Istio sets, to the filtering

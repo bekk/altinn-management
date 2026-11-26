@@ -57,6 +57,13 @@ data class MaskinportenSchema(
     @JsonSchema.Type(JsonType.BOOLEAN)
     @JsonSchema.Description("If `true`, Altinn shows the resource to its users.")
     val visible: Boolean? = null,
+
+    @JsonSchema.Type(JsonType.STRING)
+    @JsonSchema.Description(
+        "`Enabled` when only organisations on the resource's connected access lists get access to it, or `Disabled`. " +
+            "Changed only with `PUT /api/maskinportenschemas/{id}/accesslistmode`, not by a `PUT` of the resource.",
+    )
+    val accessListMode: String? = null,
 ) {
     companion object {
         fun from(schema: ClientMaskinportenSchema) = MaskinportenSchema(
@@ -71,6 +78,7 @@ data class MaskinportenSchema(
             status = schema.status,
             delegable = schema.delegable,
             visible = schema.visible,
+            accessListMode = schema.accessListMode,
         )
     }
 }

@@ -135,6 +135,7 @@ class CreateGenericAccessResourceTest {
                 status = "Completed",
                 delegable = true,
                 visible = true,
+                accessListMode = "Disabled",
             ),
             Json.decodeFromString(GenericAccessResource.serializer(), response.bodyAsText()),
         )

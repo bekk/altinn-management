@@ -92,6 +92,7 @@ class ListGenericAccessResourcesTest {
             status = "Completed",
             delegable = true,
             visible = true,
+            accessListMode = "Disabled",
         )
         assertEquals(listOf(expected), response.genericAccessResources())
         assertFalse("scopes" in response.bodyAsText())

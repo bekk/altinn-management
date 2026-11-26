@@ -9,6 +9,11 @@ public enum class ResourceStatus(public val value: String) {
     WITHDRAWN("Withdrawn"),
 }
 
+public enum class AccessListMode(public val value: String) {
+    ENABLED("Enabled"),
+    DISABLED("Disabled"),
+}
+
 public data class MultilingualText(
     public val en: String?,
     public val nb: String?,

@@ -116,6 +116,7 @@ class PutMaskinportenSchemaTest {
                 status = "Completed",
                 delegable = true,
                 visible = true,
+                accessListMode = "Disabled",
             ),
             Json.decodeFromString(MaskinportenSchema.serializer(), response.bodyAsText()),
         )
@@ -166,7 +167,7 @@ class PutMaskinportenSchemaTest {
         assertFalse("homepage" in sentResource)
         assertEquals("[]", sentResource["contactPoints"].toString())
         assertEquals("[]", sentResource["keywords"].toString())
-        assertEquals(setOf("resourceId", "scopes", "title", "description", "delegationDescription", "contactPoints", "keywords", "status", "delegable", "visible"), Json.parseToJsonElement(response.bodyAsText()).jsonObject.keys)
+        assertEquals(setOf("resourceId", "scopes", "title", "description", "delegationDescription", "contactPoints", "keywords", "status", "delegable", "visible", "accessListMode"), Json.parseToJsonElement(response.bodyAsText()).jsonObject.keys)
     }
 
     @Test
