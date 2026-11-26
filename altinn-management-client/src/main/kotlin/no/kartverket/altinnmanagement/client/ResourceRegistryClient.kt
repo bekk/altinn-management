@@ -57,7 +57,11 @@ public class ResourceRegistryClient(
     public suspend fun withdrawMaskinportenSchema(id: ResourceId): MaskinportenSchema? =
         change(id, AltinnResource::isMaskinportenSchema) { json, _ -> json.withdrawn() }?.toMaskinportenSchema(id)
 
-    /** Keeps the rest of the resource as it is. Null when Kartverket has no MaskinportenSchema [id]. */
+    /**
+     * Keeps the rest of the resource as it is. Null when Kartverket has no MaskinportenSchema [id]. Throws
+     * [AltinnRejectedException] when Altinn would not take the change, and [IllegalStateException] when this client has
+     * no [AccessTokenProvider].
+     */
     public suspend fun setMaskinportenSchemaAccessListMode(id: ResourceId, mode: AccessListMode): MaskinportenSchema? =
         change(id, AltinnResource::isMaskinportenSchema) { json, _ -> json.withAccessListMode(mode) }?.toMaskinportenSchema(id)
 
@@ -79,7 +83,11 @@ public class ResourceRegistryClient(
     public suspend fun withdrawGenericAccessResource(id: ResourceId): GenericAccessResource? =
         change(id, AltinnResource::isGenericAccessResource) { json, _ -> json.withdrawn() }?.toGenericAccessResource(id)
 
-    /** Keeps the rest of the resource as it is. Null when Kartverket has no GenericAccessResource [id]. */
+    /**
+     * Keeps the rest of the resource as it is. Null when Kartverket has no GenericAccessResource [id]. Throws
+     * [AltinnRejectedException] when Altinn would not take the change, and [IllegalStateException] when this client has
+     * no [AccessTokenProvider].
+     */
     public suspend fun setGenericAccessResourceAccessListMode(id: ResourceId, mode: AccessListMode): GenericAccessResource? =
         change(id, AltinnResource::isGenericAccessResource) { json, _ -> json.withAccessListMode(mode) }?.toGenericAccessResource(id)
 
