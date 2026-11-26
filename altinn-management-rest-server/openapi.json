@@ -3035,6 +3035,169 @@
                 }
             }
         },
+        "/api/accesslists": {
+            "get": {
+                "summary": "List Kartverket's access lists",
+                "description": "Gets Kartverket's access lists from Altinn, from every page Altinn gives. When filtering is on, this API only returns the lists whose id starts with one of the calling app's prefixes for resources. An `exact` resource id gives no access to a list. This API reads which app is calling from the `X-Forwarded-Client-Cert` header, which Istio usually sets.",
+                "parameters": [
+                    {
+                        "name": "X-Forwarded-Client-Cert",
+                        "in": "header",
+                        "description": "Says which app is calling. Istio usually sets it on every call, so the app does not. This API requires it when filtering is on.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-Request-ID",
+                        "in": "header",
+                        "description": "An id to find this call by in this API's logs. Up to 128 ASCII letters, digits, `-`, `_`, `.` and `:`. Without it, or with any other value, this API makes a new one. Every response has the id in its `X-Request-Id` header.",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "3f2b8c1e-7d4a-4f0e-9b6a-2c5d8e1f4a7b"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Kartverket's access lists, and when filtering is on, only those the calling app has access to. The list is empty if there are none.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/AccessList"
+                                    }
+                                },
+                                "examples": {
+                                    "AccessLists": {
+                                        "value": [
+                                            {
+                                                "accessListId": "kv-matrikkel-kunder",
+                                                "urn": "urn:altinn:access-list:kv:kv-matrikkel-kunder",
+                                                "name": "Matrikkel customers",
+                                                "description": "Organisations with an agreement to use the Matrikkel API.",
+                                                "createdAt": "2026-11-20T10:15:30.123456+00:00",
+                                                "updatedAt": "2026-11-21T08:00:00.000000+00:00"
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Filtering is on and the `X-Forwarded-Client-Cert` header is missing, so this API cannot tell which app is calling.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "MissingClientCertificate": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:validation-error",
+                                            "title": "Validation failed",
+                                            "status": 400,
+                                            "errors": [
+                                                {
+                                                    "field": "X-Forwarded-Client-Cert",
+                                                    "code": "MISSING",
+                                                    "message": "X-Forwarded-Client-Cert is required"
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "This API could not get an answer from Altinn, or from the service that says which resources the calling app has access to. Your request did not cause it.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "UpstreamError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:upstream-error",
+                                            "title": "A service this API depends on failed",
+                                            "status": 502,
+                                            "detail": "The call to Altinn failed"
+                                        }
+                                    },
+                                    "FilteringError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:upstream-error",
+                                            "title": "A service this API depends on failed",
+                                            "status": 502,
+                                            "detail": "The call to the filtering service failed"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "An unexpected error in this API.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "InternalError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:internal-error",
+                                            "title": "Internal error",
+                                            "status": 500
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/accesslists/{id}": {
             "get": {
                 "summary": "Get an access list",
