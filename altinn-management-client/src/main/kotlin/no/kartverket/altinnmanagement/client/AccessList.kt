@@ -24,6 +24,10 @@ internal data class AltinnAccessList(
     fun toAccessList(): AccessList = AccessList(identifier, urn, name, description, createdAt, updatedAt)
 }
 
+// Altinn takes a left out description as an empty one, so one is always sent
+@Serializable
+internal data class AltinnAccessListContent(val name: String, val description: String)
+
 @Serializable
 internal data class AltinnResourceConnection(val resourceIdentifier: String)
 

@@ -8,6 +8,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import no.kartverket.altinnmanagement.client.auth.AccessTokenProvider
+import no.kartverket.altinnmanagement.client.exception.AccessListAlreadyExistsException
 import no.kartverket.altinnmanagement.client.exception.AltinnException
 import no.kartverket.altinnmanagement.client.exception.AltinnRejectedException
 import no.kartverket.altinnmanagement.client.exception.ResourceAlreadyExistsException
@@ -23,9 +24,9 @@ import java.net.URLEncoder
 import java.util.UUID
 
 /**
- * Reads Altinn's resources without a token, and changes them, and reads Kartverket's access lists, with a token from
- * [accessTokenProvider], such as a [no.kartverket.altinnmanagement.client.auth.MaskinportenAltinnTokenProvider]. A
- * client that only reads resources needs none.
+ * Reads Altinn's resources without a token, and changes them, and reads and changes Kartverket's access lists, with a
+ * token from [accessTokenProvider], such as a [no.kartverket.altinnmanagement.client.auth.MaskinportenAltinnTokenProvider].
+ * A client that only reads resources needs none.
  */
 public class ResourceRegistryClient(
     platformBaseUrl: URI,
@@ -265,11 +266,63 @@ public class ResourceRegistryClient(
      */
     public suspend fun getAccessList(id: String): AccessList? {
         val tokens = tokens()
-        val segment = URLEncoder.encode(id, Charsets.UTF_8).replace("+", "%20")
-        val response = readWithToken(tokens, Http.url(platformBaseUrl, "$ACCESS_LIST_PATH/$segment"))
+        val response = readWithToken(tokens, accessListUrl(id))
         if (response.statusCode == 404) return null
         if (response.statusCode != 200) throw failed(response)
         return parse(response, AltinnAccessList.serializer()).toAccessList()
+    }
+
+    /**
+     * Creates Kartverket's access list [id] in Altinn and returns it as Altinn has it. Throws
+     * [AccessListAlreadyExistsException] when Kartverket has a list with this id, [AltinnRejectedException] when Altinn
+     * would not take it, and [IllegalStateException] when this client has no [AccessTokenProvider].
+     */
+    public suspend fun createAccessList(id: String, name: String, description: String?): AccessList {
+        val response = putAccessList(id, name, description, "If-None-Match")
+        if (response.statusCode == 412) throw AccessListAlreadyExistsException(id, response.statusCode, response.body.decodeToString())
+        return parse(response, AltinnAccessList.serializer()).toAccessList()
+    }
+
+    /**
+     * Replaces the name and description of Kartverket's access list [id], and returns it as Altinn has it, or null when
+     * Kartverket has no list with this id. A [description] that is null empties it. Throws [AltinnRejectedException]
+     * when Altinn would not take the change, and [IllegalStateException] when this client has no [AccessTokenProvider].
+     */
+    public suspend fun updateAccessList(id: String, name: String, description: String?): AccessList? {
+        val response = putAccessList(id, name, description, "If-Match")
+        if (response.statusCode == 412) return null
+        return parse(response, AltinnAccessList.serializer()).toAccessList()
+    }
+
+    /**
+     * Deletes Kartverket's access list [id] and returns it as it was, or null when Kartverket has no list with this id.
+     * Throws [IllegalStateException] when this client has no [AccessTokenProvider].
+     */
+    public suspend fun deleteAccessList(id: String): AccessList? {
+        val tokens = tokens()
+        val request = OutgoingRequest(HttpMethod.DELETE, accessListUrl(id), mapOf("Accept" to "application/json"))
+        val response = sendWrite(tokens, request) { it == 200 || it == 204 }
+        if (response.statusCode == 204) return null
+        return parse(response, AltinnAccessList.serializer()).toAccessList()
+    }
+
+    // Altinn's PUT both creates and changes, so the condition "*" on whether the list exists says which one it may do.
+    // When the condition fails, Altinn answers 412 and changes nothing
+    private suspend fun putAccessList(id: String, name: String, description: String?, condition: String): OutgoingResponse {
+        val tokens = tokens()
+        val content = AltinnAccessListContent(name, description.orEmpty())
+        val request = OutgoingRequest(
+            method = HttpMethod.PUT,
+            url = accessListUrl(id),
+            headers = mapOf("Content-Type" to "application/json", "Accept" to "application/json", condition to "*"),
+            body = Http.json.encodeToString(AltinnAccessListContent.serializer(), content).encodeToByteArray(),
+        )
+        return sendWrite(tokens, request) { it == 200 || it == 412 }
+    }
+
+    private fun accessListUrl(id: String): URI {
+        val segment = URLEncoder.encode(id, Charsets.UTF_8).replace("+", "%20")
+        return Http.url(platformBaseUrl, "$ACCESS_LIST_PATH/$segment")
     }
 
     private suspend fun readWithToken(tokens: AccessTokenProvider, url: URI): OutgoingResponse {
@@ -301,14 +354,14 @@ public class ResourceRegistryClient(
         AltinnException("$TARGET responded ${response.statusCode}", response.statusCode, response.body.decodeToString())
 
     private fun tokens(): AccessTokenProvider =
-        checkNotNull(accessTokenProvider) { "Changing a resource or reading an access list needs an AccessTokenProvider" }
+        checkNotNull(accessTokenProvider) { "Changing a resource or using an access list needs an AccessTokenProvider" }
 
     // A rejection is about what was sent. Any other 401 means Altinn did not take the token, so the next call gets a new one
-    private suspend fun sendWrite(tokens: AccessTokenProvider, request: OutgoingRequest, isSuccess: (Int) -> Boolean) {
+    private suspend fun sendWrite(tokens: AccessTokenProvider, request: OutgoingRequest, isSuccess: (Int) -> Boolean): OutgoingResponse {
         val token = tokens.accessToken()
         val headers = request.headers + ("Authorization" to "Bearer ${token.value}")
         val response = Http.send(httpClient, OutgoingRequest(request.method, request.url, headers, request.body), TARGET, ::AltinnException)
-        if (isSuccess(response.statusCode)) return
+        if (isSuccess(response.statusCode)) return response
         val e = AltinnException("$TARGET responded ${response.statusCode}", response.statusCode, response.body.decodeToString())
         rejection(e)?.let { throw it }
         if (e.statusCode == 401) tokens.refused(token)

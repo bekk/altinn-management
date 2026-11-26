@@ -42,7 +42,7 @@ internal fun resourceIdOrNull(value: String): ResourceId? = try {
     null
 }
 
-private fun invalidResourceId(name: String) = FieldError(name, ValidationCode.INVALID_FORMAT, "$name must be 4 or more of a-z, 0-9, _ and -")
+internal fun invalidResourceId(name: String) = FieldError(name, ValidationCode.INVALID_FORMAT, "$name must be 4 or more of a-z, 0-9, _ and -")
 
 // Altinn requires it only for a resource that can be delegated, and takes a resource without delegable as one
 internal fun checkDelegationDescription(delegable: Boolean?, delegationDescription: MultilingualText?) {

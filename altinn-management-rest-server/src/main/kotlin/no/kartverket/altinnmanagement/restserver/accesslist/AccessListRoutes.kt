@@ -1,9 +1,15 @@
 package no.kartverket.altinnmanagement.restserver.accesslist
 
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.response.header
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
+import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.openapi.describe
+import io.ktor.server.routing.post
+import io.ktor.server.routing.put
 import io.ktor.utils.io.ExperimentalKtorApi
 import no.kartverket.altinnmanagement.client.ResourceRegistryClient
 import no.kartverket.altinnmanagement.restserver.clientCertificate
@@ -22,8 +28,28 @@ internal fun Route.accessLists(client: ResourceRegistryClient, externalFiltering
         call.respond(lists.allowedBy(filter) { allows(it) }.map(AccessList::from))
     }.describe(accessListsListOperation)
 
+    post("/api/accesslists") {
+        val list = newAccessList(call.newAccessListRequest())
+        val created = client.createAccessList(list.id, list.name, list.description)
+        call.response.header(HttpHeaders.Location, "/api/accesslists/${list.id}")
+        call.respond(HttpStatusCode.Created, AccessList.from(created))
+    }.describe(accessListCreateOperation)
+
     get("/api/accesslists/{id}") {
         val list = client.getAccessList(call.pathParameters["id"]!!) ?: throw ResourceNotFoundException("access list")
         call.respond(AccessList.from(list))
     }.describe(accessListGetOperation)
+
+    put("/api/accesslists/{id}") {
+        val id = accessListId("id", call.pathParameters["id"]!!)
+        val list = accessListContent(id, call.accessListRequest())
+        val changed = client.updateAccessList(list.id, list.name, list.description) ?: throw ResourceNotFoundException("access list")
+        call.respond(AccessList.from(changed))
+    }.describe(accessListPutOperation)
+
+    delete("/api/accesslists/{id}") {
+        val id = accessListId("id", call.pathParameters["id"]!!)
+        val deleted = client.deleteAccessList(id) ?: throw ResourceNotFoundException("access list")
+        call.respond(AccessList.from(deleted))
+    }.describe(accessListDeleteOperation)
 }

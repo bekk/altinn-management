@@ -1,24 +1,30 @@
 package no.kartverket.altinnmanagement.restserver.accesslist
 
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.openapi.JsonSchema
 import io.ktor.openapi.JsonType
 import io.ktor.openapi.Operation
+import io.ktor.openapi.Parameters
 import io.ktor.openapi.ReferenceOr
 import io.ktor.openapi.jsonSchema
 import no.kartverket.altinnmanagement.restserver.badGateway
 import no.kartverket.altinnmanagement.restserver.badRequest
 import no.kartverket.altinnmanagement.restserver.clientCertificate
+import no.kartverket.altinnmanagement.restserver.conflict
 import no.kartverket.altinnmanagement.restserver.example
 import no.kartverket.altinnmanagement.restserver.filteringErrorExample
 import no.kartverket.altinnmanagement.restserver.internalError
+import no.kartverket.altinnmanagement.restserver.invalidIdExample
+import no.kartverket.altinnmanagement.restserver.malformedBodyExample
 import no.kartverket.altinnmanagement.restserver.missingClientCertificateExample
 import no.kartverket.altinnmanagement.restserver.notFound
 import no.kartverket.altinnmanagement.restserver.problem.FieldError
 import no.kartverket.altinnmanagement.restserver.problem.ValidationCode
 import no.kartverket.altinnmanagement.restserver.requestId
 import no.kartverket.altinnmanagement.restserver.validationError
+import no.kartverket.altinnmanagement.restserver.withRequiredNotNull
 
 private val exampleAccessList = AccessList(
     accessListId = "kv-matrikkel-kunder",
@@ -103,6 +109,164 @@ internal val accessListGetOperation: Operation.Builder.() -> Unit = {
         notFound("Kartverket has no access list with this id in Altinn.", "There is no access list with this id")
 
         badGateway("This API could not get an answer from Altinn. Your request did not cause it.")
+
+        internalError()
+    }
+}
+
+private val exampleNewAccessList = NewAccessList(
+    accessListId = "kv-matrikkel-kunder",
+    name = "Matrikkel customers",
+    description = "Organisations with an agreement to use the Matrikkel API.",
+)
+
+private val exampleAccessListRequest = AccessListRequest(
+    name = "Matrikkel customers",
+    description = "Organisations with an agreement to use the Matrikkel API.",
+)
+
+private fun Parameters.Builder.accessListIdPath() {
+    path("id") {
+        required = true
+        description = "The list's id: 4 or more of `a-z`, `0-9`, `_` and `-`, for example `kv-matrikkel-kunder`."
+        schema = JsonSchema(type = JsonType.STRING, pattern = "^[a-z0-9_-]{4,}$")
+    }
+}
+
+internal val accessListCreateOperation: Operation.Builder.() -> Unit = {
+    summary = "Create an access list"
+    description = "Creates an access list in Altinn, owned by Kartverket, with no members and connected to no " +
+        "resource. This API checks the id and the name first, and Altinn checks the list again."
+
+    parameters {
+        requestId()
+    }
+
+    requestBody {
+        required = true
+        ContentType.Application.Json {
+            schema = jsonSchema<NewAccessList>().withRequiredNotNull()
+            example("NewAccessList", exampleNewAccessList)
+        }
+    }
+
+    responses {
+        HttpStatusCode.Created {
+            description = "Altinn created the list. The body is the list as Altinn has it."
+            headers {
+                requestId()
+                header(HttpHeaders.Location) {
+                    description = "Where to get the new list from this API."
+                    required = true
+                    schema = JsonSchema(type = JsonType.STRING)
+                }
+            }
+            ContentType.Application.Json {
+                schema = jsonSchema<AccessList>()
+                example("AccessList", exampleAccessList)
+            }
+        }
+
+        badRequest(
+            "The body cannot be read or has fields that are missing or invalid, or Altinn rejected the list. When " +
+                "Altinn rejects it, `detail` has Altinn's reasons. The body must be UTF-8 JSON that gives each name once.",
+            "ValidationError" to validationError(
+                FieldError("accessListId", ValidationCode.INVALID_FORMAT, "accessListId must be 4 or more of a-z, 0-9, _ and -"),
+                FieldError("name", ValidationCode.MISSING, "name is required"),
+            ),
+            malformedBodyExample("The body must be one JSON object, with no name given twice"),
+        )
+
+        conflict(
+            "Kartverket already has an access list with this id in Altinn.",
+            "Altinn already has an access list with this id",
+        )
+
+        badGateway(
+            "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
+                "did not cause it. Altinn may or may not have created the list.",
+        )
+
+        internalError()
+    }
+}
+
+internal val accessListPutOperation: Operation.Builder.() -> Unit = {
+    summary = "Change an access list"
+    description = "Replaces the name and description of Kartverket's access list with this id in Altinn. Send both: " +
+        "a description that is left out is emptied. The list's members and the resources it is connected to are kept " +
+        "as they are. A list that does not exist gives `404`, and is not created."
+
+    parameters {
+        accessListIdPath()
+        requestId()
+    }
+
+    requestBody {
+        required = true
+        ContentType.Application.Json {
+            schema = jsonSchema<AccessListRequest>().withRequiredNotNull()
+            example("AccessList", exampleAccessListRequest)
+        }
+    }
+
+    responses {
+        HttpStatusCode.OK {
+            description = "The list as Altinn has it after the change."
+            headers { requestId() }
+            ContentType.Application.Json {
+                schema = jsonSchema<AccessList>()
+                example("AccessList", exampleAccessList)
+            }
+        }
+
+        badRequest(
+            "The id or the body is not valid, the body could not be read, or Altinn rejected the list. When Altinn " +
+                "rejects it, `detail` has Altinn's reasons. Nothing was changed. The body must be UTF-8 JSON that " +
+                "gives each name once.",
+            invalidIdExample,
+            "MissingName" to validationError(FieldError("name", ValidationCode.MISSING, "name is required")),
+            malformedBodyExample("The body must be a JSON object with only this API's fields, each of the right type"),
+        )
+
+        notFound("Kartverket has no access list with this id in Altinn.", "There is no access list with this id")
+
+        badGateway(
+            "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
+                "did not cause it, and the list may or may not have been changed.",
+        )
+
+        internalError()
+    }
+}
+
+internal val accessListDeleteOperation: Operation.Builder.() -> Unit = {
+    summary = "Delete an access list"
+    description = "Deletes Kartverket's access list with this id from Altinn."
+
+    parameters {
+        accessListIdPath()
+        requestId()
+    }
+
+    responses {
+        HttpStatusCode.OK {
+            description = "Altinn deleted the list. The body is the list as it was."
+            headers { requestId() }
+            ContentType.Application.Json {
+                schema = jsonSchema<AccessList>()
+                example("AccessList", exampleAccessList)
+            }
+        }
+
+        badRequest("The id is not valid. Nothing was deleted.", invalidIdExample)
+
+        notFound("Kartverket has no access list with this id in Altinn.", "There is no access list with this id")
+
+        badGateway(
+            "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
+                "did not cause it, and the list may or may not have been deleted.",
+        )
 
         internalError()
     }

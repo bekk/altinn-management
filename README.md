@@ -71,7 +71,7 @@ resources over plain JSON without speaking Maskinporten and Altinn's API themsel
 
 - JDK 25, or let the Gradle toolchain resolver provision one
 - To call Altinn: a [Maskinporten client](https://docs.digdir.no/docs/Maskinporten/maskinporten_guide_apikonsument.html)
-  granted `altinn:resourceregistry/resource.write` and `altinn:resourceregistry/accesslist.read`, with its private
+  granted `altinn:resourceregistry/resource.write` and `altinn:resourceregistry/accesslist.write`, with its private
   key as JWK. Altinn's write endpoints and access lists require its token, and the server needs the client at startup,
   although reading resources from Altinn needs no token
 
@@ -125,6 +125,9 @@ setting them yourself.
 | `GET /api/genericaccessresources/{id}/policy`   | Gets the policy of a GenericAccessResource                              |
 | `GET /api/accesslists`                          | Lists Kartverket's access lists, or with `?resource=` those for one     |
 | `GET /api/accesslists/{id}`                     | Gets an access list                                                     |
+| `POST /api/accesslists`                         | Creates an access list                                                  |
+| `PUT /api/accesslists/{id}`                     | Changes an access list's name and description                           |
+| `DELETE /api/accesslists/{id}`                  | Deletes an access list                                                  |
 | `GET /openapi`                                  | The OpenAPI spec as JSON                                                |
 | `GET /health/live`                              | Liveness probe for the platform, left out of the spec                   |
 
