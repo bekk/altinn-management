@@ -71,8 +71,9 @@ resources over plain JSON without speaking Maskinporten and Altinn's API themsel
 
 - JDK 25, or let the Gradle toolchain resolver provision one
 - To call Altinn: a [Maskinporten client](https://docs.digdir.no/docs/Maskinporten/maskinporten_guide_apikonsument.html)
-  granted `altinn:resourceregistry/resource.write`, with its private key as JWK. Altinn's write endpoints require
-  its token, and the server needs the client at startup, although reading from Altinn needs no token
+  granted `altinn:resourceregistry/resource.write` and `altinn:resourceregistry/accesslist.read`, with its private
+  key as JWK. Altinn's write endpoints and access lists require its token, and the server needs the client at startup,
+  although reading resources from Altinn needs no token
 
 ---
 
