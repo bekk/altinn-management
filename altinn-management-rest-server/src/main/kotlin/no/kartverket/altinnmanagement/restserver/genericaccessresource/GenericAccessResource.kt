@@ -50,6 +50,12 @@ data class GenericAccessResource(
     @JsonSchema.Type(JsonType.BOOLEAN)
     @JsonSchema.Description("If `true`, Altinn shows the resource to its users.")
     val visible: Boolean? = null,
+
+    @JsonSchema.Type(JsonType.STRING)
+    @JsonSchema.Description(
+        "`Enabled` when only organisations on the resource's connected access lists get access to it, or `Disabled`.",
+    )
+    val accessListMode: String? = null,
 ) {
     companion object {
         fun from(resource: ClientGenericAccessResource) = GenericAccessResource(
@@ -63,6 +69,7 @@ data class GenericAccessResource(
             status = resource.status,
             delegable = resource.delegable,
             visible = resource.visible,
+            accessListMode = resource.accessListMode,
         )
     }
 }

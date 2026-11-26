@@ -109,6 +109,7 @@ class PutGenericAccessResourceTest {
                 status = "Completed",
                 delegable = true,
                 visible = true,
+                accessListMode = "Disabled",
             ),
             Json.decodeFromString(GenericAccessResource.serializer(), response.bodyAsText()),
         )
@@ -173,7 +174,7 @@ class PutGenericAccessResourceTest {
         assertEquals("[]", sentResource["contactPoints"].toString())
         assertEquals("[]", sentResource["keywords"].toString())
         assertEquals(
-            setOf("resourceId", "title", "description", "delegationDescription", "contactPoints", "keywords", "status", "delegable", "visible"),
+            setOf("resourceId", "title", "description", "delegationDescription", "contactPoints", "keywords", "status", "delegable", "visible", "accessListMode"),
             Json.parseToJsonElement(response.bodyAsText()).jsonObject.keys,
         )
     }

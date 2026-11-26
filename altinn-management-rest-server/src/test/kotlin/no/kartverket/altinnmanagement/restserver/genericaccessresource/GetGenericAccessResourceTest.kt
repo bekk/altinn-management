@@ -73,6 +73,7 @@ class GetGenericAccessResourceTest {
                 status = "Completed",
                 delegable = true,
                 visible = true,
+                accessListMode = "Disabled",
             ),
             response.genericAccessResource(),
         )

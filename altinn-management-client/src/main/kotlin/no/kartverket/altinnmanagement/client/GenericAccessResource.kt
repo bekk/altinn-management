@@ -11,6 +11,7 @@ public data class GenericAccessResource(
     public val status: String?,
     public val delegable: Boolean?,
     public val visible: Boolean?,
+    public val accessListMode: String?,
 )
 
 public data class GenericAccessResourceContent(

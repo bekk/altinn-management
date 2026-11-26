@@ -42,6 +42,7 @@ internal data class AltinnResource(
         status = status,
         delegable = delegable,
         visible = visible,
+        accessListMode = accessListMode,
     )
 
     fun toGenericAccessResource(id: ResourceId): GenericAccessResource = GenericAccessResource(
@@ -55,6 +56,7 @@ internal data class AltinnResource(
         status = status,
         delegable = delegable,
         visible = visible,
+        accessListMode = accessListMode,
     )
 }
 

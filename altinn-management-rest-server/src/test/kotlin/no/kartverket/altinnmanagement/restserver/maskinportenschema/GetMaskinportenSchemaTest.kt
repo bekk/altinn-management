@@ -73,6 +73,7 @@ class GetMaskinportenSchemaTest {
                 status = "Completed",
                 delegable = true,
                 visible = true,
+                accessListMode = "Disabled",
             ),
             response.maskinportenSchema(),
         )

@@ -101,6 +101,7 @@ class CreateMaskinportenSchemaTest {
                 status = "Completed",
                 delegable = true,
                 visible = true,
+                accessListMode = "Disabled",
             ),
             Json.decodeFromString(MaskinportenSchema.serializer(), response.bodyAsText()),
         )

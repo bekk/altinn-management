@@ -87,6 +87,7 @@ class AccessFilterTest {
         status = null,
         delegable = true,
         visible = true,
+        accessListMode = null,
     )
 
     private fun genericAccessResource(id: String) = GenericAccessResource(
@@ -100,6 +101,7 @@ class AccessFilterTest {
         status = null,
         delegable = true,
         visible = true,
+        accessListMode = null,
     )
 
     private val noText = MultilingualText(en = null, nb = null, nn = null)

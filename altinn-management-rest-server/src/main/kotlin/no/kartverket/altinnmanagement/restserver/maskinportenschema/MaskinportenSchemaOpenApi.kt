@@ -50,6 +50,7 @@ private val exampleMaskinportenSchema = MaskinportenSchema(
     status = "Completed",
     delegable = true,
     visible = true,
+    accessListMode = "Disabled",
 )
 
 internal val maskinportenSchemasListOperation: Operation.Builder.() -> Unit = {

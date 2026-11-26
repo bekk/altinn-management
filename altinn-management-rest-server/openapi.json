@@ -139,7 +139,8 @@
                                             ],
                                             "status": "Completed",
                                             "delegable": true,
-                                            "visible": true
+                                            "visible": true,
+                                            "accessListMode": "Disabled"
                                         }
                                     }
                                 }
@@ -382,7 +383,8 @@
                                                 ],
                                                 "status": "Completed",
                                                 "delegable": true,
-                                                "visible": true
+                                                "visible": true,
+                                                "accessListMode": "Disabled"
                                             }
                                         ]
                                     }
@@ -641,7 +643,8 @@
                                             ],
                                             "status": "Completed",
                                             "delegable": true,
-                                            "visible": true
+                                            "visible": true,
+                                            "accessListMode": "Disabled"
                                         }
                                     }
                                 }
@@ -874,7 +877,8 @@
                                             ],
                                             "status": "Completed",
                                             "delegable": true,
-                                            "visible": true
+                                            "visible": true,
+                                            "accessListMode": "Disabled"
                                         }
                                     }
                                 }
@@ -1088,7 +1092,8 @@
                                             ],
                                             "status": "Withdrawn",
                                             "delegable": false,
-                                            "visible": false
+                                            "visible": false,
+                                            "accessListMode": "Disabled"
                                         }
                                     }
                                 }
@@ -1525,7 +1530,8 @@
                                             ],
                                             "status": "Completed",
                                             "delegable": true,
-                                            "visible": true
+                                            "visible": true,
+                                            "accessListMode": "Disabled"
                                         }
                                     }
                                 }
@@ -1757,7 +1763,8 @@
                                                 ],
                                                 "status": "Completed",
                                                 "delegable": true,
-                                                "visible": true
+                                                "visible": true,
+                                                "accessListMode": "Disabled"
                                             }
                                         ]
                                     }
@@ -1996,7 +2003,8 @@
                                             ],
                                             "status": "Completed",
                                             "delegable": true,
-                                            "visible": true
+                                            "visible": true,
+                                            "accessListMode": "Disabled"
                                         }
                                     }
                                 }
@@ -2240,7 +2248,8 @@
                                             ],
                                             "status": "Completed",
                                             "delegable": true,
-                                            "visible": true
+                                            "visible": true,
+                                            "accessListMode": "Disabled"
                                         }
                                     }
                                 }
@@ -2451,7 +2460,8 @@
                                             ],
                                             "status": "Withdrawn",
                                             "delegable": false,
-                                            "visible": false
+                                            "visible": false,
+                                            "accessListMode": "Disabled"
                                         }
                                     }
                                 }
@@ -3153,6 +3163,10 @@
                     "visible": {
                         "type": "boolean",
                         "description": "If `true`, Altinn shows the resource to its users."
+                    },
+                    "accessListMode": {
+                        "type": "string",
+                        "description": "`Enabled` when only organisations on the resource's connected access lists get access to it, or `Disabled`."
                     }
                 }
             },
@@ -3442,6 +3456,10 @@
                     "visible": {
                         "type": "boolean",
                         "description": "If `true`, Altinn shows the resource to its users."
+                    },
+                    "accessListMode": {
+                        "type": "string",
+                        "description": "`Enabled` when only organisations on the resource's connected access lists get access to it, or `Disabled`."
                     }
                 }
             },

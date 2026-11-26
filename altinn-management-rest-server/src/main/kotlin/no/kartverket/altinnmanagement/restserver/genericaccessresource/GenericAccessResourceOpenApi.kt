@@ -50,6 +50,7 @@ private val exampleGenericAccessResource = GenericAccessResource(
     status = "Completed",
     delegable = true,
     visible = true,
+    accessListMode = "Disabled",
 )
 
 private val exampleNewGenericAccessResource = NewGenericAccessResource(
