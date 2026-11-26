@@ -102,6 +102,15 @@ class GetGenericAccessResourcePolicyTest {
     }
 
     @Test
+    fun `shows an access list another organisation owns`() =
+        testServer(altinn(policy = policyXml(levels = false, subject = "urn:altinn:access-list" to "skd:sperreliste"))) {
+            val body = Json.parseToJsonElement(client.get("/api/genericaccessresources/kv-matrikkel-brukernavn/policy").bodyAsText())
+
+            val rule = """{"subjects":[["urn:altinn:access-list:skd:sperreliste"]],"actions":["read"],"effect":"Permit"}"""
+            assertEquals(Json.parseToJsonElement("""{"minimumAuthenticationLevel":{},"rules":[$rule]}"""), body)
+        }
+
+    @Test
     fun `gives 404 when Altinn has no resource with the id`() = testServer(altinn(resource = null)) {
         client.get("/api/genericaccessresources/kv-matrikkel-brukernavn/policy").assertProblem(notFound)
     }
@@ -126,7 +135,11 @@ class GetGenericAccessResourcePolicyTest {
         )
     }
 
-    private fun policyXml(effect: String = "Permit", levels: Boolean = true): String {
+    private fun policyXml(
+        effect: String = "Permit",
+        levels: Boolean = true,
+        subject: Pair<String, String> = "urn:altinn:rolecode" to "dagl",
+    ): String {
         val string = "http://www.w3.org/2001/XMLSchema#string"
         fun match(function: String, value: String, attributeId: String, category: String) = """
             <xacml:AnyOf><xacml:AllOf><xacml:Match MatchId="urn:oasis:names:tc:xacml:$function">
@@ -146,7 +159,7 @@ class GetGenericAccessResourcePolicyTest {
             <xacml:Target />
             <xacml:Rule RuleId="urn:altinn:resource:kv-matrikkel-brukernavn:ruleid:1" Effect="$effect">
             <xacml:Target>
-            ${match("3.0:function:string-equal-ignore-case", "dagl", "urn:altinn:rolecode", "urn:oasis:names:tc:xacml:1.0:subject-category:access-subject")}
+            ${match("3.0:function:string-equal-ignore-case", subject.second, subject.first, "urn:oasis:names:tc:xacml:1.0:subject-category:access-subject")}
             ${match("1.0:function:string-equal", "kv-matrikkel-brukernavn", "urn:altinn:resource", "urn:oasis:names:tc:xacml:3.0:attribute-category:resource")}
             ${match("3.0:function:string-equal-ignore-case", "read", "urn:oasis:names:tc:xacml:1.0:action:action-id", "urn:oasis:names:tc:xacml:3.0:attribute-category:action")}
             </xacml:Target>

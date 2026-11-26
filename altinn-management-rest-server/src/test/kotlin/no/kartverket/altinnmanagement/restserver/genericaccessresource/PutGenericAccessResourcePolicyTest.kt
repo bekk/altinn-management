@@ -53,6 +53,8 @@ class PutGenericAccessResourcePolicyTest {
         }
     """.trimIndent()
 
+    private fun policyFor(subject: String) = """{"rules":[{"subjects":[["$subject"]],"actions":["read"]}]}"""
+
     private suspend fun ApplicationTestBuilder.putPolicy(body: String = geonorge, id: String = "kv-matrikkel-brukernavn") =
         client.put("/api/genericaccessresources/$id/policy") {
             contentType(ContentType.Application.Json)
@@ -145,13 +147,13 @@ class PutGenericAccessResourcePolicyTest {
                 FieldError(
                     "rules[0].subjects[0][2]",
                     ValidationCode.INVALID_FORMAT,
-                    "rules[0].subjects[0][2] must be an access list as urn:altinn:access-list:{owner}:{list}, like " +
+                    "rules[0].subjects[0][2] must be one of Kartverket's access lists, as urn:altinn:access-list:kv:{list}, like " +
                         "urn:altinn:access-list:kv:testliste",
                 ),
                 FieldError(
                     "rules[0].subjects[0][3]",
                     ValidationCode.INVALID_FORMAT,
-                    "rules[0].subjects[0][3] must be an access list as urn:altinn:access-list:{owner}:{list}, like " +
+                    "rules[0].subjects[0][3] must be one of Kartverket's access lists, as urn:altinn:access-list:kv:{list}, like " +
                         "urn:altinn:access-list:kv:testliste",
                 ),
                 FieldError("rules[0].subjects[1]", ValidationCode.MISSING, "rules[0].subjects[1] is required"),
@@ -169,6 +171,30 @@ class PutGenericAccessResourcePolicyTest {
                     "rules[1].subResources[2]",
                     ValidationCode.INVALID_FORMAT,
                     "rules[1].subResources[2] must not have urn:altinn:resource, which the rule already has",
+                ),
+            ),
+        )
+
+        assertTrue(sent.isEmpty(), "Altinn was called: $sent")
+    }
+
+    @Test
+    fun `sends an access list Kartverket owns`() = testServer(altinn()) {
+        assertEquals(HttpStatusCode.NoContent, putPolicy(policyFor("urn:altinn:access-list:kv:testliste")).status)
+
+        val policy = sent.single { it.method != HttpMethod.GET }.body!!.decodeToString()
+        assertTrue(">kv:testliste</xacml:AttributeValue>" in policy, policy)
+    }
+
+    @Test
+    fun `gives 400 for an access list another organisation owns, without asking Altinn`() = testServer(altinn()) {
+        putPolicy(policyFor("urn:altinn:access-list:skd:sperreliste")).assertProblem(
+            validationError(
+                FieldError(
+                    "rules[0].subjects[0][0]",
+                    ValidationCode.INVALID_FORMAT,
+                    "rules[0].subjects[0][0] must be one of Kartverket's access lists, as urn:altinn:access-list:kv:{list}, like " +
+                        "urn:altinn:access-list:kv:testliste",
                 ),
             ),
         )

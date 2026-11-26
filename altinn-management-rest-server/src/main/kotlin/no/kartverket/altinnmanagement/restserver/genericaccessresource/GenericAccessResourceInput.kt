@@ -136,15 +136,16 @@ internal fun genericAccessResourcePolicy(body: GenericAccessResourcePolicy): Cli
 
 private fun effect(value: String) = PolicyEffect.entries.find { it.value == value }
 
-// The client writes an access list's owner and list together as the value, so a subject without both would match no one
+// Altinn's PDP lets in a member of any list a policy names, whoever owns it, so a list another organisation owns would
+// let that organisation decide who gets access
 private fun subjectError(subject: String): String? = when {
     subject.substringBeforeLast(':', "").isBlank() || subject.substringAfterLast(':', "").isBlank() ->
         "must be a URN, like urn:altinn:accesspackage:eksplisitt"
 
-    subject.startsWith("urn:altinn:access-list", ignoreCase = true) && !ACCESS_LIST.matches(subject) ->
-        "must be an access list as urn:altinn:access-list:{owner}:{list}, like urn:altinn:access-list:kv:testliste"
+    subject.startsWith("urn:altinn:access-list", ignoreCase = true) && !KARTVERKETS_ACCESS_LIST.matches(subject) ->
+        "must be one of Kartverket's access lists, as urn:altinn:access-list:kv:{list}, like urn:altinn:access-list:kv:testliste"
 
     else -> null
 }
 
-private val ACCESS_LIST = Regex("""urn:altinn:access-list:[^:\s]+:[^:\s]+""")
+private val KARTVERKETS_ACCESS_LIST = Regex("""urn:altinn:access-list:kv:[^:\s]+""")
