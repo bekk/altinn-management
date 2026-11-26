@@ -15,7 +15,10 @@ import no.kartverket.altinnmanagement.restserver.filteringErrorExample
 import no.kartverket.altinnmanagement.restserver.internalError
 import no.kartverket.altinnmanagement.restserver.missingClientCertificateExample
 import no.kartverket.altinnmanagement.restserver.notFound
+import no.kartverket.altinnmanagement.restserver.problem.FieldError
+import no.kartverket.altinnmanagement.restserver.problem.ValidationCode
 import no.kartverket.altinnmanagement.restserver.requestId
+import no.kartverket.altinnmanagement.restserver.validationError
 
 private val exampleAccessList = AccessList(
     accessListId = "kv-matrikkel-kunder",
@@ -28,20 +31,26 @@ private val exampleAccessList = AccessList(
 
 internal val accessListsListOperation: Operation.Builder.() -> Unit = {
     summary = "List Kartverket's access lists"
-    description = "Gets Kartverket's access lists from Altinn, from every page Altinn gives. When filtering is on, " +
-        "this API only returns the lists whose id starts with one of the calling app's prefixes for resources. An " +
-        "`exact` resource id gives no access to a list. This API reads which app is calling from the " +
-        "`X-Forwarded-Client-Cert` header, which Istio usually sets."
+    description = "Gets Kartverket's access lists from Altinn, from every page Altinn gives, or with `resource`, only " +
+        "the lists connected to that resource. When filtering is on, this API only returns the lists whose id starts " +
+        "with one of the calling app's prefixes for resources. An `exact` resource id gives no access to a list. This " +
+        "API reads which app is calling from the `X-Forwarded-Client-Cert` header, which Istio usually sets."
 
     parameters {
+        query("resource") {
+            required = false
+            description = "Only the lists connected to this resource, for example `kv-geonorge`. It is a resource's " +
+                "id: 4 or more of `a-z`, `0-9`, `_` and `-`. Send one resource, at most once."
+            schema = JsonSchema(type = JsonType.STRING, pattern = "^[a-z0-9_-]{4,}$")
+        }
         clientCertificate()
         requestId()
     }
 
     responses {
         HttpStatusCode.OK {
-            description = "Kartverket's access lists, and when filtering is on, only those the calling app has " +
-                "access to. The list is empty if there are none."
+            description = "Kartverket's access lists, only those connected to `resource` when it is sent, and when " +
+                "filtering is on, only those the calling app has access to. The list is empty if there are none."
             headers { requestId() }
             ContentType.Application.Json {
                 schema = JsonSchema(type = JsonType.ARRAY, items = ReferenceOr.Value(jsonSchema<AccessList>()))
@@ -50,8 +59,11 @@ internal val accessListsListOperation: Operation.Builder.() -> Unit = {
         }
 
         badRequest(
-            "Filtering is on and the `X-Forwarded-Client-Cert` header is missing, so this API cannot tell " +
-                "which app is calling.",
+            "`resource` is not a resource's id or is sent more than once, or filtering is on and the " +
+                "`X-Forwarded-Client-Cert` header is missing, so this API cannot tell which app is calling.",
+            "InvalidResource" to validationError(
+                FieldError("resource", ValidationCode.INVALID_FORMAT, "resource must be 4 or more of a-z, 0-9, _ and -"),
+            ),
             missingClientCertificateExample,
         )
 
