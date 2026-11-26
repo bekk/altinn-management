@@ -7,6 +7,7 @@ import io.ktor.server.request.contentType
 import io.ktor.server.request.receive
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
+import no.kartverket.altinnmanagement.client.AccessListMode
 import no.kartverket.altinnmanagement.client.ResourceId
 import no.kartverket.altinnmanagement.client.ResourceStatus
 import no.kartverket.altinnmanagement.restserver.filtering.CLIENT_CERTIFICATE_HEADER
@@ -123,6 +124,15 @@ internal fun newResourceIdErrors(value: String?, resourceId: ResourceId?): List<
     )
 
     else -> emptyList()
+}
+
+internal suspend fun ApplicationCall.accessListMode(): AccessListMode {
+    val value = strictBody(AccessListModeRequest.serializer()).accessListMode
+    val mode = AccessListMode.entries.find { it.value == value }
+    if (mode != null) return mode
+    val values = AccessListMode.entries.joinToString { it.value }
+    val error = if (value == null) missing("accessListMode") else FieldError("accessListMode", ValidationCode.INVALID_FORMAT, "accessListMode must be one of $values")
+    throw InvalidRequestException(listOf(error))
 }
 
 internal fun resourceStatus(value: String?): ResourceStatus? = value?.let { ResourceStatus.entries.find { it.value == value } }

@@ -107,7 +107,7 @@ internal fun newAltinnResource(schema: NewMaskinportenSchema) = AltinnResource(
     visible = true,
     resourceType = MASKINPORTEN_SCHEMA,
     hasCompetentAuthority = KARTVERKET_AUTHORITY,
-    accessListMode = ACCESS_LIST_MODE_DISABLED,
+    accessListMode = AccessListMode.DISABLED.value,
 )
 
 internal fun newAltinnResource(resource: NewGenericAccessResource) = AltinnResource(
@@ -123,7 +123,7 @@ internal fun newAltinnResource(resource: NewGenericAccessResource) = AltinnResou
     visible = true,
     resourceType = GENERIC_ACCESS_RESOURCE,
     hasCompetentAuthority = KARTVERKET_AUTHORITY,
-    accessListMode = ACCESS_LIST_MODE_DISABLED,
+    accessListMode = AccessListMode.DISABLED.value,
 )
 
 internal const val MASKINPORTEN_SCHEMA = "MaskinportenSchema"
@@ -133,8 +133,6 @@ internal const val GENERIC_ACCESS_RESOURCE = "GenericAccessResource"
 internal const val KARTVERKET_ORGANIZATION_NUMBER = "971040238"
 
 private val KARTVERKET_AUTHORITY = AltinnCompetentAuthority(organization = KARTVERKET_ORGANIZATION_NUMBER, orgcode = "kv")
-
-private const val ACCESS_LIST_MODE_DISABLED = "Disabled"
 
 private const val MASKINPORTEN_SCOPE = "MaskinportenScope"
 
@@ -201,6 +199,10 @@ internal fun JsonObject.withdrawn(): JsonObject = JsonObject(
         "visible" to JsonPrimitive(false),
         "status" to JsonPrimitive("Withdrawn"),
     ),
+)
+
+internal fun JsonObject.withAccessListMode(mode: AccessListMode): JsonObject = JsonObject(
+    filterKeys { it !in VERSION_FIELDS } + mapOf("accessListMode" to JsonPrimitive(mode.value)),
 )
 
 private val VERSION_FIELDS = setOf("versionId", "createdAt", "updatedAt")

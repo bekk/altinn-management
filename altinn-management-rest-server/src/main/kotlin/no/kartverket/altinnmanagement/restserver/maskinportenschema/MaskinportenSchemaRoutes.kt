@@ -11,6 +11,7 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.utils.io.ExperimentalKtorApi
 import no.kartverket.altinnmanagement.client.ResourceRegistryClient
+import no.kartverket.altinnmanagement.restserver.accessListMode
 import no.kartverket.altinnmanagement.restserver.clientCertificate
 import no.kartverket.altinnmanagement.restserver.filtering.CLIENT_CERTIFICATE_HEADER
 import no.kartverket.altinnmanagement.restserver.filtering.ExternalFiltering
@@ -55,6 +56,13 @@ internal fun Route.maskinportenSchemas(client: ResourceRegistryClient, externalF
         val schema = client.withdrawMaskinportenSchema(id) ?: throw ResourceNotFoundException("MaskinportenSchema")
         call.respond(MaskinportenSchema.from(schema))
     }.describe(maskinportenSchemaWithdrawOperation)
+
+    put("/api/maskinportenschemas/{id}/accesslistmode") {
+        val id = resourceId("id", call.pathParameters["id"]!!)
+        val mode = call.accessListMode()
+        val schema = client.setMaskinportenSchemaAccessListMode(id, mode) ?: throw ResourceNotFoundException("MaskinportenSchema")
+        call.respond(MaskinportenSchema.from(schema))
+    }.describe(maskinportenSchemaAccessListModeOperation)
 
     put("/api/maskinportenschemas/{id}/policy") {
         val id = resourceId("id", call.pathParameters["id"]!!)

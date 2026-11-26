@@ -90,6 +90,13 @@ internal fun Headers.Builder.requestId() = header(HttpHeaders.XRequestId) {
     schema = JsonSchema(type = JsonType.STRING)
 }
 
+internal const val ACCESS_LIST_MODE_DESCRIPTION = "Turns access lists on or off for the resource, and keeps the rest " +
+    "of it as it is in Altinn. While they are `Enabled`, Altinn gives access only to organisations on one of the " +
+    "resource's connected access lists, and never to a person on their own behalf. With no list connected, no one " +
+    "gets access, and this API does not check for one."
+
+internal val exampleAccessListModeRequest = AccessListModeRequest(accessListMode = "Enabled")
+
 internal inline fun <reified T : Any> MediaType.Builder.example(name: String, value: T) =
     example(name, ExampleObject(value = GenericElement(exampleJson.encodeToJsonElement(value))))
 

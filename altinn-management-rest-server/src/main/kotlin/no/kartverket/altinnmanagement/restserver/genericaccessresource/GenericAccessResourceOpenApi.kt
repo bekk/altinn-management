@@ -8,6 +8,8 @@ import io.ktor.openapi.JsonType
 import io.ktor.openapi.Operation
 import io.ktor.openapi.ReferenceOr
 import io.ktor.openapi.jsonSchema
+import no.kartverket.altinnmanagement.restserver.ACCESS_LIST_MODE_DESCRIPTION
+import no.kartverket.altinnmanagement.restserver.AccessListModeRequest
 import no.kartverket.altinnmanagement.restserver.ContactPoint
 import no.kartverket.altinnmanagement.restserver.Keyword
 import no.kartverket.altinnmanagement.restserver.MultilingualText
@@ -16,6 +18,7 @@ import no.kartverket.altinnmanagement.restserver.badRequest
 import no.kartverket.altinnmanagement.restserver.clientCertificate
 import no.kartverket.altinnmanagement.restserver.conflict
 import no.kartverket.altinnmanagement.restserver.example
+import no.kartverket.altinnmanagement.restserver.exampleAccessListModeRequest
 import no.kartverket.altinnmanagement.restserver.filteringErrorExample
 import no.kartverket.altinnmanagement.restserver.idPath
 import no.kartverket.altinnmanagement.restserver.internalError
@@ -336,6 +339,56 @@ internal val genericAccessResourcePutOperation: Operation.Builder.() -> Unit = {
         badGateway(
             "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
                 "did not cause it, and the resource may or may not have been changed.",
+        )
+
+        internalError()
+    }
+}
+
+internal val genericAccessResourceAccessListModeOperation: Operation.Builder.() -> Unit = {
+    summary = "Turn access lists on or off for a GenericAccessResource"
+    description = ACCESS_LIST_MODE_DESCRIPTION + " It only works on Kartverket's GenericAccessResources."
+
+    parameters {
+        idPath("kv-grunnbok-innsyn")
+        requestId()
+    }
+
+    requestBody {
+        required = true
+        ContentType.Application.Json {
+            schema = jsonSchema<AccessListModeRequest>().withRequiredNotNull()
+            example("AccessListMode", exampleAccessListModeRequest)
+        }
+    }
+
+    responses {
+        HttpStatusCode.OK {
+            description = "The GenericAccessResource as this API sent it to Altinn, since Altinn answers a change without a body."
+            headers { requestId() }
+            ContentType.Application.Json {
+                schema = jsonSchema<GenericAccessResource>()
+                example("GenericAccessResource", exampleGenericAccessResource.copy(accessListMode = "Enabled"))
+            }
+        }
+
+        badRequest(
+            "The id or the body is not valid, or Altinn rejected the resource, which it checks as a whole. Nothing " +
+                "was changed.",
+            invalidIdExample,
+            "InvalidAccessListMode" to validationError(
+                FieldError("accessListMode", ValidationCode.INVALID_FORMAT, "accessListMode must be one of Enabled, Disabled"),
+            ),
+        )
+
+        notFound(
+            "Kartverket has no GenericAccessResource with this id in Altinn.",
+            "There is no GenericAccessResource with this id",
+        )
+
+        badGateway(
+            "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
+                "did not cause it, and the access list mode may or may not have been changed.",
         )
 
         internalError()

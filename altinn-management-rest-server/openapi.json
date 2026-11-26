@@ -1232,6 +1232,252 @@
                 }
             }
         },
+        "/api/maskinportenschemas/{id}/accesslistmode": {
+            "put": {
+                "summary": "Turn access lists on or off for a MaskinportenSchema",
+                "description": "Turns access lists on or off for the resource, and keeps the rest of it as it is in Altinn. While they are `Enabled`, Altinn gives access only to organisations on one of the resource's connected access lists, and never to a person on their own behalf. With no list connected, no one gets access, and this API does not check for one. It only works on Kartverket's MaskinportenSchemas.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "The resource's id: 4 or more of `a-z`, `0-9`, `_` and `-`, for example `kv-matrikkel-brukernavn`.",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[a-z0-9_-]{4,}$"
+                        }
+                    },
+                    {
+                        "name": "X-Request-ID",
+                        "in": "header",
+                        "description": "An id to find this call by in this API's logs. Up to 128 ASCII letters, digits, `-`, `_`, `.` and `:`. Without it, or with any other value, this API makes a new one. Every response has the id in its `X-Request-Id` header.",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "3f2b8c1e-7d4a-4f0e-9b6a-2c5d8e1f4a7b"
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AccessListModeRequest"
+                            },
+                            "examples": {
+                                "AccessListMode": {
+                                    "value": {
+                                        "accessListMode": "Enabled"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "The MaskinportenSchema as this API sent it to Altinn, since Altinn answers a change without a body.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MaskinportenSchema"
+                                },
+                                "examples": {
+                                    "MaskinportenSchema": {
+                                        "value": {
+                                            "resourceId": "kv-matrikkel-brukernavn",
+                                            "scopes": [
+                                                "kartverk:matrikkel:brukernavn"
+                                            ],
+                                            "title": {
+                                                "en": "Cadastre API",
+                                                "nb": "Matrikkel API",
+                                                "nn": "Matrikkel API"
+                                            },
+                                            "description": {
+                                                "en": "Machine-to-machine access to the Cadastre.",
+                                                "nb": "Maskinell tilgang til Matrikkelen.",
+                                                "nn": "Maskinell tilgang til Matrikkelen."
+                                            },
+                                            "delegationDescription": {
+                                                "en": "Allows a system provider to use the Matrikkel API on behalf of your organisation.",
+                                                "nb": "Gir en systemleverandør rett til å bruke Matrikkel API på vegne av virksomheten din.",
+                                                "nn": "Gir ein systemleverandør rett til å bruke Matrikkel API på vegner av verksemda di."
+                                            },
+                                            "homepage": "https://kartverket.github.io/api-dokumentasjon/docs/matrikkelen",
+                                            "contactPoints": [
+                                                {
+                                                    "category": "Kartverket Kundesenter",
+                                                    "email": "kundesenter@kartverket.no"
+                                                }
+                                            ],
+                                            "keywords": [
+                                                {
+                                                    "word": "matrikkel",
+                                                    "language": "nb"
+                                                },
+                                                {
+                                                    "word": "cadastre",
+                                                    "language": "en"
+                                                }
+                                            ],
+                                            "status": "Completed",
+                                            "delegable": true,
+                                            "visible": true,
+                                            "accessListMode": "Enabled"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "The id or the body is not valid, or Altinn rejected the resource, which it checks as a whole. Nothing was changed.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "InvalidId": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:validation-error",
+                                            "title": "Validation failed",
+                                            "status": 400,
+                                            "errors": [
+                                                {
+                                                    "field": "id",
+                                                    "code": "INVALID_FORMAT",
+                                                    "message": "id must be 4 or more of a-z, 0-9, _ and -"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "InvalidAccessListMode": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:validation-error",
+                                            "title": "Validation failed",
+                                            "status": 400,
+                                            "errors": [
+                                                {
+                                                    "field": "accessListMode",
+                                                    "code": "INVALID_FORMAT",
+                                                    "message": "accessListMode must be one of Enabled, Disabled"
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Kartverket has no MaskinportenSchema with this id in Altinn.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "NotFound": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:not-found",
+                                            "title": "Not found",
+                                            "status": 404,
+                                            "detail": "There is no MaskinportenSchema with this id"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "This API could not get an answer from Altinn, or a token from Maskinporten. Your request did not cause it, and the access list mode may or may not have been changed.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "UpstreamError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:upstream-error",
+                                            "title": "A service this API depends on failed",
+                                            "status": 502,
+                                            "detail": "The call to Altinn failed"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "An unexpected error in this API.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "InternalError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:internal-error",
+                                            "title": "Internal error",
+                                            "status": 500
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/maskinportenschemas/{id}/policy": {
             "put": {
                 "summary": "Give a MaskinportenSchema its policy",
@@ -2600,6 +2846,249 @@
                 }
             }
         },
+        "/api/genericaccessresources/{id}/accesslistmode": {
+            "put": {
+                "summary": "Turn access lists on or off for a GenericAccessResource",
+                "description": "Turns access lists on or off for the resource, and keeps the rest of it as it is in Altinn. While they are `Enabled`, Altinn gives access only to organisations on one of the resource's connected access lists, and never to a person on their own behalf. With no list connected, no one gets access, and this API does not check for one. It only works on Kartverket's GenericAccessResources.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "The resource's id: 4 or more of `a-z`, `0-9`, `_` and `-`, for example `kv-grunnbok-innsyn`.",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[a-z0-9_-]{4,}$"
+                        }
+                    },
+                    {
+                        "name": "X-Request-ID",
+                        "in": "header",
+                        "description": "An id to find this call by in this API's logs. Up to 128 ASCII letters, digits, `-`, `_`, `.` and `:`. Without it, or with any other value, this API makes a new one. Every response has the id in its `X-Request-Id` header.",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "3f2b8c1e-7d4a-4f0e-9b6a-2c5d8e1f4a7b"
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AccessListModeRequest"
+                            },
+                            "examples": {
+                                "AccessListMode": {
+                                    "value": {
+                                        "accessListMode": "Enabled"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "The GenericAccessResource as this API sent it to Altinn, since Altinn answers a change without a body.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GenericAccessResource"
+                                },
+                                "examples": {
+                                    "GenericAccessResource": {
+                                        "value": {
+                                            "resourceId": "kv-grunnbok-innsyn",
+                                            "title": {
+                                                "en": "Land Register lookup",
+                                                "nb": "Innsyn i grunnboka",
+                                                "nn": "Innsyn i grunnboka"
+                                            },
+                                            "description": {
+                                                "en": "Access to look up registered rights in the Land Register.",
+                                                "nb": "Tilgang til å slå opp tinglyste rettigheter i grunnboka.",
+                                                "nn": "Tilgang til å slå opp tinglyste rettar i grunnboka."
+                                            },
+                                            "delegationDescription": {
+                                                "en": "Allows a system provider to look up the Land Register on behalf of your organisation.",
+                                                "nb": "Gir en systemleverandør rett til å slå opp i grunnboka på vegne av virksomheten din.",
+                                                "nn": "Gir ein systemleverandør rett til å slå opp i grunnboka på vegner av verksemda di."
+                                            },
+                                            "homepage": "https://www.kartverket.no",
+                                            "contactPoints": [
+                                                {
+                                                    "category": "Kartverket Kundesenter",
+                                                    "email": "kundesenter@kartverket.no"
+                                                }
+                                            ],
+                                            "keywords": [
+                                                {
+                                                    "word": "grunnbok",
+                                                    "language": "nb"
+                                                },
+                                                {
+                                                    "word": "land register",
+                                                    "language": "en"
+                                                }
+                                            ],
+                                            "status": "Completed",
+                                            "delegable": true,
+                                            "visible": true,
+                                            "accessListMode": "Enabled"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "The id or the body is not valid, or Altinn rejected the resource, which it checks as a whole. Nothing was changed.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "InvalidId": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:validation-error",
+                                            "title": "Validation failed",
+                                            "status": 400,
+                                            "errors": [
+                                                {
+                                                    "field": "id",
+                                                    "code": "INVALID_FORMAT",
+                                                    "message": "id must be 4 or more of a-z, 0-9, _ and -"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "InvalidAccessListMode": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:validation-error",
+                                            "title": "Validation failed",
+                                            "status": 400,
+                                            "errors": [
+                                                {
+                                                    "field": "accessListMode",
+                                                    "code": "INVALID_FORMAT",
+                                                    "message": "accessListMode must be one of Enabled, Disabled"
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Kartverket has no GenericAccessResource with this id in Altinn.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "NotFound": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:not-found",
+                                            "title": "Not found",
+                                            "status": 404,
+                                            "detail": "There is no GenericAccessResource with this id"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "This API could not get an answer from Altinn, or a token from Maskinporten. Your request did not cause it, and the access list mode may or may not have been changed.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "UpstreamError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:upstream-error",
+                                            "title": "A service this API depends on failed",
+                                            "status": 502,
+                                            "detail": "The call to Altinn failed"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "An unexpected error in this API.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "InternalError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:internal-error",
+                                            "title": "Internal error",
+                                            "status": 500
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/genericaccessresources/{id}/policy": {
             "put": {
                 "summary": "Set or replace the policy of a GenericAccessResource",
@@ -3403,6 +3892,24 @@
                         "items": {
                             "$ref": "#/components/schemas/Keyword"
                         }
+                    }
+                }
+            },
+            "AccessListModeRequest": {
+                "type": "object",
+                "title": "AccessListModeRequest",
+                "description": "Whether only organisations on the resource's connected access lists get access to it.",
+                "required": [
+                    "accessListMode"
+                ],
+                "properties": {
+                    "accessListMode": {
+                        "type": "string",
+                        "description": "Required. `Enabled` lets only the organisations on the resource's connected access lists through, and `Disabled` turns that off.",
+                        "enum": [
+                            "Enabled",
+                            "Disabled"
+                        ]
                     }
                 }
             },
