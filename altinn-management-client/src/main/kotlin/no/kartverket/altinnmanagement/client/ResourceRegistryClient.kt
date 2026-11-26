@@ -1,5 +1,6 @@
 package no.kartverket.altinnmanagement.client
 
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -15,12 +16,15 @@ import no.kartverket.altinnmanagement.client.http.Http
 import no.kartverket.altinnmanagement.client.http.HttpMethod
 import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
 import no.kartverket.altinnmanagement.client.http.OutgoingRequest
+import no.kartverket.altinnmanagement.client.http.OutgoingResponse
 import java.net.URI
+import java.net.URLEncoder
 import java.util.UUID
 
 /**
- * Reads Altinn's resources without a token, and changes them with a token from [accessTokenProvider], such as a
- * [no.kartverket.altinnmanagement.client.auth.MaskinportenAltinnTokenProvider]. A client that only reads needs none.
+ * Reads Altinn's resources without a token, and changes them, and reads Kartverket's access lists, with a token from
+ * [accessTokenProvider], such as a [no.kartverket.altinnmanagement.client.auth.MaskinportenAltinnTokenProvider]. A
+ * client that only reads resources needs none.
  */
 public class ResourceRegistryClient(
     platformBaseUrl: URI,
@@ -217,7 +221,41 @@ public class ResourceRegistryClient(
         return true
     }
 
-    private fun tokens(): AccessTokenProvider = checkNotNull(accessTokenProvider) { "Changing a resource needs an AccessTokenProvider" }
+    /**
+     * Kartverket's access list [id], or null when Kartverket has none with this id. Throws [IllegalStateException] when
+     * this client has no [AccessTokenProvider], since Altinn gives access lists only with a token.
+     */
+    public suspend fun getAccessList(id: String): AccessList? {
+        val tokens = tokens()
+        val segment = URLEncoder.encode(id, Charsets.UTF_8).replace("+", "%20")
+        val response = readWithToken(tokens, Http.url(platformBaseUrl, "$ACCESS_LIST_PATH/$segment"))
+        if (response.statusCode == 404) return null
+        if (response.statusCode != 200) throw failed(response)
+        return parse(response, AltinnAccessList.serializer()).toAccessList()
+    }
+
+    private suspend fun readWithToken(tokens: AccessTokenProvider, url: URI): OutgoingResponse {
+        val token = tokens.accessToken()
+        val headers = mapOf("Accept" to "application/json", "Authorization" to "Bearer ${token.value}")
+        val response = Http.send(httpClient, OutgoingRequest(HttpMethod.GET, url, headers), TARGET, ::AltinnException)
+        if (response.statusCode == 401) tokens.refused(token)
+        return response
+    }
+
+    private fun <T> parse(response: OutgoingResponse, serializer: KSerializer<T>): T {
+        val body = response.body.decodeToString()
+        return try {
+            Http.json.decodeFromString(serializer, body)
+        } catch (e: IllegalArgumentException) {
+            throw AltinnException("Failed to parse the answer from $TARGET: ${e.message}", response.statusCode, body, e)
+        }
+    }
+
+    private fun failed(response: OutgoingResponse) =
+        AltinnException("$TARGET responded ${response.statusCode}", response.statusCode, response.body.decodeToString())
+
+    private fun tokens(): AccessTokenProvider =
+        checkNotNull(accessTokenProvider) { "Changing a resource or reading an access list needs an AccessTokenProvider" }
 
     // A rejection is about what was sent. Any other 401 means Altinn did not take the token, so the next call gets a new one
     private suspend fun sendWrite(tokens: AccessTokenProvider, request: OutgoingRequest, isSuccess: (Int) -> Boolean) {
@@ -254,6 +292,8 @@ public class ResourceRegistryClient(
 
     internal companion object {
         const val RESOURCE_PATH = "/resourceregistry/api/v1/resource"
+
+        const val ACCESS_LIST_PATH = "/resourceregistry/api/v1/access-lists/$KARTVERKET_ORGCODE"
 
         private const val TARGET = "Altinn Resource Registry"
 

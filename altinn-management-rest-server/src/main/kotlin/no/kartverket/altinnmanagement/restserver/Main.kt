@@ -18,6 +18,7 @@ import io.ktor.server.routing.routing
 import io.ktor.utils.io.ExperimentalKtorApi
 import kotlinx.serialization.json.Json
 import no.kartverket.altinnmanagement.client.ResourceRegistryClient
+import no.kartverket.altinnmanagement.restserver.accesslist.accessLists
 import no.kartverket.altinnmanagement.restserver.config.AppConfig
 import no.kartverket.altinnmanagement.restserver.config.externalFiltering
 import no.kartverket.altinnmanagement.restserver.config.file
@@ -73,5 +74,6 @@ fun Application.module(
 
         maskinportenSchemas(client, externalFiltering)
         genericAccessResources(client, externalFiltering)
+        accessLists(client)
     }
 }
