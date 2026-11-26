@@ -60,7 +60,8 @@ data class MaskinportenSchema(
 
     @JsonSchema.Type(JsonType.STRING)
     @JsonSchema.Description(
-        "`Enabled` when only organisations on the resource's connected access lists get access to it, or `Disabled`.",
+        "`Enabled` when only organisations on the resource's connected access lists get access to it, or `Disabled`. " +
+            "Changed only with `PUT /api/maskinportenschemas/{id}/accesslistmode`, not by a `PUT` of the resource.",
     )
     val accessListMode: String? = null,
 ) {
