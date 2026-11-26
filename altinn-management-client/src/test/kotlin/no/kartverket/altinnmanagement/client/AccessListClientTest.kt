@@ -3,7 +3,10 @@ package no.kartverket.altinnmanagement.client
 import kotlinx.coroutines.runBlocking
 import no.kartverket.altinnmanagement.client.auth.AccessToken
 import no.kartverket.altinnmanagement.client.auth.AccessTokenProvider
+import no.kartverket.altinnmanagement.client.exception.AccessListAlreadyExistsException
 import no.kartverket.altinnmanagement.client.exception.AltinnException
+import no.kartverket.altinnmanagement.client.exception.AltinnRejectedException
+import no.kartverket.altinnmanagement.client.http.HttpMethod
 import no.kartverket.altinnmanagement.client.http.OutgoingRequest
 import no.kartverket.altinnmanagement.client.http.OutgoingResponse
 import no.kartverket.altinnmanagement.client.support.recording
@@ -51,6 +54,22 @@ class AccessListClientTest {
     private val geonorge = ResourceId.of("kv-geonorge")
 
     private fun json(status: Int, body: String) = response(status, "application/json", body)
+
+    private val kvNy = AccessList(
+        accessListId = "kv-ny",
+        urn = "urn:altinn:access-list:kv:kv-ny",
+        name = "Name of kv-ny",
+        description = "",
+        createdAt = "2026-11-20T10:15:30.123456+00:00",
+        updatedAt = "2026-11-21T08:00:00+00:00",
+    )
+
+    // Every way of changing a list, so that each can be checked for what they share
+    private val writes: List<suspend ResourceRegistryClient.() -> Any?> = listOf(
+        { createAccessList("kv-ny", "Ny", null) },
+        { updateAccessList("kv-ny", "Ny", null) },
+        { deleteAccessList("kv-ny") },
+    )
 
     private fun client(accessTokenProvider: AccessTokenProvider? = tokens, answer: (OutgoingRequest) -> OutgoingResponse) =
         ResourceRegistryClient(AltinnEnvironment.TT02.platformBaseUrl, recording(sent, answer), accessTokenProvider)
@@ -101,6 +120,82 @@ class AccessListClientTest {
     }
 
     @Test
+    fun `creates a list with PUT, telling Altinn to take it only when it has no list with the id`(): Unit = runBlocking {
+        val list = client { json(200, list("kv-ny")) }.createAccessList("kv-ny", "Ny", "Om lista")
+
+        assertEquals(kvNy, list)
+        val request = sent.single()
+        assertEquals(HttpMethod.PUT, request.method)
+        assertEquals("$lists/kv-ny", request.url.toString())
+        assertEquals("*", request.headers["If-None-Match"])
+        assertEquals(null, request.headers["If-Match"])
+        assertEquals("application/json", request.headers["Content-Type"])
+        assertEquals("Bearer token", request.headers["Authorization"])
+        assertEquals("""{"name":"Ny","description":"Om lista"}""", request.body!!.decodeToString())
+    }
+
+    @Test
+    fun `fails to create a list when Altinn has one with the id`(): Unit = runBlocking {
+        val e = assertFailsWith<AccessListAlreadyExistsException> { client { json(412, "") }.createAccessList("kv-ny", "Ny", null) }
+
+        assertEquals("kv-ny", e.accessListId)
+    }
+
+    @Test
+    fun `changes a list with PUT, telling Altinn to take it only when it has the list, and empties a left out description`(): Unit =
+        runBlocking {
+            val list = client { json(200, list("kv-ny")) }.updateAccessList("kv-ny", "Ny", null)
+
+            assertEquals(kvNy, list)
+            val request = sent.single()
+            assertEquals(HttpMethod.PUT, request.method)
+            assertEquals("$lists/kv-ny", request.url.toString())
+            assertEquals("*", request.headers["If-Match"])
+            assertEquals(null, request.headers["If-None-Match"])
+            assertEquals("""{"name":"Ny","description":""}""", request.body!!.decodeToString())
+        }
+
+    @Test
+    fun `changes no list when Altinn has none with the id`(): Unit = runBlocking {
+        assertNull(client { json(412, "") }.updateAccessList("kv-ny", "Ny", null))
+    }
+
+    @Test
+    fun `deletes a list and gives it as it was`(): Unit = runBlocking {
+        val list = client { json(200, list("kv-ny")) }.deleteAccessList("kv-ny")
+
+        assertEquals(kvNy, list)
+        val request = sent.single()
+        assertEquals(HttpMethod.DELETE, request.method)
+        assertEquals("$lists/kv-ny", request.url.toString())
+        assertEquals("Bearer token", request.headers["Authorization"])
+    }
+
+    @Test
+    fun `deletes no list when Altinn has none with the id`(): Unit = runBlocking {
+        assertNull(client { response(204, "application/json", "") }.deleteAccessList("kv-ny"))
+    }
+
+    @Test
+    fun `keeps the id of a list to change in one path segment`(): Unit = runBlocking {
+        val client = client { json(200, list("kv-ny")) }
+        client.createAccessList("a/b c", "Ny", null)
+        client.updateAccessList("a/b c", "Ny", null)
+        client.deleteAccessList("a/b c")
+
+        assertEquals(List(3) { "$lists/a%2Fb%20c" }, sent.map { it.url.toString() })
+    }
+
+    @Test
+    fun `gives Altinn's reasons when it rejects a change to a list`(): Unit = runBlocking {
+        val answer = json(400, """{"title":"Bad Request","status":400,"errors":{"Name":["The Name field is required."]}}""")
+        for (write in writes) {
+            val e = assertFailsWith<AltinnRejectedException> { client { answer }.write() }
+            assertEquals(listOf("Name: The Name field is required."), e.reasons)
+        }
+    }
+
+    @Test
     fun `gives a list as Altinn has it`(): Unit = runBlocking {
         val list = client { json(200, list("kv-matrikkel-kunder")) }.getAccessList("kv-matrikkel-kunder")
 
@@ -135,6 +230,7 @@ class AccessListClientTest {
         assertFailsWith<IllegalStateException> { client.listAccessLists() }
         assertFailsWith<IllegalStateException> { client.listAccessLists(geonorge) }
         assertFailsWith<IllegalStateException> { client.getAccessList("kv-a") }
+        for (write in writes) assertFailsWith<IllegalStateException> { client.write() }
         assertEquals(emptyList(), sent)
     }
 
@@ -145,13 +241,15 @@ class AccessListClientTest {
         assertFailsWith<AltinnException> { client.listAccessLists() }
         assertFailsWith<AltinnException> { client.listAccessLists(geonorge) }
         assertFailsWith<AltinnException> { client.getAccessList("kv-a") }
-        assertEquals(listOf("token", "token", "token"), refused.map { it.value })
+        for (write in writes) assertFailsWith<AltinnException> { client.write() }
+        assertEquals(List(6) { "token" }, refused.map { it.value })
     }
 
     @Test
     fun `fails when Altinn answers with an error or with something else than a list`(): Unit = runBlocking {
         for (answer in listOf(json(500, ""), json(200, "[]"))) {
             assertFailsWith<AltinnException>(answer.toString()) { client { answer }.getAccessList("kv-a") }
+            for (write in writes) assertFailsWith<AltinnException>(answer.toString()) { client { answer }.write() }
         }
     }
 

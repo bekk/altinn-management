@@ -39,7 +39,7 @@ internal class MaskinportenClient(
         val claims = JWTClaimsSet.Builder()
             .issuer(config.clientId)
             .audience(config.audience)
-            .claim("scope", "${AltinnScopes.RESOURCE_WRITE} ${AltinnScopes.ACCESS_LIST_READ}")
+            .claim("scope", "${AltinnScopes.RESOURCE_WRITE} ${AltinnScopes.ACCESS_LIST_WRITE}")
             .jwtID(UUID.randomUUID().toString())
             .issueTime(Date.from(now))
             .expirationTime(Date.from(now.plus(ASSERTION_LIFETIME)))

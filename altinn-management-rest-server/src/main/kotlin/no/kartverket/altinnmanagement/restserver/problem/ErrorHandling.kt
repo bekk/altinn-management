@@ -8,6 +8,7 @@ import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.plugins.statuspages.StatusPagesConfig
 import io.ktor.server.response.respondText
 import kotlinx.serialization.json.Json
+import no.kartverket.altinnmanagement.client.exception.AccessListAlreadyExistsException
 import no.kartverket.altinnmanagement.client.exception.AltinnManagementException
 import no.kartverket.altinnmanagement.client.exception.AltinnRejectedException
 import no.kartverket.altinnmanagement.client.exception.ResourceAlreadyExistsException
@@ -40,6 +41,9 @@ internal fun StatusPagesConfig.errorResponses() {
     }
     exception<ResourceAlreadyExistsException> { call, _ ->
         call.respondProblem(ProblemType.CONFLICT, HttpStatusCode.Conflict, "Altinn already has a resource with this id")
+    }
+    exception<AccessListAlreadyExistsException> { call, _ ->
+        call.respondProblem(ProblemType.CONFLICT, HttpStatusCode.Conflict, "Altinn already has an access list with this id")
     }
     exception<AltinnRejectedException> { call, cause ->
         call.application.log.warn("Altinn rejected the resource: statusCode=${cause.statusCode}")
