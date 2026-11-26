@@ -31,14 +31,24 @@ class ListAccessListsTest {
 
     private val certificate = "Hash=abc;Subject=\"\";URI=spiffe://cluster.local/ns/matrikkel/sa/matrikkel-api"
 
-    private fun list(id: String) = """
-        {"urn":"urn:altinn:access-list:kv:$id","identifier":"$id","name":"Kunder","description":"","createdAt":"2026-11-20T10:15:30.123456+00:00","updatedAt":"2026-11-21T08:00:00+00:00"}
+    private fun list(id: String, connections: String = "") = """
+        {"urn":"urn:altinn:access-list:kv:$id","identifier":"$id","name":"Kunder","description":"","createdAt":"2026-11-20T10:15:30.123456+00:00","updatedAt":"2026-11-21T08:00:00+00:00"$connections}
     """.trimIndent()
 
     /** Altinn with one page of lists with the ids [ids]. */
-    private fun altinn(vararg ids: String) = OutgoingHttpClient { request ->
+    private fun altinn(vararg ids: String) = altinnWith(ids.map { list(it) })
+
+    /** Altinn with one page of lists, each connected to `kv-geonorge` or not, as Altinn gives them with that resource. */
+    private fun altinnConnecting(vararg connected: Pair<String, Boolean>) = altinnWith(
+        connected.map { (id, isConnected) ->
+            val connection = """{"resourceIdentifier":"kv-geonorge","createdAt":"2026-11-20T10:15:30+00:00","updatedAt":"2026-11-20T10:15:30+00:00"}"""
+            list(id, ""","resourceConnections":[${if (isConnected) connection else ""}]""")
+        },
+    )
+
+    private fun altinnWith(lists: List<String>) = OutgoingHttpClient { request ->
         sent += request
-        response(200, "application/json", ids.joinToString(prefix = """{"links":{},"data":[""", postfix = "]}") { list(it) })
+        response(200, "application/json", lists.joinToString(prefix = """{"links":{},"data":[""", postfix = "]}"))
     }
 
     private fun filteringAllowing(resources: String) = ExternalFiltering(
@@ -77,6 +87,41 @@ class ListAccessListsTest {
 
         assertEquals(listOf("nrl-kunder"), response.accessLists().map { it.accessListId })
     }
+
+    @Test
+    fun `lists only the lists connected to the resource, asking Altinn for its connections`() =
+        testServer(altinnConnecting("kv-a" to false, "kv-b" to true)) {
+            val response = client.get("/api/accesslists?resource=kv-geonorge")
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(listOf("kv-b"), response.accessLists().map { it.accessListId })
+            assertEquals("include=resources&resource=kv-geonorge", sent.single().url.query)
+        }
+
+    @Test
+    fun `lists only the connected lists under one of the calling app's prefixes for resources`() = testServer(
+        altinn = altinnConnecting("kv-b" to true, "nrl-a" to true, "nrl-c" to false),
+        filtering = filteringAllowing("""{"exact":["kv-b"],"prefix":["nrl-"]}"""),
+    ) {
+        val response = client.get("/api/accesslists?resource=kv-geonorge") { header(CLIENT_CERTIFICATE_HEADER, certificate) }
+
+        assertEquals(listOf("nrl-a"), response.accessLists().map { it.accessListId })
+    }
+
+    @Test
+    fun `gives 400 for a resource that is not a resource's id or is sent twice, without asking Altinn`() =
+        testServer(altinnConnecting("kv-b" to true)) {
+            val invalid = FieldError("resource", ValidationCode.INVALID_FORMAT, "resource must be 4 or more of a-z, 0-9, _ and -")
+            val twice = FieldError("resource", ValidationCode.INVALID_FORMAT, "resource must be sent once")
+            val cases = mapOf("resource=KV-GEONORGE" to invalid, "resource=" to invalid, "resource=kv-a1&resource=kv-a2" to twice)
+            for ((query, error) in cases) {
+                client.get("/api/accesslists?$query").assertProblem(
+                    ErrorResponse.of(ProblemType.VALIDATION_ERROR, HttpStatusCode.BadRequest, errors = listOf(error)),
+                )
+            }
+
+            assertTrue(sent.isEmpty(), "Altinn was called: $sent")
+        }
 
     @Test
     fun `gives 400 when filtering is on and X-Forwarded-Client-Cert is missing, without asking Altinn`() =

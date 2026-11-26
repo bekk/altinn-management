@@ -15,9 +15,10 @@ import no.kartverket.altinnmanagement.restserver.problem.ResourceNotFoundExcepti
 @OptIn(ExperimentalKtorApi::class)
 internal fun Route.accessLists(client: ResourceRegistryClient, externalFiltering: ExternalFiltering) {
     get("/api/accesslists") {
+        val resource = resource(call.queryParameters.getAll("resource"))
         val certificate = clientCertificate(call.request.headers[CLIENT_CERTIFICATE_HEADER], required = externalFiltering.isOn)
         val filter = externalFiltering.filterFor(certificate)
-        val lists = client.listAccessLists()
+        val lists = if (resource == null) client.listAccessLists() else client.listAccessLists(resource)
         call.respond(lists.allowedBy(filter) { allows(it) }.map(AccessList::from))
     }.describe(accessListsListOperation)
 

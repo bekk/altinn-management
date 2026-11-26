@@ -226,16 +226,34 @@ public class ResourceRegistryClient(
      * Kartverket's access lists, from every page Altinn gives. Throws [IllegalStateException] when this client has no
      * [AccessTokenProvider], since Altinn gives access lists only with a token.
      */
-    public suspend fun listAccessLists(): List<AccessList> {
+    public suspend fun listAccessLists(): List<AccessList> = readAccessLists(emptyList()).map { it.toAccessList() }
+
+    /**
+     * Kartverket's access lists that are connected to [resource], from every page Altinn gives. Throws
+     * [IllegalStateException] when this client has no [AccessTokenProvider], since Altinn gives access lists only with
+     * a token.
+     */
+    public suspend fun listAccessLists(resource: ResourceId): List<AccessList> {
+        // Altinn gives every list, with its connections to the resource, so the lists without one are left out here
+        val query = listOf("include" to "resources", "resource" to resource.value)
+        return readAccessLists(query)
+            .filter { list -> list.resourceConnections.orEmpty().any { it.resourceIdentifier == resource.value } }
+            .map { it.toAccessList() }
+    }
+
+    // The next page is asked for with the same query, since Altinn's link to it leaves out include and resource
+    private suspend fun readAccessLists(query: List<Pair<String, String>>): List<AltinnAccessList> {
         val tokens = tokens()
-        val lists = mutableListOf<AccessList>()
+        val lists = mutableListOf<AltinnAccessList>()
         var pageToken: String? = null
         do {
-            val query = pageToken?.let { "?token=${URLEncoder.encode(it, Charsets.UTF_8)}" }.orEmpty()
-            val response = readWithToken(tokens, Http.url(platformBaseUrl, ACCESS_LIST_PATH + query))
+            val parameters = query + listOfNotNull(pageToken?.let { "token" to it })
+            val encoded = parameters.joinToString("&") { (name, value) -> "$name=${URLEncoder.encode(value, Charsets.UTF_8)}" }
+            val path = if (encoded.isEmpty()) ACCESS_LIST_PATH else "$ACCESS_LIST_PATH?$encoded"
+            val response = readWithToken(tokens, Http.url(platformBaseUrl, path))
             if (response.statusCode != 200) throw failed(response)
             val page = parse(response, AltinnAccessListPage.serializer())
-            lists += page.data.map { it.toAccessList() }
+            lists += page.data
             pageToken = page.links.next?.let { nextPageToken(it, response) }
         } while (pageToken != null)
         return lists

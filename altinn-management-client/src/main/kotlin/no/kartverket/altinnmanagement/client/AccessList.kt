@@ -19,9 +19,13 @@ internal data class AltinnAccessList(
     val description: String? = null,
     val createdAt: String? = null,
     val updatedAt: String? = null,
+    val resourceConnections: List<AltinnResourceConnection>? = null,
 ) {
     fun toAccessList(): AccessList = AccessList(identifier, urn, name, description, createdAt, updatedAt)
 }
+
+@Serializable
+internal data class AltinnResourceConnection(val resourceIdentifier: String)
 
 @Serializable
 internal data class AltinnAccessListPage(

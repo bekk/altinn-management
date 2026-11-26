@@ -29,16 +29,26 @@ class AccessListClientTest {
 
     private val lists = "https://platform.tt02.altinn.no/resourceregistry/api/v1/access-lists/kv"
 
-    private fun list(id: String) = """
+    private fun list(id: String, connections: String = "") = """
         {
           "urn": "urn:altinn:access-list:kv:$id",
           "identifier": "$id",
           "name": "Name of $id",
           "description": "",
           "createdAt": "2026-11-20T10:15:30.123456+00:00",
-          "updatedAt": "2026-11-21T08:00:00+00:00"
+          "updatedAt": "2026-11-21T08:00:00+00:00"$connections
         }
     """.trimIndent()
+
+    // Altinn gives every list its connections to the resource asked for, which is an empty array for most
+    private fun listConnectedTo(id: String, vararg resources: String) = list(
+        id,
+        resources.joinToString(",", """, "resourceConnections": [""", "]") {
+            """{"resourceIdentifier":"$it","createdAt":"2026-11-20T10:15:30+00:00","updatedAt":"2026-11-20T10:15:30+00:00"}"""
+        },
+    )
+
+    private val geonorge = ResourceId.of("kv-geonorge")
 
     private fun json(status: Int, body: String) = response(status, "application/json", body)
 
@@ -58,6 +68,36 @@ class AccessListClientTest {
         assertEquals(listOf("kv-a", "kv-b"), client.listAccessLists().map { it.accessListId })
         assertEquals(listOf(lists, "$lists?token=InRlc3QyMCI"), sent.map { it.url.toString() })
         assertTrue(sent.all { it.headers["Authorization"] == "Bearer token" }, sent.toString())
+    }
+
+    @Test
+    fun `gives only the lists connected to the resource`(): Unit = runBlocking {
+        val client = client {
+            json(200, """{"links":{},"data":[${listConnectedTo("kv-a")},${listConnectedTo("kv-b", "kv-geonorge")}]}""")
+        }
+
+        assertEquals(listOf("kv-b"), client.listAccessLists(geonorge).map { it.accessListId })
+        assertEquals("$lists?include=resources&resource=kv-geonorge", sent.single().url.toString())
+    }
+
+    @Test
+    fun `asks for every page with the resource, since Altinn's link to the next page leaves it out`(): Unit = runBlocking {
+        val client = client { request ->
+            if ("token=" !in request.url.query) {
+                json(200, """{"links":{"next":"$lists?token=ImtiLWEi&includes=resources"},"data":[${listConnectedTo("kv-a")}]}""")
+            } else {
+                json(200, """{"links":{},"data":[${listConnectedTo("kv-b", "kv-geonorge")}]}""")
+            }
+        }
+
+        assertEquals(listOf("kv-b"), client.listAccessLists(geonorge).map { it.accessListId })
+        assertEquals(
+            listOf(
+                "$lists?include=resources&resource=kv-geonorge",
+                "$lists?include=resources&resource=kv-geonorge&token=ImtiLWEi",
+            ),
+            sent.map { it.url.toString() },
+        )
     }
 
     @Test
@@ -93,6 +133,7 @@ class AccessListClientTest {
         val client = client(accessTokenProvider = null) { json(200, "") }
 
         assertFailsWith<IllegalStateException> { client.listAccessLists() }
+        assertFailsWith<IllegalStateException> { client.listAccessLists(geonorge) }
         assertFailsWith<IllegalStateException> { client.getAccessList("kv-a") }
         assertEquals(emptyList(), sent)
     }
@@ -102,8 +143,9 @@ class AccessListClientTest {
         val client = client { json(401, "") }
 
         assertFailsWith<AltinnException> { client.listAccessLists() }
+        assertFailsWith<AltinnException> { client.listAccessLists(geonorge) }
         assertFailsWith<AltinnException> { client.getAccessList("kv-a") }
-        assertEquals(listOf("token", "token"), refused.map { it.value })
+        assertEquals(listOf("token", "token", "token"), refused.map { it.value })
     }
 
     @Test
@@ -122,6 +164,7 @@ class AccessListClientTest {
         )
         for (answer in answers) {
             assertFailsWith<AltinnException>(answer.toString()) { client { answer }.listAccessLists() }
+            assertFailsWith<AltinnException>(answer.toString()) { client { answer }.listAccessLists(geonorge) }
         }
     }
 }
