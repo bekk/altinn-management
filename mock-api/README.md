@@ -5,7 +5,8 @@ for running altinn-management locally. It keeps its data in memory, so every sta
 production, one of another organisation's, and Kartverket's GenericAccessResource `kv-geonorge` in TT02, with its policy
 from [`policies`](src/main/resources/policies). Kartverket's 12 access lists in TT02, as
 Altinn gave them on 26.11.2026, come from [`access-lists.json`](src/main/resources/access-lists.json). None of them
-starts with `nrl-`, so with filtering on, the server lists none.
+starts with `nrl-`, so with filtering on, the server lists none. The lists start with no members, and the organisations
+that can be added are Kartverket (`971040238`), Digdir (`991825827`) and the test organisation `311718371`.
 
 It copies Altinn's behaviour from Altinn's source code in
 [Altinn/altinn-auth](https://github.com/Altinn/altinn-auth/tree/main/src/apps/Altinn.ResourceRegistry), not from the
@@ -32,15 +33,19 @@ token from the exchange under [Tokens](#tokens), with the scope `altinn:resource
 | `POST` or `PUT /resourceregistry/api/v1/resource/{id}/policy` | Checks the XACML policy in the multipart field `policyFile`: every rule must be about the resource. It checks the owner the mock has, keeps the file as it was sent in place of the one before, and answers 201 with no body |
 | `GET /resourceregistry/api/v1/resource/{id}/policy` | The policy as it was sent, as `text/xml`. Without the resource or a policy it answers 404 as plain text: "Unable to find resource" or "Unable to find requested policy" |
 
-It also answers Altinn's two read routes for access lists the way Altinn does. Unlike resources, they need an Altinn
-token with `altinn:resourceregistry/accesslist.read`, `accesslist.write`, `pdp:accesslist.read` or `resource.admin`,
-and the mock's tokens are all Kartverket's, so the owner must be `kv` in any case. Another owner is 403, unless the
-token has `pdp:accesslist.read` or `resource.admin`.
+It also answers Altinn's routes for access lists and their members the way Altinn does. Unlike resources, they need
+an Altinn token: to read, with `altinn:resourceregistry/accesslist.read`, `accesslist.write`, `pdp:accesslist.read` or
+`resource.admin`, and to change members, with `accesslist.write` or `resource.admin`. The mock's tokens are all
+Kartverket's, so the owner must be `kv` in any case. Another owner is 403, unless a read has `pdp:accesslist.read` or
+`resource.admin`.
 
 | Route | Like in Altinn |
 | :-- | :-- |
 | `GET /resourceregistry/api/v1/access-lists/{owner}` | 20 lists at a time, by identifier, as `{"links":{"next":…},"data":[…]}`. `next` is an absolute URL with `?token=`, the identifier the next page starts at as a JSON string in base64url, and is left out on the last page. A token that is not one is 400 |
 | `GET /resourceregistry/api/v1/access-lists/{owner}/{identifier}` | The list. The identifier must match exactly, and a list the mock does not have is 404 |
+| `GET /resourceregistry/api/v1/access-lists/{owner}/{identifier}/members` | 100 members at a time, by party uuid, paged like the lists. A member is `{"id":"urn:altinn:party:uuid:…","since":…,"identifiers":{…}}`, with the party uuid, party id and organisation number in `identifiers`. A list the mock does not have is 404 |
+| `POST /resourceregistry/api/v1/access-lists/{owner}/{identifier}/members` | Adds the parties in `{"data":[…]}`, each `urn:altinn:organization:identifier-no:`, `urn:altinn:party:uuid:` or `urn:altinn:party:id:`, skipping those already on the list. Answers 200 with the first page of members. More than 100, or a URN it cannot read, is 400, and when one party is unknown it is 400 with `code` `RR-00001` and nothing changes |
+| `DELETE /resourceregistry/api/v1/access-lists/{owner}/{identifier}/members` | Removes the parties in the body, like `POST` adds them, skipping those not on the list |
 
 Errors look like Altinn's: ProblemDetails sent as `application/json`, or a JSON string. A missing or unknown token gives
 401 and a token without access gives 403, both without a body.
