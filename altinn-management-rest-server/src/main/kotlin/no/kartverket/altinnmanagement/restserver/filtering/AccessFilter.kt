@@ -1,6 +1,7 @@
 package no.kartverket.altinnmanagement.restserver.filtering
 
 import kotlinx.serialization.Serializable
+import no.kartverket.altinnmanagement.client.AccessList
 import no.kartverket.altinnmanagement.client.GenericAccessResource
 import no.kartverket.altinnmanagement.client.MaskinportenSchema
 
@@ -14,6 +15,9 @@ data class AccessFilter(
         resources.allows(schema.resourceId.value) && schema.scopes.orEmpty().all(scopes::allows)
 
     fun allows(resource: GenericAccessResource): Boolean = resources.allows(resource.resourceId.value)
+
+    // Only a prefix, since an exact id names one resource, not a list
+    fun allows(list: AccessList): Boolean = resources.prefix.any { list.accessListId.startsWith(it) }
 
     companion object {
         val NOTHING = AccessFilter(Filter(emptyList(), emptyList()), Filter(emptyList(), emptyList()))

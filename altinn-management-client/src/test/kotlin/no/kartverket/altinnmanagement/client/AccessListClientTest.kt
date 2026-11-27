@@ -12,6 +12,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class AccessListClientTest {
 
@@ -45,6 +46,21 @@ class AccessListClientTest {
         ResourceRegistryClient(AltinnEnvironment.TT02.platformBaseUrl, recording(sent, answer), accessTokenProvider)
 
     @Test
+    fun `gives the lists from every page, asking for the next page on its own URL with only the link's token`(): Unit = runBlocking {
+        val client = client { request ->
+            if (request.url.query == null) {
+                json(200, """{"links":{"next":"https://elsewhere.example/access-lists/kv?token=InRlc3QyMCI&includes=resources"},"data":[${list("kv-a")}]}""")
+            } else {
+                json(200, """{"links":{},"data":[${list("kv-b")}]}""")
+            }
+        }
+
+        assertEquals(listOf("kv-a", "kv-b"), client.listAccessLists().map { it.accessListId })
+        assertEquals(listOf(lists, "$lists?token=InRlc3QyMCI"), sent.map { it.url.toString() })
+        assertTrue(sent.all { it.headers["Authorization"] == "Bearer token" }, sent.toString())
+    }
+
+    @Test
     fun `gives a list as Altinn has it`(): Unit = runBlocking {
         val list = client { json(200, list("kv-matrikkel-kunder")) }.getAccessList("kv-matrikkel-kunder")
 
@@ -76,6 +92,7 @@ class AccessListClientTest {
     fun `refuses to read access lists without an AccessTokenProvider, before asking Altinn`(): Unit = runBlocking {
         val client = client(accessTokenProvider = null) { json(200, "") }
 
+        assertFailsWith<IllegalStateException> { client.listAccessLists() }
         assertFailsWith<IllegalStateException> { client.getAccessList("kv-a") }
         assertEquals(emptyList(), sent)
     }
@@ -84,14 +101,27 @@ class AccessListClientTest {
     fun `drops a token Altinn refuses, so the next call gets a new one`(): Unit = runBlocking {
         val client = client { json(401, "") }
 
+        assertFailsWith<AltinnException> { client.listAccessLists() }
         assertFailsWith<AltinnException> { client.getAccessList("kv-a") }
-        assertEquals(listOf("token"), refused.map { it.value })
+        assertEquals(listOf("token", "token"), refused.map { it.value })
     }
 
     @Test
     fun `fails when Altinn answers with an error or with something else than a list`(): Unit = runBlocking {
         for (answer in listOf(json(500, ""), json(200, "[]"))) {
             assertFailsWith<AltinnException>(answer.toString()) { client { answer }.getAccessList("kv-a") }
+        }
+    }
+
+    @Test
+    fun `fails when Altinn answers a list with an error, something else than lists, or a next page without a token`(): Unit = runBlocking {
+        val answers = listOf(
+            json(403, ""),
+            json(200, "[]"),
+            json(200, """{"links":{"next":"https://platform.tt02.altinn.no/resourceregistry/api/v1/access-lists/kv"},"data":[]}"""),
+        )
+        for (answer in answers) {
+            assertFailsWith<AltinnException>(answer.toString()) { client { answer }.listAccessLists() }
         }
     }
 }

@@ -22,3 +22,12 @@ internal data class AltinnAccessList(
 ) {
     fun toAccessList(): AccessList = AccessList(identifier, urn, name, description, createdAt, updatedAt)
 }
+
+@Serializable
+internal data class AltinnAccessListPage(
+    val links: AltinnPageLinks = AltinnPageLinks(),
+    val data: List<AltinnAccessList>,
+)
+
+@Serializable
+internal data class AltinnPageLinks(val next: String? = null)

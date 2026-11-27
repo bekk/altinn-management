@@ -6,10 +6,21 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.openapi.describe
 import io.ktor.utils.io.ExperimentalKtorApi
 import no.kartverket.altinnmanagement.client.ResourceRegistryClient
+import no.kartverket.altinnmanagement.restserver.clientCertificate
+import no.kartverket.altinnmanagement.restserver.filtering.CLIENT_CERTIFICATE_HEADER
+import no.kartverket.altinnmanagement.restserver.filtering.ExternalFiltering
+import no.kartverket.altinnmanagement.restserver.filtering.allowedBy
 import no.kartverket.altinnmanagement.restserver.problem.ResourceNotFoundException
 
 @OptIn(ExperimentalKtorApi::class)
-internal fun Route.accessLists(client: ResourceRegistryClient) {
+internal fun Route.accessLists(client: ResourceRegistryClient, externalFiltering: ExternalFiltering) {
+    get("/api/accesslists") {
+        val certificate = clientCertificate(call.request.headers[CLIENT_CERTIFICATE_HEADER], required = externalFiltering.isOn)
+        val filter = externalFiltering.filterFor(certificate)
+        val lists = client.listAccessLists()
+        call.respond(lists.allowedBy(filter) { allows(it) }.map(AccessList::from))
+    }.describe(accessListsListOperation)
+
     get("/api/accesslists/{id}") {
         val list = client.getAccessList(call.pathParameters["id"]!!) ?: throw ResourceNotFoundException("access list")
         call.respond(AccessList.from(list))

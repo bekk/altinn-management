@@ -74,6 +74,6 @@ fun Application.module(
 
         maskinportenSchemas(client, externalFiltering)
         genericAccessResources(client, externalFiltering)
-        accessLists(client)
+        accessLists(client, externalFiltering)
     }
 }

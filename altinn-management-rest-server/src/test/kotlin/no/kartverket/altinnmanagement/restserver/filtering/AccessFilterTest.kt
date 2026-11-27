@@ -1,5 +1,6 @@
 package no.kartverket.altinnmanagement.restserver.filtering
 
+import no.kartverket.altinnmanagement.client.AccessList
 import no.kartverket.altinnmanagement.client.GenericAccessResource
 import no.kartverket.altinnmanagement.client.MaskinportenSchema
 import no.kartverket.altinnmanagement.client.MultilingualText
@@ -35,6 +36,13 @@ class AccessFilterTest {
     fun `allows a resource only when it allows all its scopes`() {
         assertTrue(filter.allows(schema("res-exact", "kartverk:dokumentbestilling", "kartverk:tilgangsstyring:demo.read")))
         assertFalse(filter.allows(schema("res-exact", "kartverk:dokumentbestilling", "kartverk:matrikkel:brukernavn")))
+    }
+
+    @Test
+    fun `allows an access list only when it starts with a prefix for resources, not when it is an exact resource id`() {
+        assertTrue(filter.allows(accessList("res-prefix-kunder")))
+        assertFalse(filter.allows(accessList("res-exact")))
+        assertFalse(filter.allows(accessList("kv-matrikkel-kunder")))
     }
 
     @Test
@@ -103,4 +111,6 @@ class AccessFilterTest {
     )
 
     private val noText = MultilingualText(en = null, nb = null, nn = null)
+
+    private fun accessList(id: String) = AccessList(id, urn = null, name = null, description = null, createdAt = null, updatedAt = null)
 }

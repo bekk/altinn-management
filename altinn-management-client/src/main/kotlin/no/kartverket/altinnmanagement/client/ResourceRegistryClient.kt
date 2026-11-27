@@ -18,6 +18,7 @@ import no.kartverket.altinnmanagement.client.http.OutgoingHttpClient
 import no.kartverket.altinnmanagement.client.http.OutgoingRequest
 import no.kartverket.altinnmanagement.client.http.OutgoingResponse
 import java.net.URI
+import java.net.URLDecoder
 import java.net.URLEncoder
 import java.util.UUID
 
@@ -222,6 +223,25 @@ public class ResourceRegistryClient(
     }
 
     /**
+     * Kartverket's access lists, from every page Altinn gives. Throws [IllegalStateException] when this client has no
+     * [AccessTokenProvider], since Altinn gives access lists only with a token.
+     */
+    public suspend fun listAccessLists(): List<AccessList> {
+        val tokens = tokens()
+        val lists = mutableListOf<AccessList>()
+        var pageToken: String? = null
+        do {
+            val query = pageToken?.let { "?token=${URLEncoder.encode(it, Charsets.UTF_8)}" }.orEmpty()
+            val response = readWithToken(tokens, Http.url(platformBaseUrl, ACCESS_LIST_PATH + query))
+            if (response.statusCode != 200) throw failed(response)
+            val page = parse(response, AltinnAccessListPage.serializer())
+            lists += page.data.map { it.toAccessList() }
+            pageToken = page.links.next?.let { nextPageToken(it, response) }
+        } while (pageToken != null)
+        return lists
+    }
+
+    /**
      * Kartverket's access list [id], or null when Kartverket has none with this id. Throws [IllegalStateException] when
      * this client has no [AccessTokenProvider], since Altinn gives access lists only with a token.
      */
@@ -240,6 +260,14 @@ public class ResourceRegistryClient(
         val response = Http.send(httpClient, OutgoingRequest(HttpMethod.GET, url, headers), TARGET, ::AltinnException)
         if (response.statusCode == 401) tokens.refused(token)
         return response
+    }
+
+    // Altinn's link to the next page is absolute, so only its token is taken, and the token never goes to another host
+    private fun nextPageToken(next: String, response: OutgoingResponse): String {
+        val query = runCatching { URI(next).rawQuery }.getOrNull().orEmpty()
+        val token = query.split('&').firstOrNull { it.startsWith("token=") }?.substringAfter('=')
+        return token?.let { URLDecoder.decode(it, Charsets.UTF_8) }
+            ?: throw AltinnException("$TARGET gave a next page without a token: $next", response.statusCode, response.body.decodeToString())
     }
 
     private fun <T> parse(response: OutgoingResponse, serializer: KSerializer<T>): T {
