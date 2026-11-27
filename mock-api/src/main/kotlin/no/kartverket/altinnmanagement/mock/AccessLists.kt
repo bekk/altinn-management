@@ -8,7 +8,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.util.TreeMap
 
 /** Kartverket's access lists in memory, each as Altinn returns it, in the order Altinn pages them: by identifier. */
-class AccessLists(lists: List<JsonObject>) {
+class AccessLists(lists: List<JsonObject>, val members: AccessListMembers = AccessListMembers.seeded()) {
     private val lists = TreeMap(lists.associateBy { it.getValue("identifier").jsonPrimitive.content })
 
     /** The list [id]. The id must match exactly, case included. */
