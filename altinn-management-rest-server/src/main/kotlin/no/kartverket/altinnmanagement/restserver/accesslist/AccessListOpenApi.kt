@@ -22,6 +22,7 @@ import no.kartverket.altinnmanagement.restserver.missingClientCertificateExample
 import no.kartverket.altinnmanagement.restserver.notFound
 import no.kartverket.altinnmanagement.restserver.problem.FieldError
 import no.kartverket.altinnmanagement.restserver.problem.ValidationCode
+import no.kartverket.altinnmanagement.restserver.rejectedByAltinnExample
 import no.kartverket.altinnmanagement.restserver.requestId
 import no.kartverket.altinnmanagement.restserver.validationError
 import no.kartverket.altinnmanagement.restserver.withRequiredNotNull
@@ -266,6 +267,134 @@ internal val accessListDeleteOperation: Operation.Builder.() -> Unit = {
         badGateway(
             "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
                 "did not cause it, and the list may or may not have been deleted.",
+        )
+
+        internalError()
+    }
+}
+
+private val exampleMember = AccessListMember(organisationNumber = "991825827", addedAt = "2026-11-20T10:15:30.123456+00:00")
+
+private val invalidOrganisationNumbersExample = "InvalidOrganisationNumber" to validationError(
+    FieldError("organisationNumbers[0]", ValidationCode.INVALID_FORMAT, "organisationNumbers[0] must be 9 digits"),
+)
+
+private val unknownOrganisationExample = rejectedByAltinnExample("Altinn does not know one or more of the organisations")
+
+internal val accessListMembersListOperation: Operation.Builder.() -> Unit = {
+    summary = "List the members of an access list"
+    description = "Gets the members of Kartverket's access list with this id from Altinn, from every page Altinn gives."
+
+    parameters {
+        path("id") {
+            required = true
+            description = "The list's id, for example `kv-matrikkel-kunder`. Altinn matches it exactly, case included."
+            schema = JsonSchema(type = JsonType.STRING)
+        }
+        requestId()
+    }
+
+    responses {
+        HttpStatusCode.OK {
+            description = "The list's members. The list is empty if there are none."
+            headers { requestId() }
+            ContentType.Application.Json {
+                schema = JsonSchema(type = JsonType.ARRAY, items = ReferenceOr.Value(jsonSchema<AccessListMember>()))
+                example("AccessListMembers", listOf(exampleMember))
+            }
+        }
+
+        notFound("Kartverket has no access list with this id in Altinn.", "There is no access list with this id")
+
+        badGateway(
+            "This API could not get an answer from Altinn, or a token from Maskinporten, or the list changed while " +
+                "this API read its pages. Your request did not cause it.",
+        )
+
+        internalError()
+    }
+}
+
+internal val accessListMembersAddOperation: Operation.Builder.() -> Unit = {
+    summary = "Add organisations to an access list"
+    description = "Adds the organisations to Kartverket's access list with this id in Altinn. One that is already on " +
+        "the list is skipped. Altinn adds all of them or none."
+
+    parameters {
+        accessListIdPath()
+        requestId()
+    }
+
+    requestBody {
+        required = true
+        ContentType.Application.Json {
+            schema = jsonSchema<NewAccessListMembers>().withRequiredNotNull()
+            example("NewAccessListMembers", NewAccessListMembers(listOf("991825827")))
+        }
+    }
+
+    responses {
+        HttpStatusCode.NoContent {
+            description = "The organisations are on the list."
+            headers { requestId() }
+        }
+
+        badRequest(
+            "The id or the body is not valid, the body could not be read, or Altinn does not know one or more of the " +
+                "organisations and added none. The body must be UTF-8 JSON that gives each name once.",
+            invalidIdExample,
+            invalidOrganisationNumbersExample,
+            unknownOrganisationExample,
+            malformedBodyExample("The body must be a JSON object with only this API's fields, each of the right type"),
+        )
+
+        notFound("Kartverket has no access list with this id in Altinn.", "There is no access list with this id")
+
+        badGateway(
+            "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
+                "did not cause it, and the organisations may or may not have been added.",
+        )
+
+        internalError()
+    }
+}
+
+internal val accessListMemberRemoveOperation: Operation.Builder.() -> Unit = {
+    summary = "Remove an organisation from an access list"
+    description = "Removes the organisation from Kartverket's access list with this id in Altinn. An organisation " +
+        "that is not on the list gives the same answer."
+
+    parameters {
+        accessListIdPath()
+        path("organisationNumber") {
+            required = true
+            description = "The organisation's number: 9 digits, for example `991825827`."
+            schema = JsonSchema(type = JsonType.STRING, pattern = "^[0-9]{9}$")
+        }
+        requestId()
+    }
+
+    responses {
+        HttpStatusCode.NoContent {
+            description = "The organisation is not on the list."
+            headers { requestId() }
+        }
+
+        badRequest(
+            "The id or the organisation number is not valid, or Altinn does not know the organisation. Nothing was " +
+                "removed.",
+            invalidIdExample,
+            "InvalidOrganisationNumber" to validationError(
+                FieldError("organisationNumber", ValidationCode.INVALID_FORMAT, "organisationNumber must be 9 digits"),
+            ),
+            unknownOrganisationExample,
+        )
+
+        notFound("Kartverket has no access list with this id in Altinn.", "There is no access list with this id")
+
+        badGateway(
+            "This API could not get an answer from Altinn, or a token from Maskinporten. Your request " +
+                "did not cause it, and the organisation may or may not have been removed.",
         )
 
         internalError()
