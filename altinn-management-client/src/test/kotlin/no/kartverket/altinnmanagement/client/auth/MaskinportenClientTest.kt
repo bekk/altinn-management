@@ -54,7 +54,7 @@ class MaskinportenClientTest {
 
         assertEquals("my-client-id", claims.issuer)
         assertEquals(listOf("https://test.maskinporten.no/"), claims.audience)
-        assertEquals(AltinnScopes.RESOURCE_WRITE, claims.getStringClaim("scope"))
+        assertEquals("altinn:resourceregistry/resource.write altinn:resourceregistry/accesslist.read", claims.getStringClaim("scope"))
         assertNotNull(claims.jwtid, "a jti is required so Maskinporten can reject replays")
         assertEquals(NOW.epochSecond, claims.issueTime.toInstant().epochSecond)
         assertEquals(NOW.plusSeconds(60).epochSecond, claims.expirationTime.toInstant().epochSecond)

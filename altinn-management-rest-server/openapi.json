@@ -3034,6 +3034,151 @@
                     }
                 }
             }
+        },
+        "/api/accesslists/{id}": {
+            "get": {
+                "summary": "Get an access list",
+                "description": "Gets Kartverket's access list with this id from Altinn.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "The list's id, for example `kv-matrikkel-kunder`. Altinn matches it exactly, case included.",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-Request-ID",
+                        "in": "header",
+                        "description": "An id to find this call by in this API's logs. Up to 128 ASCII letters, digits, `-`, `_`, `.` and `:`. Without it, or with any other value, this API makes a new one. Every response has the id in its `X-Request-Id` header.",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "3f2b8c1e-7d4a-4f0e-9b6a-2c5d8e1f4a7b"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The access list.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AccessList"
+                                },
+                                "examples": {
+                                    "AccessList": {
+                                        "value": {
+                                            "accessListId": "kv-matrikkel-kunder",
+                                            "urn": "urn:altinn:access-list:kv:kv-matrikkel-kunder",
+                                            "name": "Matrikkel customers",
+                                            "description": "Organisations with an agreement to use the Matrikkel API.",
+                                            "createdAt": "2026-11-20T10:15:30.123456+00:00",
+                                            "updatedAt": "2026-11-21T08:00:00.000000+00:00"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Kartverket has no access list with this id in Altinn.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "NotFound": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:not-found",
+                                            "title": "Not found",
+                                            "status": 404,
+                                            "detail": "There is no access list with this id"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "This API could not get an answer from Altinn. Your request did not cause it.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "UpstreamError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:upstream-error",
+                                            "title": "A service this API depends on failed",
+                                            "status": 502,
+                                            "detail": "The call to Altinn failed"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "An unexpected error in this API.",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "The id of this call in this API's logs: the `X-Request-Id` you sent, or a new one.",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "InternalError": {
+                                        "value": {
+                                            "type": "tag:kartverket.no,2026:internal-error",
+                                            "title": "Internal error",
+                                            "status": 500
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -3660,6 +3805,40 @@
                             "$ref": "#/components/schemas/PolicyRule"
                         },
                         "minItems": 1
+                    }
+                }
+            },
+            "AccessList": {
+                "type": "object",
+                "title": "AccessList",
+                "description": "One of Kartverket's access lists in Altinn, with the values Altinn has. A field Altinn has no value for is left out. Connected to a resource, the list decides which organisations get access to it.",
+                "required": [
+                    "accessListId"
+                ],
+                "properties": {
+                    "accessListId": {
+                        "type": "string",
+                        "description": "The list's id in Altinn. It cannot be changed."
+                    },
+                    "urn": {
+                        "type": "string",
+                        "description": "The list as a subject in a policy, like `urn:altinn:access-list:kv:{accessListId}`."
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "The list's name."
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "What the list is for. Can be empty."
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "description": "When the list was created, as Altinn writes it, like `2026-11-20T10:15:30.123456+00:00`."
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "description": "When the list was last changed, as Altinn writes it."
                     }
                 }
             }
