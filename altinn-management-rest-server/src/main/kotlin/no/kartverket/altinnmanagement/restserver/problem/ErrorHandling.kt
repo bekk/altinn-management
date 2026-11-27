@@ -12,6 +12,7 @@ import no.kartverket.altinnmanagement.client.exception.AccessListAlreadyExistsEx
 import no.kartverket.altinnmanagement.client.exception.AltinnManagementException
 import no.kartverket.altinnmanagement.client.exception.AltinnRejectedException
 import no.kartverket.altinnmanagement.client.exception.ResourceAlreadyExistsException
+import no.kartverket.altinnmanagement.client.exception.UnknownOrganisationException
 import no.kartverket.altinnmanagement.client.exception.UnsupportedPolicyException
 import no.kartverket.altinnmanagement.restserver.InvalidRequestException
 import no.kartverket.altinnmanagement.restserver.MalformedRequestException
@@ -52,6 +53,13 @@ internal fun StatusPagesConfig.errorResponses() {
             ProblemType.UPSTREAM_REJECTED,
             HttpStatusCode.BadRequest,
             if (reasons.isEmpty()) "Altinn rejected the resource" else "Altinn rejected the resource: $reasons",
+        )
+    }
+    exception<UnknownOrganisationException> { call, _ ->
+        call.respondProblem(
+            ProblemType.UPSTREAM_REJECTED,
+            HttpStatusCode.BadRequest,
+            "Altinn does not know one or more of the organisations",
         )
     }
     exception<UnsupportedPolicyException> { call, cause ->

@@ -44,3 +44,14 @@ data class AccessListRequest(
     @JsonSchema.Description("Optional. What the list is for. Left out, it is emptied.")
     val description: String? = null,
 )
+
+@Serializable
+@JsonSchema.Required("organisationNumbers")
+@JsonSchema.Description("Organisations to add to an access list.")
+data class NewAccessListMembers(
+    @JsonSchema.Description(
+        "Up to 100 organisation numbers, each 9 digits. Altinn must know every one of them, or none are added. One " +
+            "that is already on the list is skipped.",
+    )
+    val organisationNumbers: List<String>? = null,
+)

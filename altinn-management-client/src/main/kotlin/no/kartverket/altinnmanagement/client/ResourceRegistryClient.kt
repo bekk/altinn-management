@@ -12,6 +12,7 @@ import no.kartverket.altinnmanagement.client.exception.AccessListAlreadyExistsEx
 import no.kartverket.altinnmanagement.client.exception.AltinnException
 import no.kartverket.altinnmanagement.client.exception.AltinnRejectedException
 import no.kartverket.altinnmanagement.client.exception.ResourceAlreadyExistsException
+import no.kartverket.altinnmanagement.client.exception.UnknownOrganisationException
 import no.kartverket.altinnmanagement.client.exception.UnsupportedPolicyException
 import no.kartverket.altinnmanagement.client.http.Http
 import no.kartverket.altinnmanagement.client.http.HttpMethod
@@ -306,6 +307,65 @@ public class ResourceRegistryClient(
         return parse(response, AltinnAccessList.serializer()).toAccessList()
     }
 
+    /**
+     * The members of Kartverket's access list [id], from every page Altinn gives, or null when Kartverket has no list
+     * with this id. Throws [IllegalStateException] when this client has no [AccessTokenProvider].
+     */
+    public suspend fun listAccessListMembers(id: String): List<AccessListMember>? {
+        val tokens = tokens()
+        val members = mutableListOf<AccessListMember>()
+        var pageToken: String? = null
+        do {
+            val query = pageToken?.let { "?token=${URLEncoder.encode(it, Charsets.UTF_8)}" }.orEmpty()
+            val response = readWithToken(tokens, URI("${membersUrl(id)}$query"))
+            if (response.statusCode == 404 && pageToken == null) return null
+            if (response.statusCode != 200) throw failed(response)
+            val page = parse(response, AltinnAccessListMemberPage.serializer())
+            members += page.data.map { it.toAccessListMember() }
+            pageToken = page.links.next?.let { nextPageToken(it, response) }
+        } while (pageToken != null)
+        return members
+    }
+
+    /**
+     * Adds the organisations to Kartverket's access list [id], skipping those already on it. Returns false, and changes
+     * nothing, when Kartverket has no list with this id. Throws [UnknownOrganisationException] when Altinn does not know
+     * one of the organisations, and then adds none, [AltinnRejectedException] when Altinn would not take the change, and
+     * [IllegalStateException] when this client has no [AccessTokenProvider].
+     */
+    public suspend fun addAccessListMembers(id: String, organisationNumbers: List<String>): Boolean =
+        changeMembers(HttpMethod.POST, id, organisationNumbers)
+
+    /**
+     * Removes the organisations from Kartverket's access list [id], skipping those not on it. Returns false when
+     * Kartverket has no list with this id. Throws [UnknownOrganisationException] when Altinn does not know one of the
+     * organisations, and then removes none, [AltinnRejectedException] when Altinn would not take the change, and
+     * [IllegalStateException] when this client has no [AccessTokenProvider].
+     */
+    public suspend fun removeAccessListMembers(id: String, organisationNumbers: List<String>): Boolean =
+        changeMembers(HttpMethod.DELETE, id, organisationNumbers)
+
+    // Altinn answers with the members after the change, which is left unread
+    private suspend fun changeMembers(method: HttpMethod, id: String, organisationNumbers: List<String>): Boolean {
+        val tokens = tokens()
+        val members = AltinnAccessListMembers(organisationNumbers.map { "$ORGANISATION_NUMBER_URN:$it" })
+        val request = OutgoingRequest(
+            method = method,
+            url = membersUrl(id),
+            headers = mapOf("Content-Type" to "application/json", "Accept" to "application/json"),
+            body = Http.json.encodeToString(AltinnAccessListMembers.serializer(), members).encodeToByteArray(),
+        )
+        val response = try {
+            sendWrite(tokens, request) { it == 200 || it == 404 }
+        } catch (e: AltinnRejectedException) {
+            if (errorCode(e.responseBody) == PARTY_NOT_FOUND) throw UnknownOrganisationException(e.statusCode, e.responseBody)
+            throw e
+        }
+        return response.statusCode == 200
+    }
+
+    private fun membersUrl(id: String) = URI("${accessListUrl(id)}/members")
+
     // Altinn's PUT both creates and changes, so the condition "*" on whether the list exists says which one it may do.
     // When the condition fails, Altinn answers 412 and changes nothing
     private suspend fun putAccessList(id: String, name: String, description: String?, condition: String): OutgoingResponse {
@@ -395,6 +455,13 @@ public class ResourceRegistryClient(
         const val ACCESS_LIST_PATH = "/resourceregistry/api/v1/access-lists/$KARTVERKET_ORGCODE"
 
         private const val TARGET = "Altinn Resource Registry"
+
+        private const val PARTY_NOT_FOUND = "RR-00001"
+
+        private fun errorCode(body: String?): String? {
+            val json = body?.let { runCatching { Http.json.parseToJsonElement(it) }.getOrNull() } as? JsonObject
+            return (json?.get("code") as? JsonPrimitive)?.content
+        }
 
         /**
          * Altinn answers 400 to a resource it will not take, and 401 with `InvalidPrefix` to scopes that do not start

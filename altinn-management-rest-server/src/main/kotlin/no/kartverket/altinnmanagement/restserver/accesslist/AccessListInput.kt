@@ -51,3 +51,29 @@ internal fun accessListContent(id: String, body: AccessListRequest): AccessListF
 internal suspend fun ApplicationCall.newAccessListRequest(): NewAccessList = strictBody(NewAccessList.serializer())
 
 internal suspend fun ApplicationCall.accessListRequest(): AccessListRequest = strictBody(AccessListRequest.serializer())
+
+// Altinn takes no more than 100 at a time
+private const val MAX_MEMBERS = 100
+
+internal fun newAccessListMembers(body: NewAccessListMembers): List<String> {
+    val numbers = body.organisationNumbers ?: throw InvalidRequestException(listOf(missing("organisationNumbers")))
+    val errors = buildList {
+        if (numbers.size > MAX_MEMBERS) {
+            add(FieldError("organisationNumbers", ValidationCode.INVALID_FORMAT, "organisationNumbers must have at most $MAX_MEMBERS entries"))
+        }
+        numbers.withIndex().filterNot { (_, number) -> isOrganisationNumber(number) }
+            .forEach { (index, _) -> add(invalidOrganisationNumber("organisationNumbers[$index]")) }
+    }
+    if (errors.isNotEmpty()) throw InvalidRequestException(errors)
+    return numbers
+}
+
+internal fun organisationNumber(name: String, value: String): String =
+    value.takeIf(::isOrganisationNumber) ?: throw InvalidRequestException(listOf(invalidOrganisationNumber(name)))
+
+// Altinn checks only that there are 9 digits, not the check digit
+private fun isOrganisationNumber(value: String) = value.length == 9 && value.all { it in '0'..'9' }
+
+private fun invalidOrganisationNumber(name: String) = FieldError(name, ValidationCode.INVALID_FORMAT, "$name must be 9 digits")
+
+internal suspend fun ApplicationCall.newAccessListMembersRequest(): NewAccessListMembers = strictBody(NewAccessListMembers.serializer())

@@ -52,4 +52,23 @@ internal fun Route.accessLists(client: ResourceRegistryClient, externalFiltering
         val deleted = client.deleteAccessList(id) ?: throw ResourceNotFoundException("access list")
         call.respond(AccessList.from(deleted))
     }.describe(accessListDeleteOperation)
+
+    get("/api/accesslists/{id}/members") {
+        val members = client.listAccessListMembers(call.pathParameters["id"]!!) ?: throw ResourceNotFoundException("access list")
+        call.respond(members.map(AccessListMember::from))
+    }.describe(accessListMembersListOperation)
+
+    post("/api/accesslists/{id}/members") {
+        val id = accessListId("id", call.pathParameters["id"]!!)
+        val organisationNumbers = newAccessListMembers(call.newAccessListMembersRequest())
+        if (!client.addAccessListMembers(id, organisationNumbers)) throw ResourceNotFoundException("access list")
+        call.respond(HttpStatusCode.NoContent)
+    }.describe(accessListMembersAddOperation)
+
+    delete("/api/accesslists/{id}/members/{organisationNumber}") {
+        val id = accessListId("id", call.pathParameters["id"]!!)
+        val organisationNumber = organisationNumber("organisationNumber", call.pathParameters["organisationNumber"]!!)
+        if (!client.removeAccessListMembers(id, listOf(organisationNumber))) throw ResourceNotFoundException("access list")
+        call.respond(HttpStatusCode.NoContent)
+    }.describe(accessListMemberRemoveOperation)
 }

@@ -6,6 +6,7 @@ import no.kartverket.altinnmanagement.client.auth.AccessTokenProvider
 import no.kartverket.altinnmanagement.client.exception.AccessListAlreadyExistsException
 import no.kartverket.altinnmanagement.client.exception.AltinnException
 import no.kartverket.altinnmanagement.client.exception.AltinnRejectedException
+import no.kartverket.altinnmanagement.client.exception.UnknownOrganisationException
 import no.kartverket.altinnmanagement.client.http.HttpMethod
 import no.kartverket.altinnmanagement.client.http.OutgoingRequest
 import no.kartverket.altinnmanagement.client.http.OutgoingResponse
@@ -69,6 +70,13 @@ class AccessListClientTest {
         { createAccessList("kv-ny", "Ny", null) },
         { updateAccessList("kv-ny", "Ny", null) },
         { deleteAccessList("kv-ny") },
+    )
+
+    // Every call on a list's members, which do not read what Altinn answers to a change
+    private val memberCalls: List<suspend ResourceRegistryClient.() -> Any?> = listOf(
+        { listAccessListMembers("kv-ny") },
+        { addAccessListMembers("kv-ny", listOf("991825827")) },
+        { removeAccessListMembers("kv-ny", listOf("991825827")) },
     )
 
     private fun client(accessTokenProvider: AccessTokenProvider? = tokens, answer: (OutgoingRequest) -> OutgoingResponse) =
@@ -223,6 +231,81 @@ class AccessListClientTest {
         assertNull(client { json(404, """{"title":"Not Found","status":404}""") }.getAccessList("kv-finnes-ikke"))
     }
 
+    private fun member(partyUuid: String, organisationNumber: String? = null): String {
+        val number = organisationNumber?.let { ""","urn:altinn:organization:identifier-no":"$it"""" }.orEmpty()
+        return """{"id":"urn:altinn:party:uuid:$partyUuid","since":"2026-11-20T10:15:30.123456+00:00",""" +
+            """"identifiers":{"urn:altinn:party:uuid":"$partyUuid","urn:altinn:party:id":50001234$number}}"""
+    }
+
+    @Test
+    fun `gives the members from every page, with the organisation number only for an organisation`(): Unit = runBlocking {
+        val client = client { request ->
+            if (request.url.query == null) {
+                json(200, """{"links":{"next":"https://elsewhere.example/members?token=eyJ2Ijo0Mn0"},"data":[${member("a1", "991825827")}]}""")
+            } else {
+                json(200, """{"links":{},"data":[${member("b2")}]}""")
+            }
+        }
+
+        val members = client.listAccessListMembers("kv-ny")
+
+        val since = "2026-11-20T10:15:30.123456+00:00"
+        assertEquals(listOf(AccessListMember("991825827", since), AccessListMember(null, since)), members)
+        assertEquals(listOf("$lists/kv-ny/members", "$lists/kv-ny/members?token=eyJ2Ijo0Mn0"), sent.map { it.url.toString() })
+        assertTrue(sent.all { it.headers["Authorization"] == "Bearer token" }, sent.toString())
+    }
+
+    @Test
+    fun `gives no members when Altinn has no list with the id`(): Unit = runBlocking {
+        assertNull(client { json(404, "") }.listAccessListMembers("kv-finnes-ikke"))
+    }
+
+    @Test
+    fun `adds and removes organisations by their URN, and tells whether Altinn has the list`(): Unit = runBlocking {
+        val client = client { request -> json(if ("finnes-ikke" in request.url.path) 404 else 200, """{"links":{},"data":[]}""") }
+
+        assertTrue(client.addAccessListMembers("kv-ny", listOf("991825827", "971040238")))
+        assertTrue(client.removeAccessListMembers("kv-ny", listOf("991825827")))
+        assertEquals(false, client.addAccessListMembers("kv-finnes-ikke", listOf("991825827")))
+        assertEquals(false, client.removeAccessListMembers("kv-finnes-ikke", listOf("991825827")))
+
+        assertEquals(listOf(HttpMethod.POST, HttpMethod.DELETE), sent.take(2).map { it.method })
+        assertTrue(sent.take(2).all { it.url.toString() == "$lists/kv-ny/members" }, sent.toString())
+        assertTrue(sent.all { it.headers["Authorization"] == "Bearer token" }, sent.toString())
+        assertEquals(
+            listOf(
+                """{"data":["urn:altinn:organization:identifier-no:991825827","urn:altinn:organization:identifier-no:971040238"]}""",
+                """{"data":["urn:altinn:organization:identifier-no:991825827"]}""",
+            ),
+            sent.take(2).map { it.body!!.decodeToString() },
+        )
+    }
+
+    @Test
+    fun `fails with UnknownOrganisationException when Altinn does not know an organisation`(): Unit = runBlocking {
+        val client = client {
+            json(400, """{"type":"urn:altinn:error:RR-00001","title":"One or more party references not found.","status":400,"code":"RR-00001"}""")
+        }
+
+        assertFailsWith<UnknownOrganisationException> { client.addAccessListMembers("kv-ny", listOf("991825827")) }
+        assertFailsWith<UnknownOrganisationException> { client.removeAccessListMembers("kv-ny", listOf("991825827")) }
+    }
+
+    @Test
+    fun `fails when Altinn answers members with an error, something else than members, or a next page without a token`(): Unit =
+        runBlocking {
+            val answers = listOf(
+                json(500, ""),
+                json(200, "[]"),
+                json(200, """{"links":{"next":"$lists/kv-ny/members"},"data":[]}"""),
+            )
+            for (answer in answers) {
+                assertFailsWith<AltinnException>(answer.toString()) { client { answer }.listAccessListMembers("kv-ny") }
+            }
+            assertFailsWith<AltinnException> { client { json(500, "") }.addAccessListMembers("kv-ny", listOf("991825827")) }
+            assertFailsWith<AltinnException> { client { json(500, "") }.removeAccessListMembers("kv-ny", listOf("991825827")) }
+        }
+
     @Test
     fun `refuses to read access lists without an AccessTokenProvider, before asking Altinn`(): Unit = runBlocking {
         val client = client(accessTokenProvider = null) { json(200, "") }
@@ -230,7 +313,7 @@ class AccessListClientTest {
         assertFailsWith<IllegalStateException> { client.listAccessLists() }
         assertFailsWith<IllegalStateException> { client.listAccessLists(geonorge) }
         assertFailsWith<IllegalStateException> { client.getAccessList("kv-a") }
-        for (write in writes) assertFailsWith<IllegalStateException> { client.write() }
+        for (write in writes + memberCalls) assertFailsWith<IllegalStateException> { client.write() }
         assertEquals(emptyList(), sent)
     }
 
@@ -241,8 +324,8 @@ class AccessListClientTest {
         assertFailsWith<AltinnException> { client.listAccessLists() }
         assertFailsWith<AltinnException> { client.listAccessLists(geonorge) }
         assertFailsWith<AltinnException> { client.getAccessList("kv-a") }
-        for (write in writes) assertFailsWith<AltinnException> { client.write() }
-        assertEquals(List(6) { "token" }, refused.map { it.value })
+        for (write in writes + memberCalls) assertFailsWith<AltinnException> { client.write() }
+        assertEquals(List(9) { "token" }, refused.map { it.value })
     }
 
     @Test
